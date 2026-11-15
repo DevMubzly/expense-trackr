@@ -1,6 +1,7 @@
 "use client";
 
-import { Check, Copy } from "lucide-react";
+import { Tick02Icon, Copy01Icon } from "@hugeicons/core-free-icons";
+import { Icon } from "@/components/huge-icon";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { Checkbox } from "@/components/motion/checkbox";
@@ -76,7 +77,7 @@ export function CopyMenu({
                 transition={SPRING_PRESS}
                 className="text-foreground"
               >
-                <Check className="h-4 w-4" />
+                <Icon icon={Tick02Icon} className="h-4 w-4" />
               </motion.span>
             ) : (
               <motion.span
@@ -86,7 +87,7 @@ export function CopyMenu({
                 exit={reduce ? { opacity: 0 } : { opacity: 0, scale: 0.5 }}
                 transition={SPRING_PRESS}
               >
-                <Copy className="h-4 w-4" />
+                <Icon icon={Copy01Icon} className="h-4 w-4" />
               </motion.span>
             )}
           </AnimatePresence>

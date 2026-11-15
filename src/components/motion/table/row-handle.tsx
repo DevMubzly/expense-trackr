@@ -1,6 +1,7 @@
 "use client";
 
-import { ArrowDownToLine, ArrowUpToLine, MoreVertical, Trash2 } from "lucide-react";
+import { ArrowDownToLineIcon, ArrowUpToLineIcon, MoreVerticalIcon, Delete02Icon } from "@hugeicons/core-free-icons";
+import { Icon } from "@/components/huge-icon";
 import { useEffect } from "react";
 import { createPortal } from "react-dom";
 import type { TableTranslate } from "./messages";
@@ -50,18 +51,18 @@ export function RowHandle({
       <TableMenu
         ariaLabel={t("rowOptions", { row: index + 1 })}
         triggerClassName="flex h-6 w-2 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
-        trigger={<MoreVertical className="h-3 w-3" />}
+        trigger={<Icon icon={MoreVerticalIcon} className="h-3 w-3" />}
         items={[
           ...(onInsertRow
             ? [
                 {
                   label: t("insertBefore"),
-                  icon: <ArrowUpToLine />,
+                  icon: <Icon icon={ArrowUpToLineIcon} />,
                   onSelect: () => onInsertRow(index, "before"),
                 },
                 {
                   label: t("insertAfter"),
-                  icon: <ArrowDownToLine />,
+                  icon: <Icon icon={ArrowDownToLineIcon} />,
                   onSelect: () => onInsertRow(index, "after"),
                 },
               ]
@@ -70,7 +71,7 @@ export function RowHandle({
             ? [
                 {
                   label: t("deleteRow"),
-                  icon: <Trash2 />,
+                  icon: <Icon icon={Delete02Icon} />,
                   destructive: true,
                   onSelect: () => onDeleteRow(id, index),
                 },

@@ -2,15 +2,17 @@
 // beui.dev/components/blocks/bloom-menu
 
 import {
-  Bell,
-  FileText,
-  FolderClosed,
-  LayoutGrid,
-  Link,
-  Plus,
-  Table,
-  X,
-} from "lucide-react";
+  Cancel01Icon,
+  DashboardSquare01Icon,
+  File01Icon,
+  Folder01Icon,
+  Link01Icon,
+  Notification01Icon,
+  PlusSignIcon,
+  Table01Icon,
+} from "@hugeicons/core-free-icons";
+import type { IconSvgElement } from "@hugeicons/react";
+import { Icon } from "@/components/huge-icon";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import {
   type ComponentType,
@@ -30,13 +32,19 @@ import { cn } from "@/lib/utils";
 
 type MenuItem = { label: string; icon: ComponentType<{ className?: string }> };
 
+function glyph(icon: IconSvgElement) {
+  return function Glyph({ className }: { className?: string }) {
+    return <Icon icon={icon} className={className} />;
+  };
+}
+
 const ITEMS: MenuItem[] = [
-  { label: "Doc", icon: FileText },
-  { label: "Board", icon: LayoutGrid },
-  { label: "Table", icon: Table },
-  { label: "Folder", icon: FolderClosed },
-  { label: "Reminder", icon: Bell },
-  { label: "Link", icon: Link },
+  { label: "Doc", icon: glyph(File01Icon) },
+  { label: "Board", icon: glyph(DashboardSquare01Icon) },
+  { label: "Table", icon: glyph(Table01Icon) },
+  { label: "Folder", icon: glyph(Folder01Icon) },
+  { label: "Reminder", icon: glyph(Notification01Icon) },
+  { label: "Link", icon: glyph(Link01Icon) },
 ];
 
 /** English defaults. Override per instance with `labels`, or app-wide with `LocaleProvider`. */
@@ -216,7 +224,7 @@ export function BloomMenu({
                     aria-label={t("close")}
                     className="rounded-sm text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
                   >
-                    <X className="h-4 w-4" />
+                    <Icon icon={Cancel01Icon} className="h-4 w-4" />
                   </button>
                 </div>
 
@@ -329,7 +337,7 @@ export function BloomMenu({
                 className="inline-flex items-center gap-2 whitespace-nowrap"
               >
                 {t("create")}
-                <Plus className="h-4 w-4" />
+                <Icon icon={PlusSignIcon} className="h-4 w-4" />
               </motion.span>
             </motion.button>
           )}

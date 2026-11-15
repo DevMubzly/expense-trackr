@@ -15,7 +15,7 @@ type Store = {
   nextId: number;
 };
 
-// Mock data lives in memory. Swap this module for Supabase later — the route
+// Mock data lives in memory. Swap this module for Supabase later, the route
 // handlers already speak the same shapes.
 const globalStore = globalThis as unknown as { __xpenseStore?: Store };
 

@@ -1,7 +1,8 @@
 "use client";
 // beui.dev/components/blocks/card-folder
 
-import { EllipsisVertical, Eye, EyeOff } from "lucide-react";
+import { MoreVerticalIcon, ViewIcon, ViewOffIcon } from "@hugeicons/core-free-icons";
+import { Icon } from "@/components/huge-icon";
 import {
   AnimatePresence,
   animate,
@@ -290,9 +291,9 @@ export function CardFolder({
                     className="flex items-center justify-center"
                   >
                     {areDetailsVisible ? (
-                      <EyeOff className="size-4" aria-hidden="true" />
+                      <Icon icon={ViewOffIcon} className="size-4" aria-hidden="true" />
                     ) : (
-                      <Eye className="size-4" aria-hidden="true" />
+                      <Icon icon={ViewIcon} className="size-4" aria-hidden="true" />
                     )}
                   </motion.span>
                 </AnimatePresence>
@@ -300,7 +301,7 @@ export function CardFolder({
 
               <span className="flex shrink-0 items-end gap-3.5 pt-2">
                 <span className="flex flex-col gap-0.5">
-                  <span className="text-[9px] font-medium uppercase tracking-[0.12em] text-muted-foreground/65">
+ <span className="text-[9px] font-medium text-muted-foreground/65">
                     {t("expiry")}
                   </span>
                   <span className="text-xs font-medium text-foreground tabular-nums">
@@ -308,7 +309,7 @@ export function CardFolder({
                   </span>
                 </span>
                 <span className="flex flex-col gap-0.5">
-                  <span className="text-[9px] font-medium uppercase tracking-[0.12em] text-muted-foreground/65">
+ <span className="text-[9px] font-medium text-muted-foreground/65">
                     {t("cvv")}
                   </span>
                   <DigitSwap
@@ -358,7 +359,7 @@ export function CardFolder({
           transition={transition}
           className="absolute right-[2.6%] top-[10%] z-10 flex size-10 -translate-y-1/2 items-center justify-center rounded-full text-white/65 outline-none transition-colors hover:bg-white/10 hover:text-white focus-visible:ring-2 focus-visible:ring-white disabled:cursor-not-allowed disabled:opacity-50"
         >
-          <EllipsisVertical className="size-4" aria-hidden="true" />
+          <Icon icon={MoreVerticalIcon} className="size-4" aria-hidden="true" />
         </motion.button>
       ) : null}
     </div>

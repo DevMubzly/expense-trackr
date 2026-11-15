@@ -2,7 +2,9 @@
 // beui.dev/components/blocks/command-palette
 
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { Search, type LucideIcon } from "lucide-react";
+import { Search01Icon } from "@hugeicons/core-free-icons";
+import type { IconSvgElement } from "@hugeicons/react";
+import { Icon } from "@/components/huge-icon";
 import {
   type ReactNode,
   useCallback,
@@ -28,7 +30,7 @@ export type CommandItem = {
   group?: string;
   hint?: string;
   keywords?: string[];
-  icon?: LucideIcon;
+  icon?: IconSvgElement;
   badge?: ReactNode;
   onSelect: () => void;
 };
@@ -259,7 +261,7 @@ export function CommandPalette({
                 className="pointer-events-auto w-full max-w-xl overflow-hidden rounded-2xl border border-border bg-background shadow-2xl will-change-transform"
               >
                 <div className="flex items-center gap-3 border-b border-border px-4">
-                  <Search className="h-4 w-4 text-muted-foreground" />
+                  <Icon icon={Search01Icon} className="h-4 w-4 text-muted-foreground" />
                   <input
                     ref={inputRef}
                     value={query}
@@ -303,7 +305,7 @@ export function CommandPalette({
                       <div key={group} className="mb-1 last:mb-0">
                         <div
                           aria-hidden
-                          className="px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground"
+ className="px-2 py-1.5 text-[10px] font-semibold text-muted-foreground"
                         >
                           {group}
                         </div>
@@ -311,7 +313,7 @@ export function CommandPalette({
                           // `rows` holds these very objects, in render order.
                           const idx = rows.indexOf(it);
                           const isActive = idx === active;
-                          const Icon = it.icon;
+                          const ItemIcon = it.icon;
                           return (
                             <button
                               key={it.id}
@@ -349,8 +351,8 @@ export function CommandPalette({
                                   }
                                 />
                               ) : null}
-                              {Icon ? (
-                                <Icon className="relative z-10 h-4 w-4" />
+                              {ItemIcon ? (
+                                <Icon icon={ItemIcon} className="relative z-10 h-4 w-4" />
                               ) : hasIcons ? (
                                 <span className="relative z-10 h-4 w-4" />
                               ) : null}

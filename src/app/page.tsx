@@ -2,7 +2,14 @@
 
 import { useMemo } from "react";
 import Link from "next/link";
-import { ArrowUpRight, ChartPie, ReceiptText, TrendingDown, TrendingUp } from "lucide-react";
+import {
+  ArrowUpRight01Icon,
+  PieChartIcon,
+  PlusSignIcon,
+  ReceiptTextIcon,
+  TrendingDownIcon,
+  TrendingUpIcon,
+} from "@hugeicons/core-free-icons";
 import {
   Area,
   AreaChart,
@@ -13,34 +20,24 @@ import {
   ChartTooltip,
   Gauge,
   Grid,
-  PieCenter,
-  PieChart,
-  PieSlice,
   XAxis,
   YAxis,
 } from "@/components/charts";
-import { AnimatedNumber } from "@/components/motion/animated-number";
 import { AnimatedBadge } from "@/components/motion/animated-badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/motion/card";
 import { ExpandableTabs } from "@/components/motion/expandable-tabs";
+import { TiltCard } from "@/components/motion/tilt-card";
 import { Loader } from "@/components/motion/loader";
+import { Icon } from "@/components/huge-icon";
+import { Money } from "@/components/money";
 import { Panel, PanelHeader } from "@/components/panel";
 import { useExpenseDialog } from "@/components/expense-dialog";
 import { useApi } from "@/lib/use-api";
 import { useNow } from "@/lib/use-now";
 import { categoryOf } from "@/lib/categories";
-import {
-  formatCompact,
-  formatUgx,
-  formatUgxCompact,
-  parseYmd,
-  relativeDay,
-  ymd,
-} from "@/lib/format";
+import { formatNumber, parseYmd, relativeDay, ymd } from "@/lib/format";
 import type { Stats } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-const MONTH_BARS = ["food", "transport", "bills", "fun", "shopping", "health", "other"];
 const DECK = "w-[min(1000px,90vw)]";
 
 export default function DashboardPage() {
@@ -73,29 +70,42 @@ export default function DashboardPage() {
   if (loading && !stats) {
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 text-muted-foreground">
-        <Loader variant="dot-matrix" size={28} />
-        <p className="text-xs uppercase tracking-[0.2em]">Crunching the numbers</p>
+        <Loader variant="dot-matrix" size={26} />
+        <p className="text-[13px]">Crunching the numbers</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <header className="flex flex-wrap items-end justify-between gap-6">
         <div>
-          <p className="text-[11px] uppercase tracking-[0.25em] text-muted-foreground">
+          <p className="text-[13px] text-muted-foreground">
             {now
               ? now.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })
               : "\u00a0"}
           </p>
-          <h1 className="mt-2 font-display text-5xl leading-none md:text-6xl">
+          <h1 className="mt-2 font-display text-5xl leading-none md:text-[56px]">
             {now ? `${greeting(now.getHours())}.` : "Hello."}
           </h1>
-          <p className="mt-3 max-w-xl text-sm text-muted-foreground">
-            You&apos;ve spent{" "}
-            <span className="font-medium text-foreground">{formatUgx(spent)}</span> in{" "}
-            {stats?.monthLabel} — {Math.round(pct)}% of the budget.{" "}
-            {over ? "That's the budget gone." : `${formatUgxCompact(remaining)} still breathing.`}
+          <p className="mt-4 max-w-xl text-sm leading-relaxed text-muted-foreground">
+            You have spent{" "}
+            <span className="font-medium text-foreground">
+              {formatNumber(spent)}
+              <span className="ml-1 text-xs font-normal text-muted-foreground">UGX</span>
+            </span>{" "}
+            in {stats?.monthLabel}. That is {Math.round(pct)}% of the budget, with{" "}
+            {over ? (
+              "nothing left."
+            ) : (
+              <>
+                <span className="font-medium text-foreground">
+                  {formatNumber(remaining)}
+                  <span className="ml-1 text-xs font-normal text-muted-foreground">UGX</span>
+                </span>{" "}
+                left.
+              </>
+            )}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -105,37 +115,49 @@ export default function DashboardPage() {
           <button
             type="button"
             onClick={() => openExpense()}
-            className="inline-flex h-9 items-center gap-2 rounded-full bg-primary px-4 text-sm font-medium text-primary-foreground transition-transform active:scale-[0.98]"
+            className="inline-flex h-9 items-center gap-2 rounded-full bg-primary px-4 text-[13px] font-medium text-primary-foreground transition-transform active:scale-[0.98]"
           >
-            <ReceiptText className="size-4" /> Log expense
+            <Icon icon={PlusSignIcon} className="size-4" /> Log expense
           </button>
         </div>
       </header>
 
-      <div className="grid grid-cols-12 gap-4">
-        <Panel className="col-span-12 overflow-hidden p-1 lg:col-span-8">
+      <div className="grid grid-cols-12 gap-5">
+        <Panel className="col-span-12 overflow-hidden p-6 xl:col-span-8">
           <PanelHeader
             title="Month pace"
-            hint={`Spend line vs a ${formatUgxCompact(budget)} budget pace`}
+            hint="Spend against a straight-line budget"
             action={
               stats ? (
                 <span
                   className={cn(
                     "flex items-center gap-1 text-xs",
-                    stats.vsLastMonth > 0 ? "text-destructive" : "text-emerald-500",
+                    stats.vsLastMonth > 0 ? "text-destructive" : "text-emerald-600",
                   )}
                 >
-                  {stats.vsLastMonth > 0 ? <TrendingUp className="size-3.5" /> : <TrendingDown className="size-3.5" />}
-                  {Math.abs(stats.vsLastMonth)}% vs last month
+                  <Icon
+                    icon={stats.vsLastMonth > 0 ? TrendingUpIcon : TrendingDownIcon}
+                    className="size-3.5"
+                  />
+                  {Math.abs(stats.vsLastMonth)}% versus last month
                 </span>
               ) : null
             }
+            className="p-0"
           />
-          <div className="px-1 pb-2 pt-4">
+          <div className="mt-4 flex items-center gap-5 text-xs text-muted-foreground">
+            <span className="flex items-center gap-1.5">
+              <span className="h-1.5 w-4 rounded-full bg-primary" /> Spent
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="h-1.5 w-4 rounded-full bg-muted-foreground/50" /> Budget pace
+            </span>
+          </div>
+          <div className="mt-2">
             <AreaChart
               data={areaData}
-              aspectRatio="2.4 / 1"
-              margin={{ top: 10, right: 18, bottom: 28, left: 44 }}
+              aspectRatio="2.6 / 1"
+              margin={{ top: 12, right: 12, bottom: 30, left: 72 }}
             >
               <Grid horizontal />
               <Area
@@ -149,89 +171,63 @@ export default function DashboardPage() {
                 dataKey="spent"
                 fill="var(--chart-1)"
                 stroke="var(--chart-1)"
-                fillOpacity={0.45}
+                fillOpacity={0.32}
                 strokeWidth={2.5}
-                fadeBottom={40}
+                fadeBottom={45}
               />
-              <YAxis formatValue={(value) => formatCompact(value)} />
+              <YAxis formatValue={(value) => formatNumber(value)} />
               <XAxis />
               <ChartTooltip />
             </AreaChart>
           </div>
         </Panel>
 
-        <div className="col-span-12 grid gap-4 lg:col-span-4">
-          <Panel className="flex flex-col items-center justify-center p-4">
-            <PanelHeader title="Budget" hint="This month" className="w-full" />
-            <Gauge
-              value={pct}
-              centerValue={Math.round(pct)}
-              suffix="%"
-              defaultLabel="used"
-              totalNotches={34}
-              height={168}
-              width={230}
-              activeFill="var(--chart-1)"
-              zones={[
-                { from: 0, to: 75, color: "var(--chart-1)" },
-                { from: 75, to: 100, color: "var(--destructive)" },
-              ]}
-              needle
-            />
-            <div className="grid w-full grid-cols-2 gap-2 pb-1 pt-2 text-center">
-              <div>
-                <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Spent</p>
-                <p className="tnum text-sm font-semibold">{formatUgxCompact(spent)}</p>
+        <div className="col-span-12 xl:col-span-4">
+          <TiltCard max={5} className="h-full">
+            <Panel className="flex h-full flex-col justify-between p-6">
+              <PanelHeader title="Budget" hint="This month" className="p-0" />
+              <div className="flex flex-col items-center py-2">
+                <Gauge
+                  value={pct}
+                  centerValue={Math.round(pct)}
+                  suffix="%"
+                  defaultLabel="used"
+                  totalNotches={36}
+                  height={170}
+                  width={240}
+                  activeFill="var(--chart-1)"
+                  inactiveFill="var(--muted)"
+                  needle="line"
+                />
               </div>
-              <div>
-                <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Left</p>
-                <p className="tnum text-sm font-semibold text-primary">{formatUgxCompact(remaining)}</p>
+              <div className="grid grid-cols-2 gap-3 border-t border-border/70 pt-4">
+                <div>
+                  <p className="text-xs text-muted-foreground">Spent</p>
+                  <Money value={spent} size="md" className="mt-1" />
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-muted-foreground">Left</p>
+                  <Money value={remaining} size="md" className="mt-1" />
+                </div>
               </div>
-            </div>
-          </Panel>
-
-          <Panel className="p-4">
-            <PanelHeader title="Where it went" hint="By category" />
-            <div className="flex items-center gap-3 pt-2">
-              <PieChart
-                data={(stats?.byCategory ?? []).map((entry) => ({
-                  label: entry.label,
-                  value: entry.value,
-                  color: entry.color,
-                }))}
-                innerRadius={46}
-                padAngle={0.03}
-                cornerRadius={4}
-                hoverOffset={8}
-                size={150}
-              >
-                {(stats?.byCategory ?? []).map((entry, index) => (
-                  <PieSlice key={entry.id} index={index} color={entry.color} showGlow />
-                ))}
-                <PieCenter defaultLabel="Total" formatOptions={{ notation: "compact", maximumFractionDigits: 1 }} />
-              </PieChart>
-              <ul className="min-w-0 flex-1 space-y-1.5">
-                {(stats?.byCategory ?? []).slice(0, 4).map((entry) => (
-                  <li key={entry.id} className="flex items-center gap-2 text-xs">
-                    <span className="size-2 shrink-0 rounded-full" style={{ background: entry.color }} />
-                    <span className="truncate text-muted-foreground">{entry.label}</span>
-                    <span className="tnum ml-auto">{Math.round((entry.value / Math.max(1, spent)) * 100)}%</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </Panel>
+            </Panel>
+          </TiltCard>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-5 lg:grid-cols-4">
         <StatCard
           label="Today"
           value={stats?.totals.today ?? 0}
           spark={spark.slice(-10)}
-          foot={`${stats?.totals.count ?? 0} entries this month`}
+          foot="Rolling today"
         />
-        <StatCard label="This week" value={stats?.totals.week ?? 0} spark={spark.slice(-7)} foot="Rolling 7 days" />
+        <StatCard
+          label="This week"
+          value={stats?.totals.week ?? 0}
+          spark={spark.slice(-7)}
+          foot="Last seven days"
+        />
         <StatCard
           label="Daily average"
           value={stats?.totals.avgPerDay ?? 0}
@@ -239,10 +235,10 @@ export default function DashboardPage() {
           foot={`Across ${stats?.daily.length ?? 0} days`}
         />
         <StatCard
-          label="Biggest hit"
+          label="Largest expense"
           value={stats?.totals.largest ?? 0}
           spark={spark}
-          foot={`≈ $${formatCompact(Math.round((stats?.totals.usd ?? 0)))} this month`}
+          foot={`${stats?.totals.count ?? 0} entries this month`}
         />
       </div>
 
@@ -254,19 +250,22 @@ export default function DashboardPage() {
             {
               id: "recent",
               label: "Recent",
-              icon: <ReceiptText className="size-4" />,
+              icon: <Icon icon={ReceiptTextIcon} className="size-4" />,
               content: (
                 <div className={DECK}>
                   <div className="flex items-start justify-between px-1 pb-3">
                     <div>
-                      <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Recent activity</p>
-                      <p className="mt-0.5 text-xs text-muted-foreground/80">Latest entries, newest first</p>
+                      <p className="text-[13px] font-medium">Recent activity</p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">Latest entries, newest first</p>
                     </div>
-                    <Link href="/expenses" className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
-                      All expenses <ArrowUpRight className="size-3.5" />
+                    <Link
+                      href="/expenses"
+                      className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+                    >
+                      All expenses <Icon icon={ArrowUpRight01Icon} className="size-3.5" />
                     </Link>
                   </div>
-                  <ul className="divide-y divide-border/60">
+                  <ul className="divide-y divide-border/70">
                     {(stats?.recent ?? []).map((expense) => {
                       const category = categoryOf(expense.category);
                       return (
@@ -274,21 +273,21 @@ export default function DashboardPage() {
                           <button
                             type="button"
                             onClick={() => openExpense(expense)}
-                            className="flex w-full items-center gap-3 px-1 py-3 text-left transition-colors hover:bg-muted/40"
+                            className="flex w-full items-center gap-3 px-1 py-3 text-left transition-colors hover:bg-muted/50"
                           >
                             <span
-                              className="grid size-9 shrink-0 place-items-center rounded-xl text-base"
-                              style={{ background: `color-mix(in oklab, ${category.color} 16%, transparent)` }}
+                              className="grid size-9 shrink-0 place-items-center rounded-lg"
+                              style={{ background: `color-mix(in oklab, ${category.color} 14%, transparent)` }}
                             >
-                              {category.emoji}
+                              <Icon icon={category.icon} className="size-4" />
                             </span>
                             <span className="min-w-0 flex-1">
                               <span className="block truncate text-sm">{expense.note || category.label}</span>
                               <span className="block text-[11px] text-muted-foreground">
-                                {relativeDay(expense.spentOn, today)} · {category.label}
+                                {relativeDay(expense.spentOn, today)}, {category.label}
                               </span>
                             </span>
-                            <span className="tnum text-sm">{formatUgx(expense.amountUgx)}</span>
+                            <Money value={expense.amountUgx} size="sm" />
                           </button>
                         </li>
                       );
@@ -300,20 +299,23 @@ export default function DashboardPage() {
             {
               id: "categories",
               label: "Categories",
-              icon: <ChartPie className="size-4" />,
+              icon: <Icon icon={PieChartIcon} className="size-4" />,
               content: (
                 <div className={DECK}>
-                  <p className="px-1 pb-4 text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-                    {stats?.monthLabel} — share of spend
+                  <p className="px-1 pb-4 text-[13px] font-medium">
+                    {stats?.monthLabel}, share of spend
                   </p>
                   <div className="space-y-4 px-1">
                     {(stats?.byCategory ?? []).map((entry) => (
                       <div key={entry.id} className="space-y-1.5">
                         <div className="flex items-center justify-between text-xs">
-                          <span className="text-muted-foreground">{entry.label}</span>
-                          <span className="tnum">{formatUgx(entry.value)}</span>
+                          <span className="flex items-center gap-2 text-muted-foreground">
+                            <Icon icon={categoryOf(entry.id).icon} className="size-3.5" />
+                            {entry.label}
+                          </span>
+                          <span className="tnum text-foreground">{formatNumber(entry.value)} UGX</span>
                         </div>
-                        <div className="h-2 overflow-hidden rounded-full bg-muted">
+                        <div className="h-1.5 overflow-hidden rounded-full bg-muted">
                           <div
                             className="h-full rounded-full"
                             style={{
@@ -331,21 +333,19 @@ export default function DashboardPage() {
             {
               id: "months",
               label: "Months",
-              icon: <TrendingUp className="size-4" />,
+              icon: <Icon icon={TrendingUpIcon} className="size-4" />,
               content: (
                 <div className={DECK}>
-                  <p className="px-1 pb-2 text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-                    Last eight months
-                  </p>
+                  <p className="px-1 pb-2 text-[13px] font-medium">Last eight months</p>
                   <BarChart
                     data={stats?.months ?? []}
                     xDataKey="label"
                     aspectRatio="3 / 1"
                     barGap={0.35}
-                    margin={{ top: 10, right: 10, bottom: 30, left: 52 }}
+                    margin={{ top: 10, right: 10, bottom: 30, left: 80 }}
                   >
                     <Grid horizontal />
-                    <YAxis formatValue={(value) => formatCompact(value)} />
+                    <YAxis formatValue={(value) => formatNumber(value)} />
                     <Bar dataKey="total" fill="var(--chart-1)" lineCap="round" />
                     <BarXAxis />
                     <ChartTooltip />
@@ -357,8 +357,12 @@ export default function DashboardPage() {
         />
       </div>
 
-      <Panel className="p-5">
-        <PanelHeader title="Daily flow" hint="Every day this month, stacked by category" className="p-0 pb-4" />
+      <Panel className="p-6">
+        <PanelHeader
+          title="Daily flow"
+          hint="Every day this month, stacked by category"
+          className="p-0 pb-4"
+        />
         <BarChart
           data={(stats?.daily ?? []).map((point) => ({
             ...point,
@@ -369,14 +373,17 @@ export default function DashboardPage() {
           aspectRatio="3.4 / 1"
           barGap={0.25}
           stackGap={1}
-          margin={{ top: 10, right: 10, bottom: 30, left: 52 }}
+          margin={{ top: 10, right: 10, bottom: 30, left: 80 }}
         >
           <Grid horizontal />
-          <YAxis formatValue={(value) => formatCompact(value)} />
-          {MONTH_BARS.map((id) => {
-            const category = categoryOf(id);
-            return <Bar key={id} dataKey={id} fill={category.color} lineCap={2} />;
-          })}
+          <YAxis formatValue={(value) => formatNumber(value)} />
+          <Bar dataKey="food" fill={categoryOf("food").color} lineCap={2} />
+          <Bar dataKey="transport" fill={categoryOf("transport").color} lineCap={2} />
+          <Bar dataKey="bills" fill={categoryOf("bills").color} lineCap={2} />
+          <Bar dataKey="fun" fill={categoryOf("fun").color} lineCap={2} />
+          <Bar dataKey="shopping" fill={categoryOf("shopping").color} lineCap={2} />
+          <Bar dataKey="health" fill={categoryOf("health").color} lineCap={2} />
+          <Bar dataKey="other" fill={categoryOf("other").color} lineCap={2} />
           <BarXAxis />
           <ChartTooltip />
         </BarChart>
@@ -403,28 +410,21 @@ function StatCard({
   foot: string;
 }) {
   return (
-    <Card className="overflow-hidden">
-      <CardHeader className="pb-0">
-        <CardTitle className="text-[11px] font-normal uppercase tracking-[0.18em] text-muted-foreground">
-          {label}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-1 pt-2">
-        <p className="tnum font-display text-3xl leading-none">
-          <AnimatedNumber value={value} startOnView={false} format={(n) => formatCompact(n)} />
-          <span className="ml-1 font-sans text-xs text-muted-foreground">UGX</span>
-        </p>
-        <p className="text-[11px] text-muted-foreground">{foot}</p>
-        <div className="pt-2">
-          <AreaSparkline
-            data={spark.length > 1 ? spark : [...spark, ...spark]}
-            dataKey="value"
-            height={44}
-            color="var(--chart-1)"
-            fill="gradient"
-          />
-        </div>
-      </CardContent>
-    </Card>
+    <Panel className="p-5">
+      <p className="text-[13px] text-muted-foreground">{label}</p>
+      <div className="mt-2">
+        <Money value={value} size="lg" />
+      </div>
+      <p className="mt-1.5 text-[11px] text-muted-foreground">{foot}</p>
+      <div className="mt-3">
+        <AreaSparkline
+          data={spark.length > 1 ? spark : [...spark, ...spark]}
+          dataKey="value"
+          height={40}
+          color="var(--chart-1)"
+          fill="gradient"
+        />
+      </div>
+    </Panel>
   );
 }

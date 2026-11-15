@@ -1,6 +1,7 @@
 "use client";
 
-import { ArrowDownUp, Check, ChevronDown, Send, X } from "lucide-react";
+import { ArrowDataTransferVerticalIcon, Tick02Icon, ArrowDown01Icon, SentIcon, Cancel01Icon } from "@hugeicons/core-free-icons";
+import { Icon } from "@/components/huge-icon";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useEffect, useRef } from "react";
 import { SPRING_PRESS } from "@/lib/ease";
@@ -34,7 +35,7 @@ export function FlipButton({
         transition={{ type: "spring", stiffness: 380, damping: 26, mass: 0.6 }}
         className="inline-flex h-9 w-9 items-center justify-center rounded-full border-[3px] border-card bg-muted text-foreground backdrop-blur"
       >
-        <ArrowDownUp className="h-3.5 w-3.5" />
+        <Icon icon={ArrowDataTransferVerticalIcon} className="h-3.5 w-3.5" />
       </motion.button>
     </div>
   );
@@ -131,7 +132,7 @@ export function DestinationRow({
         className="flex w-full items-center justify-between gap-2 px-3.5 py-2.5 text-[12px] text-muted-foreground hover:text-foreground"
       >
         <span className="flex items-center gap-2">
-          <Send className="h-3.5 w-3.5 shrink-0" />
+          <Icon icon={SentIcon} className="h-3.5 w-3.5 shrink-0" />
           <span>
             {show && hasAddress && valid
               ? t("sendTo", { address: truncateAddress(address) })
@@ -143,7 +144,7 @@ export function DestinationRow({
           transition={{ duration: 0.2, ease: EASE }}
           style={{ display: "inline-flex" }}
         >
-          <ChevronDown className="h-3.5 w-3.5" />
+          <Icon icon={ArrowDown01Icon} className="h-3.5 w-3.5" />
         </motion.span>
       </button>
 
@@ -184,7 +185,7 @@ export function DestinationRow({
                         exit={{ opacity: 0, scale: 0.7 }}
                         transition={{ duration: 0.14, ease: EASE }}
                       >
-                        <Check className="h-3.5 w-3.5 shrink-0 text-primary" />
+                        <Icon icon={Tick02Icon} className="h-3.5 w-3.5 shrink-0 text-primary" />
                       </motion.span>
                     ) : (
                       <motion.button
@@ -198,7 +199,7 @@ export function DestinationRow({
                         transition={{ duration: 0.14, ease: EASE }}
                         className="shrink-0 text-muted-foreground hover:text-foreground"
                       >
-                        <X className="h-3.5 w-3.5" />
+                        <Icon icon={Cancel01Icon} className="h-3.5 w-3.5" />
                       </motion.button>
                     )
                   ) : null}

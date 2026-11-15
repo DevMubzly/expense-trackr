@@ -1,13 +1,8 @@
 "use client";
 // beui.dev/components/motion/date-range-picker
 
-import {
-  ArrowRight,
-  CalendarDays,
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
-} from "lucide-react";
+import { ArrowRight01Icon, Calendar03Icon, ArrowDown01Icon, ArrowLeft01Icon } from "@hugeicons/core-free-icons";
+import { Icon } from "@/components/huge-icon";
 import {
   AnimatePresence,
   type HTMLMotionProps,
@@ -182,20 +177,20 @@ export function DateRangePickerSummary({
       )}
     >
       <div className="min-w-0">
-        <p className="mb-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+ <p className="mb-1 text-[10px] font-medium text-muted-foreground">
           {t("startDate")}
         </p>
         <p className="text-[13px] font-medium tabular-nums">
           {value ? shortFormat.format(parse(value.from)) : t("selectDate")}
         </p>
       </div>
-      <ArrowRight
+      <Icon icon={ArrowRight01Icon}
         size={14}
         className="text-muted-foreground/60"
         aria-hidden="true"
       />
       <div className="min-w-0">
-        <p className="mb-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+ <p className="mb-1 text-[10px] font-medium text-muted-foreground">
           {t("endDate")}
         </p>
         <p
@@ -256,7 +251,7 @@ export function DateRangePickerHeader({
           )}
         >
           {monthNameFormat.format(parse(month))}
-          <ChevronDown
+          <Icon icon={ArrowDown01Icon}
             size={12}
             aria-hidden="true"
             className={cn(
@@ -276,7 +271,7 @@ export function DateRangePickerHeader({
           className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-[13px] font-medium tabular-nums text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-40"
         >
           {view === "years" ? `${yearPage}–${yearPageEnd}` : year}
-          <ChevronDown
+          <Icon icon={ArrowDown01Icon}
             size={12}
             aria-hidden="true"
             className={cn(view === "years" && "rotate-180")}
@@ -297,7 +292,7 @@ export function DateRangePickerHeader({
           className={iconClass}
           onClick={() => page(-1)}
         >
-          <ChevronLeft size={16} aria-hidden="true" />
+          <Icon icon={ArrowLeft01Icon} size={16} aria-hidden="true" />
         </button>
         <button
           type="button"
@@ -316,7 +311,7 @@ export function DateRangePickerHeader({
           )}
           onClick={() => page(1)}
         >
-          <ChevronRight size={16} aria-hidden="true" />
+          <Icon icon={ArrowRight01Icon} size={16} aria-hidden="true" />
         </button>
       </div>
     </div>
@@ -796,7 +791,7 @@ export function DateRangePickerTrigger({
               className="shrink-0 text-muted-foreground"
               aria-hidden="true"
             >
-              <CalendarDays size={15} />
+              <Icon icon={Calendar03Icon} size={15} />
             </motion.span>
             <motion.span
               layout={ctx.reduce ? false : "position"}
@@ -811,7 +806,7 @@ export function DateRangePickerTrigger({
               className="shrink-0 text-muted-foreground"
               aria-hidden="true"
             >
-              <ChevronDown size={13} className={cn(ctx.open && "rotate-180")} />
+              <Icon icon={ArrowDown01Icon} size={13} className={cn(ctx.open && "rotate-180")} />
             </motion.span>
           </>
         )}

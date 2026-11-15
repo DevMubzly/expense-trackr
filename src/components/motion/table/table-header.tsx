@@ -1,13 +1,7 @@
 "use client";
 
-import {
-  ArrowLeftToLine,
-  ArrowRightToLine,
-  ChevronUp,
-  GripVertical,
-  MoreHorizontal,
-  Trash2,
-} from "lucide-react";
+import { ArrowLeftToLineIcon, ArrowRightToLineIcon, ArrowUp01Icon, DragDropVerticalIcon, MoreHorizontalIcon, Delete02Icon } from "@hugeicons/core-free-icons";
+import { Icon } from "@/components/huge-icon";
 import { motion } from "motion/react";
 import { type PointerEvent as ReactPointerEvent, useEffect } from "react";
 import { createPortal } from "react-dom";
@@ -68,12 +62,12 @@ function columnMenuItems<T>(
       ? [
           {
             label: t("insertBefore"),
-            icon: <ArrowLeftToLine />,
+            icon: <Icon icon={ArrowLeftToLineIcon} />,
             onSelect: () => onInsertColumn(index, "before"),
           },
           {
             label: t("insertAfter"),
-            icon: <ArrowRightToLine />,
+            icon: <Icon icon={ArrowRightToLineIcon} />,
             onSelect: () => onInsertColumn(index, "after"),
           },
         ]
@@ -82,7 +76,7 @@ function columnMenuItems<T>(
       ? [
           {
             label: t("deleteColumn"),
-            icon: <Trash2 />,
+            icon: <Icon icon={Delete02Icon} />,
             destructive: true,
             onSelect: () => onDeleteColumn(column.key, index),
           },
@@ -136,7 +130,7 @@ function ColumnHandle<T>({
       <TableMenu
         ariaLabel={t("columnOptions", { column: column.key })}
         triggerClassName="flex h-2 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
-        trigger={<MoreHorizontal className="h-3 w-3" />}
+        trigger={<Icon icon={MoreHorizontalIcon} className="h-3 w-3" />}
         items={columnMenuItems(column, index, onInsertColumn, onDeleteColumn, t)}
       />
     </div>,
@@ -267,7 +261,7 @@ export function TableHeader<T>({
                       TOUCH_GESTURE_CLASS,
                     )}
                   >
-                    <GripVertical className="h-3.5 w-3.5" />
+                    <Icon icon={DragDropVerticalIcon} className="h-3.5 w-3.5" />
                   </button>
                 ) : null}
                 {column.sortable ? (
@@ -294,7 +288,7 @@ export function TableHeader<T>({
                           : { duration: 0.18, ease: EASE_OUT }
                       }
                     >
-                      <ChevronUp className="h-3.5 w-3.5" />
+                      <Icon icon={ArrowUp01Icon} className="h-3.5 w-3.5" />
                     </motion.span>
                   </button>
                 ) : onColumnRename ? (

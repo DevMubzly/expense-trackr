@@ -4,7 +4,7 @@ export default function NotFound() {
   return (
     <NotFoundGlitch
       title="Lost the receipt"
-      description="That page doesn't exist — or it was spent and never written down. Try one of these instead."
+      description="That page does not exist, or it was spent and never written down. Try one of these instead."
       homeHref="/"
       homeLabel="Back to dashboard"
       browseHref="/expenses"

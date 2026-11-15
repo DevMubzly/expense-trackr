@@ -2,7 +2,13 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { gooeyToast } from "goey-toast";
-import { Pencil, Plus, Search, Trash2, X } from "lucide-react";
+import {
+  Cancel01Icon,
+  Delete02Icon,
+  PencilEdit01Icon,
+  PlusSignIcon,
+  Search01Icon,
+} from "@hugeicons/core-free-icons";
 import { Table, type TableColumn } from "@/components/motion/table";
 import { Input } from "@/components/motion/input";
 import {
@@ -34,12 +40,14 @@ import {
   ContextMenuTrigger,
 } from "@/components/motion/context-menu";
 import { Button } from "@/components/ui/button";
+import { Icon } from "@/components/huge-icon";
+import { Money } from "@/components/money";
 import { Panel, EmptyState } from "@/components/panel";
 import { useExpenseDialog } from "@/components/expense-dialog";
 import { useApi, api } from "@/lib/use-api";
 import { useNow } from "@/lib/use-now";
 import { CATEGORIES, categoryOf } from "@/lib/categories";
-import { formatUgx, parseYmd, relativeDay, ymd } from "@/lib/format";
+import { parseYmd, relativeDay, ymd } from "@/lib/format";
 import type { Expense } from "@/lib/types";
 
 export default function ExpensesPage() {
@@ -78,9 +86,13 @@ export default function ExpensesPage() {
         width: "170px",
         cell: (row) => (
           <div className="flex flex-col">
-            <span className="text-sm">{relativeDay(row.spentOn, today)}</span>
+            <span className="text-[13px]">{relativeDay(row.spentOn, today)}</span>
             <span className="text-[11px] text-muted-foreground">
-              {parseYmd(row.spentOn).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
+              {parseYmd(row.spentOn).toLocaleDateString("en-GB", {
+                day: "2-digit",
+                month: "short",
+                year: "numeric",
+              })}
             </span>
           </div>
         ),
@@ -93,15 +105,19 @@ export default function ExpensesPage() {
         cell: (row) => {
           const cat = categoryOf(row.category);
           return (
-            <button type="button" onClick={() => openExpense(row)} className="flex items-center gap-2.5 text-left">
+            <button
+              type="button"
+              onClick={() => openExpense(row)}
+              className="flex items-center gap-2.5 text-left"
+            >
               <span
-                className="grid size-8 shrink-0 place-items-center rounded-lg text-sm"
-                style={{ background: `color-mix(in oklab, ${cat.color} 16%, transparent)` }}
+                className="grid size-8 shrink-0 place-items-center rounded-lg"
+                style={{ background: `color-mix(in oklab, ${cat.color} 14%, transparent)` }}
               >
-                {cat.emoji}
+                <Icon icon={cat.icon} className="size-4" />
               </span>
               <span className="min-w-0">
-                <span className="block truncate text-sm">{row.note || cat.label}</span>
+                <span className="block truncate text-[13px]">{row.note || cat.label}</span>
                 <span className="block text-[11px] text-muted-foreground">{cat.label}</span>
               </span>
             </button>
@@ -119,9 +135,10 @@ export default function ExpensesPage() {
           return (
             <span
               className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px]"
-              style={{ background: `color-mix(in oklab, ${cat.color} 14%, transparent)` }}
+              style={{ background: `color-mix(in oklab, ${cat.color} 12%, transparent)` }}
             >
-              {cat.emoji} {cat.label}
+              <Icon icon={cat.icon} className="size-3.5" />
+              {cat.label}
             </span>
           );
         },
@@ -132,15 +149,13 @@ export default function ExpensesPage() {
         header: "Amount",
         sortable: true,
         align: "right",
-        width: "160px",
-        cell: (row) => (
-          <span className="tnum text-sm">{formatUgx(row.amountUgx)}</span>
-        ),
+        width: "170px",
+        cell: (row) => <Money value={row.amountUgx} size="sm" />,
       },
       {
         key: "currency",
         header: "",
-        width: "64px",
+        width: "56px",
         align: "right",
         cell: (row) => (
           <ContextMenu>
@@ -150,12 +165,12 @@ export default function ExpensesPage() {
                 aria-label={`Actions for ${row.note || row.category}`}
                 className="grid size-8 place-items-center rounded-lg text-muted-foreground outline-none transition-colors hover:bg-muted hover:text-foreground"
               >
-                ⋯
+                <Icon icon={PencilEdit01Icon} className="size-3.5" />
               </button>
             </ContextMenuTrigger>
             <ContextMenuContent>
               <ContextMenuItem onSelect={() => openExpense(row)}>
-                <Pencil className="size-3.5" /> Edit
+                <Icon icon={PencilEdit01Icon} className="size-3.5" /> Edit
               </ContextMenuItem>
               <ContextMenuSeparator />
               <ContextMenuItem
@@ -166,7 +181,7 @@ export default function ExpensesPage() {
                   refresh();
                 }}
               >
-                <Trash2 className="size-3.5" /> Delete
+                <Icon icon={Delete02Icon} className="size-3.5" /> Delete
               </ContextMenuItem>
             </ContextMenuContent>
           </ContextMenu>
@@ -179,29 +194,31 @@ export default function ExpensesPage() {
   async function deleteSelected() {
     if (!selected.length) return;
     await Promise.all(selected.map((id) => api.delete(`/api/expenses/${id}`)));
-    gooeyToast.success(`${selected.length} expense${selected.length > 1 ? "s" : ""} deleted`);
+    gooeyToast.success(`${selected.length} expenses deleted`);
     setSelected([]);
     refresh();
   }
 
+  const filtered = Boolean(range || category !== "all" || query);
+
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="text-[11px] uppercase tracking-[0.25em] text-muted-foreground">Ledger</p>
-          <h1 className="mt-1 font-display text-5xl leading-none">Every shilling.</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            {rows.length} entries · {formatUgx(total)} in view
+          <p className="text-[13px] text-muted-foreground">Ledger</p>
+          <h1 className="mt-2 font-display text-5xl leading-none">Every shilling.</h1>
+          <p className="mt-3 flex items-center gap-2 text-sm text-muted-foreground">
+            {rows.length} entries, <Money value={total} size="sm" /> in view
           </p>
         </div>
         <div className="flex items-center gap-2">
           {selected.length > 0 ? (
             <Button variant="destructive" onClick={deleteSelected}>
-              <Trash2 className="size-4" /> Delete {selected.length}
+              <Icon icon={Delete02Icon} className="size-4" /> Delete {selected.length}
             </Button>
           ) : null}
           <Button onClick={() => openExpense()}>
-            <Plus className="size-4" /> Add expense
+            <Icon icon={PlusSignIcon} className="size-4" /> Add expense
           </Button>
         </div>
       </header>
@@ -212,8 +229,8 @@ export default function ExpensesPage() {
             <Input
               value={query}
               onChange={setQuery}
-              placeholder="Search notes, amounts…"
-              leftIcon={<Search className="size-4" />}
+              placeholder="Search notes and amounts"
+              leftIcon={<Icon icon={Search01Icon} className="size-4" />}
             />
           </div>
 
@@ -230,7 +247,7 @@ export default function ExpensesPage() {
                 {CATEGORIES.map((option) => (
                   <ComboboxItem key={option.id} value={option.id} textValue={option.label}>
                     <span className="flex items-center gap-2">
-                      <span>{option.emoji}</span> {option.label}
+                      <Icon icon={option.icon} className="size-4" /> {option.label}
                     </span>
                   </ComboboxItem>
                 ))}
@@ -263,7 +280,7 @@ export default function ExpensesPage() {
             </DateRangePicker>
           ) : null}
 
-          {range || category !== "all" || query ? (
+          {filtered ? (
             <Button
               variant="ghost"
               onClick={() => {
@@ -272,7 +289,7 @@ export default function ExpensesPage() {
                 setRange(null);
               }}
             >
-              <X className="size-4" /> Clear
+              <Icon icon={Cancel01Icon} className="size-4" /> Clear
             </Button>
           ) : null}
         </div>
@@ -282,10 +299,10 @@ export default function ExpensesPage() {
         {rows.length === 0 && !loading ? (
           <EmptyState
             title="Nothing here"
-            hint="No expenses match those filters. Loosen them up, or log something new."
+            hint="No expenses match those filters. Loosen them, or log something new."
             action={
               <Button className="mt-2" onClick={() => openExpense()}>
-                <Plus className="size-4" /> Add expense
+                <Icon icon={PlusSignIcon} className="size-4" /> Add expense
               </Button>
             }
           />
@@ -312,7 +329,7 @@ export default function ExpensesPage() {
       </Panel>
 
       <p className="text-center text-[11px] text-muted-foreground">
-        Right-click a row handle for more actions. Click an expense name to edit it.
+        Select rows to delete in bulk. Click an expense name to edit it.
       </p>
     </div>
   );

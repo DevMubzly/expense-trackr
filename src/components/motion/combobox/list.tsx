@@ -1,6 +1,7 @@
 "use client";
 
-import { Check } from "lucide-react";
+import { Tick02Icon } from "@hugeicons/core-free-icons";
+import { Icon } from "@/components/huge-icon";
 import { motion } from "motion/react";
 import {
   type ReactNode,
@@ -67,7 +68,7 @@ export interface ComboboxLabelProps {
 export function ComboboxLabel({ children, className }: ComboboxLabelProps) {
   const groupId = useContext(ComboboxGroupContext);
   const labelClassName = cn(
-    "w-full px-2 py-1.5 text-[0.68rem] font-medium uppercase tracking-[0.12em] text-muted-foreground",
+ "w-full px-2 py-1.5 text-[0.68rem] font-medium text-muted-foreground",
     className,
   );
   return groupId ? (
@@ -182,7 +183,7 @@ export function ComboboxItem({
           context.reduce ? { duration: 0 } : { duration: 0.14, ease: EASE_OUT }
         }
         className="grid size-5 shrink-0 place-items-center text-foreground">
-        <Check className="size-4" />
+        <Icon icon={Tick02Icon} className="size-4" />
       </motion.span>
     </button>
   );

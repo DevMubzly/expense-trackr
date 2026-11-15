@@ -33,7 +33,7 @@ export function PanelHeader({
   return (
     <div className={cn("flex items-start justify-between gap-3 px-5 pt-4", className)}>
       <div>
-        <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">{title}</p>
+ <p className="text-[11px] text-muted-foreground">{title}</p>
         {hint ? <p className="mt-0.5 text-xs text-muted-foreground/80">{hint}</p> : null}
       </div>
       {action}

@@ -1,7 +1,8 @@
 "use client";
 // beui.dev/components/motion/context-menu
 
-import { Check } from "lucide-react";
+import { Tick02Icon } from "@hugeicons/core-free-icons";
+import { Icon } from "@/components/huge-icon";
 import {
   AnimatePresence,
   motion,
@@ -668,7 +669,7 @@ export function ContextMenuCheckboxItem({
               exit={{ opacity: 0, scale: context.reduce ? 1 : 0.75 }}
               transition={context.reduce ? { duration: 0.08 } : SPRING_PANEL}
             >
-              <Check aria-hidden="true" className="h-3.5 w-3.5" strokeWidth={2.4} />
+              <Icon icon={Tick02Icon} aria-hidden="true" className="h-3.5 w-3.5" strokeWidth={2.4} />
             </motion.span>
           ) : null}
         </AnimatePresence>
@@ -761,7 +762,7 @@ export function ContextMenuLabel({
   return (
     <div
       className={cn(
-        "px-2.5 pb-1 pt-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground",
+ "px-2.5 pb-1 pt-1.5 text-[10px] font-semibold text-muted-foreground",
         inset && "pl-8",
         className,
       )}

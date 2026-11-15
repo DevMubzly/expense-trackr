@@ -1,14 +1,15 @@
 "use client";
 
-import { CreditCard, FolderClosed } from "lucide-react";
+import { CreditCardIcon, Folder01Icon } from "@hugeicons/core-free-icons";
 import { ProjectFolder } from "@/components/motion/project-folder";
 import { CardFolder } from "@/components/motion/card-folder";
 import { Loader } from "@/components/motion/loader";
+import { Icon } from "@/components/huge-icon";
+import { Money } from "@/components/money";
 import { Panel, PanelHeader } from "@/components/panel";
 import { useApi } from "@/lib/use-api";
 import { categoryOf } from "@/lib/categories";
-import { formatUgx, formatUgxCompact, relativeDay, ymd } from "@/lib/format";
-import { useNow } from "@/lib/use-now";
+import { formatNumber } from "@/lib/format";
 import type { Expense } from "@/lib/types";
 
 type MonthSummary = {
@@ -22,13 +23,11 @@ type MonthSummary = {
 
 export default function MonthsPage() {
   const { data, loading } = useApi<MonthSummary[]>("/api/months");
-  const now = useNow();
-  const today = now ? ymd(now) : "";
 
   if (loading && !data) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
-        <Loader variant="dither" size={32} />
+        <Loader variant="dither" size={30} />
       </div>
     );
   }
@@ -37,24 +36,31 @@ export default function MonthsPage() {
   const [current, ...rest] = months;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <header>
-        <p className="text-[11px] uppercase tracking-[0.25em] text-muted-foreground">Archive</p>
-        <h1 className="mt-1 font-display text-5xl leading-none md:text-6xl">A folder for every month.</h1>
-        <p className="mt-3 max-w-2xl text-sm text-muted-foreground">
-          Open a month to see the receipts fanned out. The card sits in its sleeve on the right.
+        <p className="text-[13px] text-muted-foreground">Archive</p>
+        <h1 className="mt-2 font-display text-5xl leading-none md:text-[56px]">
+          A folder for every month.
+        </h1>
+        <p className="mt-4 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+          Open a month to fan out its biggest expenses. Your current month sits in the card
+          sleeve.
         </p>
       </header>
 
       <div className="grid grid-cols-12 gap-6">
-        <Panel className="col-span-12 p-5 lg:col-span-8">
-          <PanelHeader title="Months" hint="Hover to fan the biggest expenses, click to expand" className="p-0 pb-6" />
-          <div className="grid grid-cols-2 gap-x-4 gap-y-8 md:grid-cols-3 xl:grid-cols-4">
+        <Panel className="col-span-12 p-6 lg:col-span-8">
+          <PanelHeader
+            title="Months"
+            hint="Hover to preview, click to expand"
+            className="p-0 pb-8"
+          />
+          <div className="grid grid-cols-2 gap-x-4 gap-y-10 md:grid-cols-3 xl:grid-cols-4">
             {months.map((month) => (
               <div key={month.month} className="flex justify-center">
                 <ProjectFolder
                   title={month.label}
-                  description={`${formatUgxCompact(month.total)} across ${month.count} entries`}
+                  description={`${formatNumber(month.total)} UGX across ${month.count} entries`}
                   itemLabel="entry"
                   previews={month.top.map((expense) => {
                     const category = categoryOf(expense.category);
@@ -62,9 +68,11 @@ export default function MonthsPage() {
                       id: expense.id,
                       content: (
                         <div className="flex h-24 w-16 flex-col justify-between rounded-lg border border-border bg-card p-2 text-[9px] shadow-sm">
-                          <span className="text-base leading-none">{category.emoji}</span>
-                          <span className="tnum font-medium">{formatUgxCompact(expense.amountUgx)}</span>
-                          <span className="truncate text-muted-foreground">{expense.note || category.label}</span>
+                          <Icon icon={category.icon} className="size-4 text-muted-foreground" />
+                          <span className="tnum font-medium">{formatNumber(expense.amountUgx)}</span>
+                          <span className="truncate text-muted-foreground">
+                            {expense.note || category.label}
+                          </span>
                         </div>
                       ),
                     };
@@ -75,27 +83,29 @@ export default function MonthsPage() {
           </div>
         </Panel>
 
-        <div className="col-span-12 space-y-4 lg:col-span-4">
-          <Panel className="p-5">
+        <div className="col-span-12 space-y-5 lg:col-span-4">
+          <Panel className="p-6">
             <PanelHeader title="Current month" hint="Your spending card" className="p-0 pb-4" />
             {current ? (
               <div className="flex justify-center">
                 <CardFolder
                   title={current.label}
                   defaultOpen
-                  cardNumber={`UGX ${formatUgx(current.total).replace("UGX ", "")}`}
+                  cardNumber={`UGX ${formatNumber(current.total)}`}
                   expiry={current.shortLabel}
                   cvv={`${current.count} entries`}
                   actionLabel="Open month"
                   card={
-                    <div className="flex h-40 w-full flex-col justify-between rounded-2xl bg-gradient-to-br from-primary via-primary to-primary/70 p-4 text-primary-foreground shadow-xl">
+                    <div className="flex h-40 w-full flex-col justify-between rounded-2xl bg-primary p-4 text-primary-foreground">
                       <div className="flex items-start justify-between">
-                        <span className="font-display text-lg leading-none">xpense</span>
-                        <CreditCard className="size-5 opacity-80" />
+                        <span className="text-sm font-semibold tracking-[-0.02em]">Expense Trackr</span>
+                        <Icon icon={CreditCardIcon} className="size-5 opacity-70" />
                       </div>
                       <div>
-                        <p className="text-[9px] uppercase tracking-[0.2em] opacity-70">Spent in {current.shortLabel}</p>
-                        <p className="tnum font-display text-2xl leading-tight">{formatUgx(current.total)}</p>
+                        <p className="text-[10px] opacity-70">Spent in {current.shortLabel}</p>
+                        <p className="tnum mt-0.5 text-2xl font-semibold">
+                          {formatNumber(current.total)} UGX
+                        </p>
                       </div>
                     </div>
                   }
@@ -105,23 +115,23 @@ export default function MonthsPage() {
             ) : null}
           </Panel>
 
-          <Panel className="p-5">
-            <PanelHeader title="Biggest this month" hint="The ones that stung" className="p-0 pb-3" />
-            <ul className="space-y-2">
+          <Panel className="p-6">
+            <PanelHeader title="Biggest this month" hint="The ones that stung" className="p-0 pb-4" />
+            <ul className="space-y-3">
               {(current?.top ?? []).map((expense) => {
                 const category = categoryOf(expense.category);
                 return (
-                  <li key={expense.id} className="flex items-center gap-2.5 text-sm">
+                  <li key={expense.id} className="flex items-center gap-2.5 text-[13px]">
                     <span
-                      className="grid size-8 place-items-center rounded-lg text-sm"
-                      style={{ background: `color-mix(in oklab, ${category.color} 16%, transparent)` }}
+                      className="grid size-8 place-items-center rounded-lg"
+                      style={{ background: `color-mix(in oklab, ${category.color} 14%, transparent)` }}
                     >
-                      {category.emoji}
+                      <Icon icon={category.icon} className="size-4" />
                     </span>
                     <span className="min-w-0 flex-1 truncate text-muted-foreground">
                       {expense.note || category.label}
                     </span>
-                    <span className="tnum text-xs">{formatUgxCompact(expense.amountUgx)}</span>
+                    <Money value={expense.amountUgx} size="sm" />
                   </li>
                 );
               })}
@@ -130,27 +140,30 @@ export default function MonthsPage() {
         </div>
       </div>
 
-      <Panel className="p-5">
-        <PanelHeader title="Older months" hint={`${rest.length} earlier months in the archive`} className="p-0 pb-4" />
+      <Panel className="p-6">
+        <PanelHeader
+          title="Earlier months"
+          hint={`${rest.length} months in the archive`}
+          className="p-0 pb-4"
+        />
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           {rest.map((month) => (
-            <div key={month.month} className="flex items-center gap-3 rounded-xl border border-border/70 bg-card/40 p-3">
+            <div
+              key={month.month}
+              className="flex items-center gap-3 rounded-xl border border-border/70 p-3"
+            >
               <span className="grid size-9 place-items-center rounded-lg bg-muted text-muted-foreground">
-                <FolderClosed className="size-4" />
+                <Icon icon={Folder01Icon} className="size-4" />
               </span>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm">{month.label}</p>
+                <p className="truncate text-[13px]">{month.label}</p>
                 <p className="text-[11px] text-muted-foreground">{month.count} entries</p>
               </div>
-              <span className="tnum text-xs">{formatUgxCompact(month.total)}</span>
+              <Money value={month.total} size="sm" />
             </div>
           ))}
         </div>
       </Panel>
-
-      <p className="text-center text-[11px] text-muted-foreground">
-        {today ? `Archive as of ${relativeDay(today, today)}` : "Archive"} · folders open on click
-      </p>
     </div>
   );
 }

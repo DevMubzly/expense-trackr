@@ -1,4 +1,5 @@
-import { Loader2 } from "lucide-react";
+import { Loading03Icon } from "@hugeicons/core-free-icons";
+import { Icon } from "@/components/huge-icon";
 import { useMessages } from "@/lib/i18n";
 import { type SwapMessages, swapMessages } from "./messages";
 import type { Token } from "./types";
@@ -29,7 +30,7 @@ export function QuoteRow({
       <span className="text-muted-foreground">{t("rate")}</span>
       <span className="text-right tabular-nums text-foreground">
         {quoting ? (
-          <Loader2 className="ml-auto inline h-3 w-3 animate-spin text-muted-foreground" />
+          <Icon icon={Loading03Icon} className="ml-auto inline h-3 w-3 animate-spin text-muted-foreground" />
         ) : (
           <>
             1 {from.symbol} ≈ {formatAmount(rate)} {to.symbol}

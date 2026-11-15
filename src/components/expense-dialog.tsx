@@ -2,19 +2,19 @@
 
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
 import { gooeyToast } from "goey-toast";
-import { Check, Trash2 } from "lucide-react";
-import { CATEGORIES } from "@/lib/categories";
+import { Cancel01Icon, Delete02Icon, Tick02Icon } from "@hugeicons/core-free-icons";
+import { CATEGORIES, categoryOf } from "@/lib/categories";
 import { MorphingModal } from "@/components/motion/morphing-modal";
 import { WheelPicker } from "@/components/motion/wheel-picker";
 import { Input } from "@/components/motion/input";
+import { Icon } from "@/components/huge-icon";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/use-api";
-import { daysInMonth, formatNumber, parseYmd, ymd } from "@/lib/format";
+import { daysInMonth, formatAmount, formatNumber, parseYmd, ymd } from "@/lib/format";
 import type { Currency, Expense } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 type DialogContextValue = {
-  /** Bump to tell pages their data is stale. Append it to API URLs. */
   version: number;
   openExpense: (expense?: Expense) => void;
 };
@@ -101,11 +101,13 @@ function ExpenseForm({
       const payload = { amount: numeric, currency, category, note, spentOn };
       if (expense) {
         await api.patch(`/api/expenses/${expense.id}`, payload);
-        gooeyToast.success("Expense updated", { description: `${category} · ${spentOn}` });
+        gooeyToast.success("Expense updated", {
+          description: `${formatAmount(numeric, currency)}, ${categoryOf(category).label}`,
+        });
       } else {
         await api.post("/api/expenses", payload);
         gooeyToast.success("Expense logged", {
-          description: `${formatNumber(numeric)} ${currency} · ${category}`,
+          description: `${formatAmount(numeric, currency)}, ${categoryOf(category).label}`,
         });
       }
       onSaved();
@@ -134,9 +136,11 @@ function ExpenseForm({
     <div className="space-y-5">
       <div className="flex items-start justify-between">
         <div>
-          <h2 className="font-display text-2xl leading-none">{expense ? "Edit expense" : "Log an expense"}</h2>
-          <p className="mt-1 text-xs text-muted-foreground">
-            {expense ? "Straighten out the numbers" : "Takes about five seconds"}
+          <h2 className="text-lg font-semibold tracking-[-0.02em]">
+            {expense ? "Edit expense" : "Log an expense"}
+          </h2>
+          <p className="mt-0.5 text-[13px] text-muted-foreground">
+            {expense ? "Fix the details and save." : "Takes a few seconds."}
           </p>
         </div>
         <div className="flex rounded-full border border-border bg-muted p-0.5">
@@ -147,7 +151,7 @@ function ExpenseForm({
               onClick={() => setCurrency(code)}
               className={cn(
                 "rounded-full px-3 py-1 text-xs font-medium transition-colors",
-                currency === code ? "bg-background text-foreground shadow-sm" : "text-muted-foreground",
+                currency === code ? "bg-card text-foreground shadow-sm" : "text-muted-foreground",
               )}
             >
               {code}
@@ -157,7 +161,9 @@ function ExpenseForm({
       </div>
 
       <div className="flex items-baseline gap-2 border-b border-border pb-2">
-        <span className="text-sm font-medium text-muted-foreground">{currency === "UGX" ? "UGX" : "$"}</span>
+        <span className="text-sm font-medium text-muted-foreground">
+          {currency === "UGX" ? "UGX" : "USD"}
+        </span>
         <input
           autoFocus
           value={amount}
@@ -165,7 +171,7 @@ function ExpenseForm({
           onKeyDown={(event) => event.key === "Enter" && submit()}
           inputMode="decimal"
           placeholder="0"
-          className="tnum w-full bg-transparent font-display text-5xl tracking-tight outline-none placeholder:text-muted-foreground/40"
+          className="tnum w-full bg-transparent text-5xl font-semibold tracking-[-0.03em] outline-none placeholder:text-muted-foreground/35"
           aria-label="Amount"
         />
       </div>
@@ -176,7 +182,7 @@ function ExpenseForm({
             key={preset}
             type="button"
             onClick={() => setAmount(String(preset))}
-            className="rounded-full border border-border px-3 py-1 text-xs text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground"
+            className="rounded-full border border-border px-3 py-1 text-xs text-muted-foreground transition-colors hover:border-primary/30 hover:text-foreground"
           >
             {formatNumber(preset)}
           </button>
@@ -184,7 +190,7 @@ function ExpenseForm({
       </div>
 
       <div>
-        <p className="mb-2 text-[11px] uppercase tracking-widest text-muted-foreground">Category</p>
+        <p className="mb-2 text-[13px] text-muted-foreground">Category</p>
         <div className="grid grid-cols-4 gap-2">
           {CATEGORIES.map((option) => {
             const selected = option.id === category;
@@ -196,12 +202,15 @@ function ExpenseForm({
                 className={cn(
                   "flex items-center gap-2 rounded-xl border px-2.5 py-2 text-left text-xs transition-colors",
                   selected
-                    ? "border-primary/50 bg-primary/10 text-foreground"
-                    : "border-border text-muted-foreground hover:border-border/80 hover:text-foreground",
+                    ? "border-primary/40 bg-primary/[0.06] text-foreground"
+                    : "border-border text-muted-foreground hover:text-foreground",
                 )}
-                style={selected ? { borderColor: option.color } : undefined}
               >
-                <span className="text-base leading-none">{option.emoji}</span>
+                <Icon
+                  icon={option.icon}
+                  className="size-4"
+                  strokeWidth={selected ? 1.9 : 1.6}
+                />
                 <span className="truncate">{option.label}</span>
               </button>
             );
@@ -210,7 +219,7 @@ function ExpenseForm({
       </div>
 
       <div>
-        <p className="mb-1 text-[11px] uppercase tracking-widest text-muted-foreground">When</p>
+        <p className="mb-1 text-[13px] text-muted-foreground">When</p>
         <div className="flex items-center gap-1">
           <WheelPicker
             options={Array.from({ length: maxDay }, (_, index) => String(index + 1))}
@@ -247,15 +256,15 @@ function ExpenseForm({
       <div className="flex items-center justify-between gap-2 pt-1">
         {expense ? (
           <Button variant="ghost" onClick={remove} disabled={saving} className="text-destructive">
-            <Trash2 className="size-4" /> Delete
+            <Icon icon={Delete02Icon} className="size-4" /> Delete
           </Button>
         ) : (
           <Button variant="ghost" onClick={onCancel} disabled={saving}>
-            Cancel
+            <Icon icon={Cancel01Icon} className="size-4" /> Cancel
           </Button>
         )}
         <Button onClick={submit} disabled={!valid || saving} className="min-w-32">
-          <Check className="size-4" />
+          <Icon icon={Tick02Icon} className="size-4" />
           {expense ? "Save changes" : "Log it"}
         </Button>
       </div>

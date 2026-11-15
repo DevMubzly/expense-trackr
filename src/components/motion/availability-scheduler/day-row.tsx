@@ -1,6 +1,7 @@
 "use client";
 
-import { Plus, X } from "lucide-react";
+import { PlusSignIcon, Cancel01Icon } from "@hugeicons/core-free-icons";
+import { Icon } from "@/components/huge-icon";
 import { AnimatePresence, motion } from "motion/react";
 import { useRef, useState } from "react";
 import { Switch } from "@/components/motion/switch";
@@ -129,7 +130,7 @@ export function DayRow({
           reduce={reduce}
           onClick={addRange}
         >
-          <Plus className="h-4 w-4" />
+          <Icon icon={PlusSignIcon} className="h-4 w-4" />
         </IconButton>
       </Tooltip>
       <CopyMenu
@@ -219,7 +220,7 @@ export function DayRow({
                     reduce={reduce}
                     onClick={() => removeRange(r.id)}
                   >
-                    <X className="h-4 w-4" />
+                    <Icon icon={Cancel01Icon} className="h-4 w-4" />
                   </IconButton>
                 </Tooltip>
               </motion.div>

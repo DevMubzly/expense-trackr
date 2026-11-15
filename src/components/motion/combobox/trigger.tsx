@@ -1,6 +1,7 @@
 "use client";
 
-import { ChevronsUpDown, Search } from "lucide-react";
+import { UnfoldMoreIcon, Search01Icon } from "@hugeicons/core-free-icons";
+import { Icon } from "@/components/huge-icon";
 import type {
   InputHTMLAttributes,
   KeyboardEvent as ReactKeyboardEvent,
@@ -38,7 +39,7 @@ export function ComboboxTrigger({ children, className }: ComboboxTriggerProps) {
     >
       <span className="min-w-0 flex-1 text-left">{children}</span>
       <span aria-hidden className="shrink-0 text-muted-foreground">
-        <ChevronsUpDown className="size-4" />
+        <Icon icon={UnfoldMoreIcon} className="size-4" />
       </span>
     </div>
   );
@@ -144,7 +145,7 @@ export function ComboboxInput({
         wrapperClassName,
       )}
     >
-      <Search aria-hidden className="size-4 shrink-0 text-muted-foreground" />
+      <Icon icon={Search01Icon} aria-hidden className="size-4 shrink-0 text-muted-foreground" />
       <input
         {...props}
         ref={mergeRefs(ref, context.inputRef)}

@@ -1,7 +1,8 @@
 "use client";
 // beui.dev/components/blocks/swap
 
-import { Settings } from "lucide-react";
+import { Settings01Icon } from "@hugeicons/core-free-icons";
+import { Icon } from "@/components/huge-icon";
 import { useReducedMotion } from "motion/react";
 import { useEffect, useMemo, useState } from "react";
 import { useMessages } from "@/lib/i18n";
@@ -111,7 +112,7 @@ export function MultiChainSwap({
           aria-label={t("settings")}
           className="inline-flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition-transform hover:bg-muted/60 hover:text-foreground active:scale-[0.97]"
         >
-          <Settings className="h-4 w-4" />
+          <Icon icon={Settings01Icon} className="h-4 w-4" />
         </button>
       </div>
 

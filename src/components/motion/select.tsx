@@ -1,6 +1,7 @@
 "use client";
 
-import { Check, ChevronDown } from "lucide-react";
+import { Tick02Icon, ArrowDown01Icon } from "@hugeicons/core-free-icons";
+import { Icon } from "@/components/huge-icon";
 import {
   animate,
   type MotionValue,
@@ -317,7 +318,7 @@ export function SelectTrigger({ className, children }: SelectTriggerProps) {
         style={{ rotate }}
         className="text-muted-foreground"
       >
-        <ChevronDown className="h-4 w-4" />
+        <Icon icon={ArrowDown01Icon} className="h-4 w-4" />
       </motion.span>
     </motion.button>
   );
@@ -519,7 +520,7 @@ export function SelectItem({
         )}
       >
         {children}
-        {selected ? <Check className="h-3.5 w-3.5 shrink-0" /> : null}
+        {selected ? <Icon icon={Tick02Icon} className="h-3.5 w-3.5 shrink-0" /> : null}
       </button>
     </motion.div>
   );

@@ -2,14 +2,15 @@
 // beui.dev/components/motion/animated-badge
 
 import {
-  AlertTriangle,
-  Check,
-  Circle,
-  Info,
-  LoaderCircle,
-  X,
-  type LucideIcon,
-} from "lucide-react";
+  Alert02Icon,
+  Cancel01Icon,
+  CircleIcon,
+  InformationCircleIcon,
+  LoaderCircleIcon,
+  Tick02Icon,
+} from "@hugeicons/core-free-icons";
+import type { IconSvgElement } from "@hugeicons/react";
+import { Icon } from "@/components/huge-icon";
 import {
   AnimatePresence,
   motion,
@@ -63,13 +64,13 @@ const ICON_CLASS: Record<AnimatedBadgeSize, string> = {
   md: "h-3.5 w-3.5",
 };
 
-const ICONS: Record<AnimatedBadgeStatus, LucideIcon> = {
-  neutral: Circle,
-  info: Info,
-  success: Check,
-  warning: AlertTriangle,
-  danger: X,
-  loading: LoaderCircle,
+const ICONS: Record<AnimatedBadgeStatus, IconSvgElement> = {
+  neutral: CircleIcon,
+  info: InformationCircleIcon,
+  success: Tick02Icon,
+  warning: Alert02Icon,
+  danger: Cancel01Icon,
+  loading: LoaderCircleIcon,
 };
 
 // Status swaps roll like the action swap primitives: the leaving glyphs
@@ -132,7 +133,7 @@ export function AnimatedBadge({
   // Reduced motion skips the layout projection altogether: a zero-duration
   // layout animation still paints one transformed frame.
   const slotLayout = reduce ? false : ("position" as const);
-  const Icon = ICONS[status];
+  const BadgeIcon = ICONS[status];
   // `0` is a real label; booleans and "" from conditional callers are not and
   // must not reserve the gap and an empty slot.
   const hasLabel = children != null && typeof children !== "boolean" && children !== "";
@@ -193,10 +194,10 @@ export function AnimatedBadge({
                   transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
                   className="inline-flex"
                 >
-                  <Icon className={ICON_CLASS[size]} />
+                  <Icon icon={BadgeIcon} className={ICON_CLASS[size]} />
                 </motion.span>
               ) : (
-                (icon ?? <Icon className={ICON_CLASS[size]} />)
+                (icon ?? <Icon icon={BadgeIcon} className={ICON_CLASS[size]} />)
               )}
             </motion.span>
           </AnimatePresence>

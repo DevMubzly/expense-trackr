@@ -1,7 +1,8 @@
 "use client";
 // beui.dev/components/blocks/project-folder
 
-import { X } from "lucide-react";
+import { Cancel01Icon } from "@hugeicons/core-free-icons";
+import { Icon } from "@/components/huge-icon";
 import {
   AnimatePresence,
   LayoutGroup,
@@ -291,7 +292,7 @@ export function ProjectFolder({
                   aria-label={t("close", { title })}
                   className="flex size-10 items-center justify-center rounded-full border border-foreground/10 bg-background/50 text-muted-foreground backdrop-blur-xl transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
-                  <X className="size-4" aria-hidden="true" />
+                  <Icon icon={Cancel01Icon} className="size-4" aria-hidden="true" />
                 </button>
               </motion.div>
             ) : null}

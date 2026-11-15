@@ -1,7 +1,8 @@
 "use client";
 // beui.dev/components/blocks/morphing-tabs
 
-import { X } from "lucide-react";
+import { Cancel01Icon } from "@hugeicons/core-free-icons";
+import { Icon } from "@/components/huge-icon";
 import {
   AnimatePresence,
   animate as animateValue,
@@ -907,7 +908,7 @@ export function MorphingTabs({
                         classNames?.close,
                       )}
                     >
-                      <X aria-hidden className="size-3.5 stroke-[1.5]" />
+                      <Icon icon={Cancel01Icon} aria-hidden className="size-3.5 stroke-[1.5]" />
                     </button>
                   ) : null}
                 </div>
