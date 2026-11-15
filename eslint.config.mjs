@@ -12,6 +12,10 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Vendored shadcn-registry source (beUI + bklit). Copy-paste code we do not
+    // edit, so its hooks rules are not ours to police.
+    "src/components/motion/**",
+    "src/components/charts/**",
   ]),
 ]);
 
