@@ -55,13 +55,13 @@ export default function MonthsPage() {
             hint="Hover to preview, click to expand"
             className="p-0 pb-8"
           />
-          <div className="grid grid-cols-2 gap-x-4 gap-y-10 md:grid-cols-3 xl:grid-cols-4">
+          <div className="grid grid-cols-2 gap-x-4 gap-y-10 md:grid-cols-3">
             {months.map((month) => (
               <div key={month.month} className="flex justify-center">
                 <ProjectFolder
                   title={month.label}
-                  description={`${formatNumber(month.total)} UGX across ${month.count} entries`}
-                  itemLabel="entry"
+                  description={`${formatNumber(month.total)} UGX`}
+                  labels={{ countOne: "{count} entry", countOther: "{count} entries" }}
                   previews={month.top.map((expense) => {
                     const category = categoryOf(expense.category);
                     return {
@@ -96,7 +96,7 @@ export default function MonthsPage() {
                   cvv={`${current.count} entries`}
                   actionLabel="Open month"
                   card={
-                    <div className="flex h-40 w-full flex-col justify-between rounded-2xl bg-primary p-4 text-primary-foreground">
+                    <div className="flex h-40 w-full flex-col justify-between rounded-2xl bg-gradient-to-br from-primary via-primary to-primary/75 p-4 text-primary-foreground shadow-xl">
                       <div className="flex items-start justify-between">
                         <span className="text-sm font-semibold tracking-[-0.02em]">Expense Trackr</span>
                         <Icon icon={CreditCardIcon} className="size-5 opacity-70" />
