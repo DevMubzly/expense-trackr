@@ -10,16 +10,7 @@ import { Panel, PanelHeader } from "@/components/panel";
 import { useApi } from "@/lib/use-api";
 import { categoryOf } from "@/lib/categories";
 import { formatNumber } from "@/lib/format";
-import type { Expense } from "@/lib/types";
-
-type MonthSummary = {
-  month: string;
-  label: string;
-  shortLabel: string;
-  total: number;
-  count: number;
-  top: Expense[];
-};
+import type { MonthSummary } from "@/lib/types";
 
 export default function MonthsPage() {
   const { data, loading } = useApi<MonthSummary[]>("/api/months");
@@ -111,6 +102,18 @@ export default function MonthsPage() {
                   }
                   labels={{ showDetails: "Show month details", hideDetails: "Hide month details" }}
                 />
+              </div>
+            ) : null}
+            {current ? (
+              <div className="mt-5 grid grid-cols-2 gap-3 border-t border-border/70 pt-4">
+                <div>
+                  <p className="text-[11px] text-muted-foreground">Income</p>
+                  <Money value={current.income} size="sm" className="mt-1" />
+                </div>
+                <div className="text-right">
+                  <p className="text-[11px] text-muted-foreground">Net</p>
+                  <Money value={current.net} size="sm" className="mt-1" />
+                </div>
               </div>
             ) : null}
           </Panel>

@@ -2,24 +2,54 @@
 
 import { useState } from "react";
 import { gooeyToast } from "goey-toast";
-import { PaintBoardIcon, RepeatIcon, Tick02Icon, Wallet01Icon } from "@hugeicons/core-free-icons";
+import {
+  Delete02Icon,
+  Download01Icon,
+  PaintBoardIcon,
+  PencilEdit01Icon,
+  PlusSignIcon,
+  RepeatIcon,
+  Tick02Icon,
+  Upload01Icon,
+  UserAdd01Icon,
+  UserGroupIcon,
+  Wallet01Icon,
+} from "@hugeicons/core-free-icons";
+import { AccountSelect, accountIcon } from "@/components/account-select";
 import { InlineSlider } from "@/components/motion/range-slider-inline";
 import { AvailabilityScheduler } from "@/components/motion/availability-scheduler";
 import type { WeekAvailability } from "@/components/motion/availability-scheduler/types";
 import { Input } from "@/components/motion/input";
 import { ThemeToggle } from "@/components/motion/theme-toggle";
+import { WheelPicker } from "@/components/motion/wheel-picker";
+import { MorphingModal } from "@/components/motion/morphing-modal";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/huge-icon";
 import { Money } from "@/components/money";
 import { Panel, PanelHeader } from "@/components/panel";
 import { Loader } from "@/components/motion/loader";
 import { useApi, api } from "@/lib/use-api";
-import { CATEGORIES } from "@/lib/categories";
+import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from "@/lib/categories";
 import { formatNumber } from "@/lib/format";
-import type { Settings } from "@/lib/types";
+import { useTransactionDialog } from "@/components/expense-dialog";
+import type {
+  Account,
+  AccountBalance,
+  AccountType,
+  HouseholdMember,
+  Settings,
+} from "@/lib/types";
+import { cn } from "@/lib/utils";
 
 export default function SettingsPage() {
+  const { version, bumpVersion } = useTransactionDialog();
   const { data, loading, refresh } = useApi<Settings>("/api/settings");
+  const { data: accountsData, refresh: refreshAccounts } = useApi<AccountBalance[]>(
+    `/api/accounts?v=${version}`,
+  );
+  const { data: membersData, refresh: refreshMembers } = useApi<HouseholdMember[]>(
+    `/api/household?v=${version}`,
+  );
 
   if (loading && !data) {
     return (
@@ -30,16 +60,49 @@ export default function SettingsPage() {
   }
   if (!data) return null;
 
-  return <SettingsForm settings={data} onSaved={refresh} />;
+  return (
+    <SettingsForm
+      settings={data}
+      accounts={accountsData ?? []}
+      members={membersData ?? []}
+      onSaved={refresh}
+      refreshAccounts={refreshAccounts}
+      refreshMembers={refreshMembers}
+      bumpVersion={bumpVersion}
+    />
+  );
 }
 
-function SettingsForm({ settings, onSaved }: { settings: Settings; onSaved: () => void }) {
+function SettingsForm({
+  settings,
+  accounts,
+  members,
+  onSaved,
+  refreshAccounts,
+  refreshMembers,
+  bumpVersion,
+}: {
+  settings: Settings;
+  accounts: AccountBalance[];
+  members: HouseholdMember[];
+  onSaved: () => void;
+  refreshAccounts: () => void;
+  refreshMembers: () => void;
+  bumpVersion: () => void;
+}) {
   const [budget, setBudget] = useState(settings.monthlyBudget);
   const [rate, setRate] = useState(String(settings.usdRate));
+  const [payday, setPayday] = useState(settings.payday);
+  const [buffer, setBuffer] = useState(settings.forecastBufferUgx);
+  const [defaultAccountId, setDefaultAccountId] = useState(settings.defaultAccountId);
   const [weekPlan, setWeekPlan] = useState<WeekAvailability>(
     settings.weekPlan as unknown as WeekAvailability,
   );
   const [saving, setSaving] = useState(false);
+  const [accountModalOpen, setAccountModalOpen] = useState(false);
+  const [editingAccount, setEditingAccount] = useState<Account | null>(null);
+  const [inviteName, setInviteName] = useState("");
+  const [inviteEmail, setInviteEmail] = useState("");
 
   async function save() {
     setSaving(true);
@@ -47,14 +110,103 @@ function SettingsForm({ settings, onSaved }: { settings: Settings; onSaved: () =
       await api.patch("/api/settings", {
         monthlyBudget: budget,
         usdRate: Number(rate) || settings.usdRate,
+        payday,
+        forecastBufferUgx: buffer,
+        defaultAccountId,
         weekPlan,
       });
       gooeyToast.success("Settings saved");
       onSaved();
+      bumpVersion();
     } catch (error) {
       gooeyToast.error("Could not save", { description: (error as Error).message });
     } finally {
       setSaving(false);
+    }
+  }
+
+  function openAccount(account: Account | null) {
+    setEditingAccount(account);
+    setAccountModalOpen(true);
+  }
+
+  function closeAccount() {
+    setAccountModalOpen(false);
+    setEditingAccount(null);
+  }
+
+  async function archiveAccount(account: Account) {
+    if (account.id === settings.defaultAccountId) {
+      gooeyToast.error("Choose another default account first");
+      return;
+    }
+    await api.delete(`/api/accounts/${account.id}`);
+    gooeyToast.success(`${account.name} archived`);
+    refreshAccounts();
+    bumpVersion();
+  }
+
+  async function addMember() {
+    if (!inviteName.trim() || !inviteEmail.trim()) return;
+    try {
+      await api.post("/api/household", {
+        name: inviteName.trim(),
+        email: inviteEmail.trim(),
+        role: "member",
+      });
+      gooeyToast.success("Household member invited");
+      setInviteName("");
+      setInviteEmail("");
+      refreshMembers();
+      bumpVersion();
+    } catch (error) {
+      gooeyToast.error("Could not add member", {
+        description: (error as Error).message,
+      });
+    }
+  }
+
+  async function removeMember(member: HouseholdMember) {
+    try {
+      await api.delete(`/api/household/${member.id}`);
+      gooeyToast.success(`${member.name} removed`);
+      refreshMembers();
+      bumpVersion();
+    } catch (error) {
+      gooeyToast.error("Could not remove member", {
+        description: (error as Error).message,
+      });
+    }
+  }
+
+  async function downloadBackup(format: "json" | "csv") {
+    const response = await fetch(`/api/export?format=${format}`);
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download =
+      format === "csv"
+        ? "expense-trackr-transactions.csv"
+        : "expense-trackr-backup.json";
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function importBackup(file: File | undefined) {
+    if (!file) return;
+    try {
+      const data = JSON.parse(await file.text());
+      await api.post("/api/import", data);
+      gooeyToast.success("Backup imported");
+      onSaved();
+      refreshAccounts();
+      refreshMembers();
+      bumpVersion();
+    } catch (error) {
+      gooeyToast.error("Could not import backup", {
+        description: (error as Error).message,
+      });
     }
   }
 
@@ -64,7 +216,7 @@ function SettingsForm({ settings, onSaved }: { settings: Settings; onSaved: () =
         <p className="text-[13px] text-muted-foreground">Settings</p>
         <h1 className="mt-2 font-display text-5xl leading-none md:text-[56px]">Make it yours.</h1>
         <p className="mt-4 max-w-xl text-sm leading-relaxed text-muted-foreground">
-          The budget, the rate, the look. Everything here is stored through the mock API.
+          The budget, the accounts, the forecast. Everything here is stored through the mock API.
         </p>
       </header>
 
@@ -131,8 +283,27 @@ function SettingsForm({ settings, onSaved }: { settings: Settings; onSaved: () =
             action={<Icon icon={PaintBoardIcon} className="size-4 text-muted-foreground" />}
             className="p-0 pb-4"
           />
+          <p className="mb-2 text-[11px] font-medium text-muted-foreground">Expenses</p>
           <ul className="space-y-2">
-            {CATEGORIES.map((category) => (
+            {EXPENSE_CATEGORIES.map((category) => (
+              <li
+                key={category.id}
+                className="flex items-center gap-3 rounded-xl border border-border/70 px-3 py-2"
+              >
+                <span
+                  className="grid size-8 place-items-center rounded-lg"
+                  style={{ background: `color-mix(in oklab, ${category.color} 14%, transparent)` }}
+                >
+                  <Icon icon={category.icon} className="size-4" />
+                </span>
+                <span className="flex-1 text-[13px]">{category.label}</span>
+                <span className="size-2.5 rounded-full" style={{ background: category.color }} />
+              </li>
+            ))}
+          </ul>
+          <p className="mt-5 mb-2 text-[11px] font-medium text-muted-foreground">Income</p>
+          <ul className="space-y-2">
+            {INCOME_CATEGORIES.map((category) => (
               <li
                 key={category.id}
                 className="flex items-center gap-3 rounded-xl border border-border/70 px-3 py-2"
@@ -152,6 +323,196 @@ function SettingsForm({ settings, onSaved }: { settings: Settings; onSaved: () =
 
         <Panel className="col-span-12 p-6">
           <PanelHeader
+            title="Accounts"
+            hint="Cash, bank and mobile money wallets"
+            action={
+              <Button variant="outline" size="sm" onClick={() => openAccount(null)}>
+                <Icon icon={PlusSignIcon} className="size-4" /> Add account
+              </Button>
+            }
+            className="p-0 pb-4"
+          />
+          <ul className="grid gap-2 md:grid-cols-2">
+            {accounts.map((account) => (
+              <li
+                key={account.id}
+                className="flex items-center gap-3 rounded-xl border border-border/70 px-3 py-2.5"
+              >
+                <span
+                  className="grid size-9 place-items-center rounded-lg"
+                  style={{ background: `color-mix(in oklab, ${account.color} 14%, transparent)` }}
+                >
+                  <Icon icon={accountIcon(account.type)} className="size-4" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[13px]">{account.name}</p>
+                  <p className="text-[10px] text-muted-foreground">
+                    {account.provider ?? account.type}
+                  </p>
+                </div>
+                <Money value={account.balanceUgx} size="sm" />
+                <button
+                  type="button"
+                  onClick={() => openAccount(account)}
+                  aria-label={`Edit ${account.name}`}
+                  className="grid size-8 place-items-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"
+                >
+                  <Icon icon={PencilEdit01Icon} className="size-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => archiveAccount(account)}
+                  aria-label={`Archive ${account.name}`}
+                  className="grid size-8 place-items-center rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                >
+                  <Icon icon={Delete02Icon} className="size-3.5" />
+                </button>
+              </li>
+            ))}
+          </ul>
+        </Panel>
+
+        <Panel className="col-span-12 p-6">
+          <PanelHeader
+            title="Payday & forecast"
+            hint="Safe-to-spend runs to the next payday"
+            className="p-0 pb-5"
+          />
+          <div className="grid gap-6 md:grid-cols-3">
+            <div>
+              <p className="mb-2 text-[13px] text-muted-foreground">Payday day</p>
+              <WheelPicker
+                options={Array.from({ length: 31 }, (_, index) => String(index + 1))}
+                value={String(payday)}
+                onValueChange={(value) => setPayday(Number(value))}
+                visibleCount={3}
+                itemHeight={34}
+                className="w-28"
+                aria-label="Payday"
+              />
+            </div>
+            <div className="md:col-span-2">
+              <InlineSlider
+                label="Buffer"
+                value={buffer}
+                onValueChange={setBuffer}
+                min={0}
+                max={1_000_000}
+                step={25_000}
+                format={(value) => `${formatNumber(value)} UGX`}
+                aria-label="Forecast buffer"
+              />
+              <div className="mt-5">
+                <AccountSelect
+                  label="Default account"
+                  value={defaultAccountId}
+                  accounts={accounts}
+                  onValueChange={setDefaultAccountId}
+                />
+              </div>
+            </div>
+          </div>
+          <div className="mt-6 flex justify-end border-t border-border/70 pt-5">
+            <Button onClick={save} disabled={saving}>
+              <Icon icon={Tick02Icon} className="size-4" /> {saving ? "Saving" : "Save forecast"}
+            </Button>
+          </div>
+        </Panel>
+
+        <Panel className="col-span-12 p-6">
+          <PanelHeader
+            title="Household"
+            hint="Shared budgets and visibility — mock membership"
+            action={<Icon icon={UserGroupIcon} className="size-4 text-muted-foreground" />}
+            className="p-0 pb-4"
+          />
+          <ul className="grid gap-2 md:grid-cols-2">
+            {members.map((member) => (
+              <li
+                key={member.id}
+                className="flex items-center gap-3 rounded-xl border border-border/70 px-3 py-2.5"
+              >
+                <span className="grid size-9 place-items-center rounded-full bg-muted text-[12px] font-semibold text-muted-foreground">
+                  {member.name.charAt(0).toUpperCase()}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[13px]">{member.name}</p>
+                  <p className="truncate text-[10px] text-muted-foreground">{member.email}</p>
+                </div>
+                <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
+                  {member.role} · {member.status}
+                </span>
+                {member.role !== "owner" ? (
+                  <button
+                    type="button"
+                    onClick={() => removeMember(member)}
+                    aria-label={`Remove ${member.name}`}
+                    className="grid size-8 place-items-center rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                  >
+                    <Icon icon={Delete02Icon} className="size-3.5" />
+                  </button>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+          <div className="mt-5 grid gap-2 border-t border-border/70 pt-5 sm:grid-cols-[1fr_1fr_auto]">
+            <Input
+              label="Name"
+              value={inviteName}
+              onChange={setInviteName}
+              placeholder="Aisha"
+            />
+            <Input
+              label="Email"
+              value={inviteEmail}
+              onChange={setInviteEmail}
+              placeholder="aisha@example.com"
+            />
+            <div className="flex items-end">
+              <Button
+                variant="outline"
+                onClick={addMember}
+                disabled={!inviteName.trim() || !inviteEmail.trim()}
+              >
+                <Icon icon={UserAdd01Icon} className="size-4" /> Invite
+              </Button>
+            </div>
+          </div>
+        </Panel>
+
+        <Panel className="col-span-12 p-6">
+          <PanelHeader
+            title="Data & backup"
+            hint="Export a copy or restore a backup file"
+            className="p-0 pb-4"
+          />
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="outline" onClick={() => downloadBackup("json")}>
+              <Icon icon={Download01Icon} className="size-4" /> Export JSON
+            </Button>
+            <Button variant="outline" onClick={() => downloadBackup("csv")}>
+              <Icon icon={Download01Icon} className="size-4" /> Export CSV
+            </Button>
+            <label className="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-lg border border-border px-2.5 text-sm font-medium transition-colors hover:bg-muted">
+              <Icon icon={Upload01Icon} className="size-4" /> Import backup
+              <input
+                type="file"
+                accept="application/json"
+                className="sr-only"
+                onChange={(event) => {
+                  importBackup(event.target.files?.[0]);
+                  event.target.value = "";
+                }}
+              />
+            </label>
+          </div>
+          <p className="mt-3 text-[11px] text-muted-foreground">
+            The mock store is in memory. Export a backup before restarting the dev server.
+          </p>
+        </Panel>
+
+        <Panel className="col-span-12 p-6">
+          <PanelHeader
             title="Spending windows"
             hint="When money usually leaves your account"
             action={<Icon icon={RepeatIcon} className="size-4 text-muted-foreground" />}
@@ -164,6 +525,140 @@ function SettingsForm({ settings, onSaved }: { settings: Settings; onSaved: () =
             </Button>
           </div>
         </Panel>
+      </div>
+
+      <MorphingModal
+        viewId={accountModalOpen ? "account" : null}
+        onClose={closeAccount}
+        placement="center"
+        className="max-w-md"
+        ariaLabel={editingAccount ? "Edit account" : "Add account"}
+      >
+        {accountModalOpen ? (
+          <AccountForm
+            key={editingAccount?.id ?? "new-account"}
+            account={editingAccount}
+            onSaved={() => {
+              refreshAccounts();
+              bumpVersion();
+              closeAccount();
+            }}
+            onCancel={closeAccount}
+          />
+        ) : null}
+      </MorphingModal>
+    </div>
+  );
+}
+
+const ACCOUNT_TYPES: { value: AccountType; label: string }[] = [
+  { value: "cash", label: "Cash" },
+  { value: "bank", label: "Bank" },
+  { value: "momo", label: "Mobile Money" },
+];
+
+function AccountForm({
+  account,
+  onSaved,
+  onCancel,
+}: {
+  account: Account | null;
+  onSaved: () => void;
+  onCancel: () => void;
+}) {
+  const [name, setName] = useState(account?.name ?? "");
+  const [type, setType] = useState<AccountType>(account?.type ?? "cash");
+  const [provider, setProvider] = useState(account?.provider ?? "");
+  const [openingBalance, setOpeningBalance] = useState(
+    account ? String(account.openingBalanceUgx) : "0",
+  );
+  const [saving, setSaving] = useState(false);
+
+  async function submit() {
+    if (!name.trim() || saving) return;
+    setSaving(true);
+    try {
+      const payload = {
+        name: name.trim(),
+        type,
+        provider: type === "momo" ? provider.trim() || undefined : undefined,
+        openingBalanceUgx: Number(openingBalance) || 0,
+      };
+      if (account) {
+        await api.patch(`/api/accounts/${account.id}`, payload);
+        gooeyToast.success("Account updated");
+      } else {
+        await api.post("/api/accounts", payload);
+        gooeyToast.success("Account added");
+      }
+      onSaved();
+    } catch (error) {
+      gooeyToast.error("Could not save account", {
+        description: (error as Error).message,
+      });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <h2 className="text-lg font-semibold tracking-[-0.02em]">
+          {account ? "Edit account" : "Add account"}
+        </h2>
+        <p className="mt-0.5 text-[13px] text-muted-foreground">
+          Cash, bank, or a Mobile Money wallet.
+        </p>
+      </div>
+
+      <Input label="Name" value={name} onChange={setName} placeholder="MTN MoMo" />
+
+      <div>
+        <p className="mb-2 text-[13px] text-muted-foreground">Type</p>
+        <div className="flex rounded-full border border-border bg-muted p-0.5">
+          {ACCOUNT_TYPES.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => setType(option.value)}
+              className={cn(
+                "flex-1 rounded-full px-2 py-1.5 text-[11px] font-medium transition-colors",
+                type === option.value
+                  ? "bg-card text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {type === "momo" ? (
+        <Input
+          label="Provider"
+          value={provider}
+          onChange={setProvider}
+          placeholder="MTN or Airtel"
+        />
+      ) : null}
+
+      <Input
+        label="Opening balance (UGX)"
+        value={openingBalance}
+        onChange={(value) => setOpeningBalance(value.replace(/[^0-9]/g, ""))}
+        placeholder="0"
+      />
+
+      <div className="flex justify-end gap-2 pt-1">
+        <Button variant="ghost" onClick={onCancel} disabled={saving}>
+          Cancel
+        </Button>
+        <Button onClick={submit} disabled={!name.trim() || saving}>
+          <Icon icon={Tick02Icon} className="size-4" />
+          {account ? "Save account" : "Add account"}
+        </Button>
       </div>
     </div>
   );

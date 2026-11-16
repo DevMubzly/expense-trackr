@@ -2,19 +2,20 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeftRightIcon,
   ChartLineData01Icon,
-  CommandIcon,
   Folder01Icon,
   Home01Icon,
+  Money01Icon,
   PieChartIcon,
   PlusSignIcon,
   ReceiptTextIcon,
   Search01Icon,
   Settings01Icon,
-  Wallet02Icon,
+  SparklesIcon,
+  Target02Icon,
 } from "@hugeicons/core-free-icons";
 import type { IconSvgElement } from "@hugeicons/react";
 import { Dock, DockItem, DockSeparator } from "@/components/motion/dock";
@@ -22,18 +23,22 @@ import { ThemeToggle } from "@/components/motion/theme-toggle";
 import { DynamicIsland, DynamicIslandView } from "@/components/motion/dynamic-island";
 import { CommandPalette, type CommandItem } from "@/components/motion/command-palette";
 import { BloomMenu } from "@/components/motion/bloom-menu";
-import { useExpenseDialog } from "@/components/expense-dialog";
+import { useTransactionDialog } from "@/components/expense-dialog";
 import { Icon } from "@/components/huge-icon";
-import { Money } from "@/components/money";
 import { useApi } from "@/lib/use-api";
 import { formatNumber } from "@/lib/format";
 import type { Stats } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
+const FRAME =
+  "mx-auto w-full max-w-[1200px] px-6 sm:px-10 md:px-14 lg:px-16 xl:px-24";
+
 const NAV = [
   { href: "/", label: "Dashboard", icon: Home01Icon },
-  { href: "/expenses", label: "Expenses", icon: ReceiptTextIcon },
+  { href: "/expenses", label: "Ledger", icon: ReceiptTextIcon },
   { href: "/stats", label: "Insights", icon: ChartLineData01Icon },
+  { href: "/plan", label: "Plan", icon: Target02Icon },
+  { href: "/assistant", label: "Assistant", icon: SparklesIcon },
   { href: "/months", label: "Months", icon: Folder01Icon },
   { href: "/convert", label: "Convert", icon: ArrowLeftRightIcon },
   { href: "/settings", label: "Settings", icon: Settings01Icon },
@@ -47,7 +52,11 @@ function glyph(icon: IconSvgElement) {
 
 const MENU_ITEMS = [
   { label: "Expense", icon: glyph(ReceiptTextIcon) },
-  { label: "Convert", icon: glyph(ArrowLeftRightIcon) },
+  { label: "Income", icon: glyph(Money01Icon) },
+  { label: "Transfer", icon: glyph(ArrowLeftRightIcon) },
+  { label: "Quick add", icon: glyph(SparklesIcon) },
+  { label: "Plan", icon: glyph(Target02Icon) },
+  { label: "Assistant", icon: glyph(SparklesIcon) },
   { label: "Insights", icon: glyph(PieChartIcon) },
   { label: "Months", icon: glyph(Folder01Icon) },
 ];
@@ -55,21 +64,66 @@ const MENU_ITEMS = [
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { version, openExpense } = useExpenseDialog();
+  const { version, openTransaction, openQuickAdd } = useTransactionDialog();
   const { data: stats } = useApi<Stats>(`/api/stats?v=${version}`);
   const [commandOpen, setCommandOpen] = useState(false);
   const [islandView, setIslandView] = useState<string | null>(null);
+  const islandRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!islandView) return;
+    const onPointerDown = (event: PointerEvent) => {
+      if (islandRef.current?.contains(event.target as Node)) return;
+      setIslandView(null);
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setIslandView(null);
+    };
+    window.addEventListener("pointerdown", onPointerDown);
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("pointerdown", onPointerDown);
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [islandView]);
 
   const commands = useMemo<CommandItem[]>(
     () => [
       {
-        id: "add",
-        label: "Log an expense",
+        id: "add-expense",
+        label: "Add an expense",
         group: "Actions",
-        hint: "Add",
+        hint: "Expense",
         icon: PlusSignIcon,
-        keywords: ["new", "add", "spend"],
-        onSelect: () => openExpense(),
+        keywords: ["new", "add", "spend", "expense"],
+        onSelect: () => openTransaction(undefined, "expense"),
+      },
+      {
+        id: "add-income",
+        label: "Add income",
+        group: "Actions",
+        hint: "Income",
+        icon: Money01Icon,
+        keywords: ["salary", "freelance", "forex", "earn"],
+        onSelect: () => openTransaction(undefined, "income"),
+      },
+      {
+        id: "add-transfer",
+        label: "Transfer money",
+        group: "Actions",
+        hint: "Transfer",
+        icon: ArrowLeftRightIcon,
+        keywords: ["move", "momo", "bank", "cash"],
+        onSelect: () => openTransaction(undefined, "transfer"),
+      },
+      {
+        id: "quick-add",
+        label: "Quick add from text",
+        group: "Actions",
+        hint: "AI",
+        icon: SparklesIcon,
+        keywords: ["sentence", "parse", "multiple", "ai"],
+        onSelect: openQuickAdd,
       },
       ...NAV.map((item) => ({
         id: item.href,
@@ -88,98 +142,62 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         onSelect: () => router.push("/convert"),
       },
     ],
-    [openExpense, router],
+    [openQuickAdd, openTransaction, router],
   );
 
-  const today = stats?.totals.today ?? 0;
+  const today = stats?.totals.todayNet ?? 0;
   const remaining = Math.max(0, (stats?.totals.budget ?? 0) - (stats?.totals.month ?? 0));
 
   return (
     <div className="flex min-h-dvh flex-col">
-      <header className="sticky top-0 z-40 border-b border-border/70 bg-background/85 backdrop-blur-xl">
-        <div className="mx-auto flex h-16 w-full max-w-[1440px] items-center gap-4 px-6">
-          <Link href="/" className="flex items-center gap-2.5">
-            <span className="grid size-9 place-items-center rounded-xl bg-primary text-primary-foreground">
-              <Icon icon={Wallet02Icon} className="size-[18px]" strokeWidth={1.7} />
-            </span>
-            <span className="text-[15px] font-semibold tracking-[-0.02em]">Expense Trackr</span>
-          </Link>
+      <main className={cn("flex-1 pb-40 pt-10", FRAME)}>{children}</main>
 
-          <div className="ml-2 hidden items-center gap-2.5 text-[13px] text-muted-foreground lg:flex">
-            <span className="size-1.5 rounded-full bg-primary" />
-            <span className="text-foreground">{stats?.monthLabel ?? "This month"}</span>
-            <span className="text-border">·</span>
-            <Money value={stats?.totals.month ?? 0} size="sm" />
-            <span className="text-border">·</span>
-            <span>{stats?.totals.count ?? 0} entries</span>
-          </div>
-
-          <div className="ml-auto flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setIslandView(islandView ? null : "today")}
-              className="cursor-pointer border-0 bg-transparent p-0"
-              aria-label="Today's summary"
-            >
-              <DynamicIsland
-                view={islandView}
-                compact={
-                  <span className="flex items-center gap-2 whitespace-nowrap px-3 text-[11px] font-medium">
-                    <span className="size-1.5 rounded-full bg-primary" />
-                    Today
-                    <span className="text-background/50">·</span>
-                    <span className="text-background/60">UGX</span>
-                    {formatNumber(today)}
-                  </span>
-                }
-              >
-                <DynamicIslandView id="today">
-                  <div className="flex items-center gap-5 whitespace-nowrap px-4 py-2.5">
-                    <div>
-                      <p className="text-[10px] text-background/60">Today</p>
-                      <p className="tnum text-sm font-semibold">
-                        <span className="mr-1 text-[10px] font-normal text-background/60">UGX</span>
-                        {formatNumber(today)}
-                      </p>
-                    </div>
-                    <div className="h-6 w-px bg-background/20" />
-                    <div>
-                      <p className="text-[10px] text-background/60">Left in budget</p>
-                      <p className="tnum text-sm font-semibold">
-                        <span className="mr-1 text-[10px] font-normal text-background/60">UGX</span>
-                        {formatNumber(remaining)}
-                      </p>
-                    </div>
-                  </div>
-                </DynamicIslandView>
-              </DynamicIsland>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setCommandOpen(true)}
-              className="flex h-9 items-center gap-2 rounded-full border border-border bg-card px-3 text-[13px] text-muted-foreground transition-colors hover:text-foreground"
-            >
-              <Icon icon={Search01Icon} className="size-4" />
-              <span className="hidden sm:inline">Search</span>
-              <span className="hidden items-center gap-0.5 rounded border border-border px-1.5 py-0.5 text-[10px] md:flex">
-                <Icon icon={CommandIcon} className="size-2.5" />K
+      <div className="pointer-events-none fixed inset-x-0 bottom-6 z-50 flex flex-col items-center gap-3">
+        <button
+          ref={islandRef}
+          type="button"
+          onClick={() => setIslandView(islandView ? null : "today")}
+          className="pointer-events-auto cursor-pointer border-0 bg-transparent p-0"
+          aria-label="Today's summary"
+          aria-expanded={islandView === "today"}
+        >
+          <DynamicIsland
+            view={islandView}
+            compact={
+              <span className="flex items-center gap-2 whitespace-nowrap px-3 text-[11px] font-medium">
+                Today net
+                <span className="text-background/50">·</span>
+                <span className="text-background/60">UGX</span>
+                {formatNumber(today)}
               </span>
-            </button>
+            }
+          >
+            <DynamicIslandView id="today">
+              <div className="flex items-center gap-5 whitespace-nowrap px-4 py-2.5">
+                <div>
+                  <p className="text-[10px] text-background/60">Today net</p>
+                  <p className="tnum text-sm font-semibold">
+                    <span className="mr-1 text-[10px] font-normal text-background/60">UGX</span>
+                    {formatNumber(today)}
+                  </p>
+                </div>
+                <div className="h-6 w-px bg-background/20" />
+                <div>
+                  <p className="text-[10px] text-background/60">Left in budget</p>
+                  <p className="tnum text-sm font-semibold">
+                    <span className="mr-1 text-[10px] font-normal text-background/60">UGX</span>
+                    {formatNumber(remaining)}
+                  </p>
+                </div>
+              </div>
+            </DynamicIslandView>
+          </DynamicIsland>
+        </button>
 
-            <ThemeToggle
-              variant="circle-blur"
-              className="size-9 rounded-full border border-border bg-card"
-              iconClassName="size-4"
-            />
-          </div>
-        </div>
-      </header>
-
-      <main className="mx-auto w-full max-w-[1440px] flex-1 px-6 pb-40 pt-10">{children}</main>
-
-      <div className="pointer-events-none fixed inset-x-0 bottom-6 z-50 flex justify-center">
-        <Dock size={46} className="pointer-events-auto">
+        <Dock
+          size={46}
+          className="pointer-events-auto max-w-[calc(100vw-1.5rem)] overflow-x-auto no-scrollbar"
+        >
           {NAV.slice(0, 4).map((item) => {
             const active = pathname === item.href;
             return (
@@ -215,6 +233,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </DockItem>
             );
           })}
+          <DockSeparator />
+          <DockItem onClick={() => setCommandOpen(true)} aria-label="Search">
+            <Icon icon={Search01Icon} className="size-[18px] text-muted-foreground" />
+          </DockItem>
+          <DockItem aria-label="Toggle theme">
+            <ThemeToggle
+              variant="circle-blur"
+              className="size-9 rounded-full text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
+              iconClassName="size-[18px]"
+            />
+          </DockItem>
         </Dock>
       </div>
 
@@ -223,8 +252,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           items={MENU_ITEMS}
           labels={{ create: "Quick add", close: "Close quick add" }}
           onSelect={(label) => {
-            if (label === "Expense") openExpense();
-            if (label === "Convert") router.push("/convert");
+            if (label === "Expense") openTransaction(undefined, "expense");
+            if (label === "Income") openTransaction(undefined, "income");
+            if (label === "Transfer") openTransaction(undefined, "transfer");
+            if (label === "Quick add") openQuickAdd();
+            if (label === "Plan") router.push("/plan");
+            if (label === "Assistant") router.push("/assistant");
             if (label === "Insights") router.push("/stats");
             if (label === "Months") router.push("/months");
           }}

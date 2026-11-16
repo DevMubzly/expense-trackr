@@ -1,12 +1,12 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
+  ArrowLeftRightIcon,
   ArrowUpRight01Icon,
-  PieChartIcon,
   PlusSignIcon,
-  ReceiptTextIcon,
+  SparklesIcon,
   TrendingDownIcon,
   TrendingUpIcon,
 } from "@hugeicons/core-free-icons";
@@ -23,28 +23,40 @@ import {
   XAxis,
   YAxis,
 } from "@/components/charts";
-import { AnimatedBadge } from "@/components/motion/animated-badge";
-import { ExpandableTabs } from "@/components/motion/expandable-tabs";
+import { AnimatedNumber } from "@/components/motion/animated-number";
 import { TiltCard } from "@/components/motion/tilt-card";
 import { Loader } from "@/components/motion/loader";
+import {
+  Combobox,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxList,
+  ComboboxTrigger,
+} from "@/components/motion/combobox";
+import { accountIcon } from "@/components/account-select";
 import { Icon } from "@/components/huge-icon";
 import { Money } from "@/components/money";
 import { Panel, PanelHeader } from "@/components/panel";
-import { useExpenseDialog } from "@/components/expense-dialog";
+import { useTransactionDialog } from "@/components/expense-dialog";
 import { useApi } from "@/lib/use-api";
 import { useNow } from "@/lib/use-now";
 import { categoryOf } from "@/lib/categories";
 import { formatNumber, parseYmd, relativeDay, ymd } from "@/lib/format";
-import type { Stats } from "@/lib/types";
+import { PERIOD_LABELS, PERIOD_OPTIONS } from "@/lib/periods";
+import type { PeriodStats, StatPeriod, Stats } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-const DECK = "w-[min(1000px,90vw)]";
-
 export default function DashboardPage() {
-  const { version, openExpense } = useExpenseDialog();
-  const { data: stats, loading } = useApi<Stats>(`/api/stats?v=${version}`);
+  const { version, openTransaction, openQuickAdd } = useTransactionDialog();
+  const [period, setPeriod] = useState<StatPeriod>("30d");
+  const { data: stats, loading } = useApi<Stats>(
+    `/api/stats?period=${period}&v=${version}`,
+  );
   const now = useNow();
   const today = now ? ymd(now) : "";
+  const periodStats = stats?.period;
 
   const areaData = useMemo(
     () =>
@@ -56,16 +68,21 @@ export default function DashboardPage() {
     [stats],
   );
 
+  const forecastData = useMemo(
+    () =>
+      (stats?.forecast.points ?? []).map((point) => ({
+        date: parseYmd(point.date),
+        balance: point.balance,
+      })),
+    [stats],
+  );
+
+  const forecast = stats?.forecast;
   const budget = stats?.totals.budget ?? 0;
   const spent = stats?.totals.month ?? 0;
   const pct = budget > 0 ? Math.min(100, (spent / budget) * 100) : 0;
   const remaining = Math.max(0, budget - spent);
   const over = spent > budget;
-
-  const spark = useMemo(
-    () => (stats?.daily ?? []).map((point) => ({ day: point.date, value: point.total })),
-    [stats],
-  );
 
   if (loading && !stats) {
     return (
@@ -82,7 +99,12 @@ export default function DashboardPage() {
         <div>
           <p className="text-[13px] text-muted-foreground">
             {now
-              ? now.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })
+              ? now.toLocaleDateString("en-GB", {
+                  weekday: "long",
+                  day: "numeric",
+                  month: "long",
+                  year: "numeric",
+                })
               : "\u00a0"}
           </p>
           <h1 className="mt-2 font-display text-5xl leading-none md:text-[56px]">
@@ -109,18 +131,182 @@ export default function DashboardPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <AnimatedBadge status={over ? "danger" : pct > 80 ? "warning" : "success"}>
-            {over ? "Over budget" : `${100 - Math.round(pct)}% left`}
-          </AnimatedBadge>
+          <Combobox
+            value={period}
+            onValueChange={(value) => setPeriod(value as StatPeriod)}
+            className="w-44 shrink-0"
+          >
+            <ComboboxTrigger className="h-9 min-w-0 rounded-full px-3">
+              <ComboboxInput
+                aria-label="Timeframe"
+                placeholder="Timeframe"
+                className="h-9 text-[13px]"
+                showIcon={false}
+              />
+            </ComboboxTrigger>
+            <ComboboxContent className="w-52 rounded-xl">
+              <ComboboxList ariaLabel="Timeframe" className="p-2">
+                <ComboboxEmpty>No timeframes.</ComboboxEmpty>
+                {PERIOD_OPTIONS.map((option) => (
+                  <ComboboxItem
+                    key={option.value}
+                    value={option.value}
+                    textValue={option.label}
+                  >
+                    {option.label}
+                  </ComboboxItem>
+                ))}
+              </ComboboxList>
+            </ComboboxContent>
+          </Combobox>
           <button
             type="button"
-            onClick={() => openExpense()}
+            onClick={openQuickAdd}
+            className="inline-flex h-9 items-center gap-2 rounded-full border border-border bg-card px-3 text-[13px] text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <Icon icon={SparklesIcon} className="size-4" /> Quick add
+          </button>
+          <button
+            type="button"
+            onClick={() => openTransaction(undefined, "expense")}
             className="inline-flex h-9 items-center gap-2 rounded-full bg-primary px-4 text-[13px] font-medium text-primary-foreground transition-transform active:scale-[0.98]"
           >
             <Icon icon={PlusSignIcon} className="size-4" /> Log expense
           </button>
         </div>
       </header>
+
+      <div className="grid grid-cols-2 gap-5 lg:grid-cols-4">
+        <StatCard
+          label="Spent"
+          value={periodStats?.expense ?? 0}
+          spark={periodStats?.spark ?? []}
+          sparkKey="expense"
+          foot={periodStats?.label ?? PERIOD_LABELS[period]}
+        />
+        <StatCard
+          label="Income"
+          value={periodStats?.income ?? 0}
+          spark={periodStats?.spark ?? []}
+          sparkKey="income"
+          foot={periodStats?.label ?? PERIOD_LABELS[period]}
+        />
+        <StatCard
+          label="Net"
+          value={periodStats?.net ?? 0}
+          spark={periodStats?.spark ?? []}
+          sparkKey="net"
+          foot={periodStats?.label ?? PERIOD_LABELS[period]}
+        />
+        <StatCard
+          label="Entries"
+          value={periodStats?.count ?? 0}
+          spark={periodStats?.spark ?? []}
+          sparkKey="count"
+          money={false}
+          foot={periodStats?.label ?? PERIOD_LABELS[period]}
+        />
+      </div>
+
+      <div className="grid grid-cols-12 gap-5">
+        <Panel className="col-span-12 overflow-hidden p-6 xl:col-span-7">
+          <PanelHeader
+            title="Safe to spend"
+            hint="Per day until payday, after your buffer"
+            action={
+              <span className="rounded-full bg-muted px-2.5 py-1 text-[11px] text-muted-foreground">
+                {forecast?.daysToPayday ?? 0} days to payday
+              </span>
+            }
+            className="p-0"
+          />
+          <div className="mt-4 flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <p className="text-[11px] text-muted-foreground">Safe to spend / day</p>
+              <div className="mt-1">
+                <span className="tnum inline-flex items-baseline gap-1.5">
+                  <span className="text-xs font-medium text-muted-foreground">UGX</span>
+                  <AnimatedNumber
+                    value={forecast?.safePerDayUgx ?? 0}
+                    duration={0.6}
+                    startOnView={false}
+                    format={formatNumber}
+                    className="text-4xl font-semibold leading-none tracking-[-0.03em]"
+                  />
+                </span>
+              </div>
+              <p className="mt-2 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                Projected at payday
+                <Money value={forecast?.projectedBalanceUgx ?? 0} size="sm" />
+              </p>
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              MoMo fees this month{" "}
+              <span className="tnum text-foreground">
+                {formatNumber(stats?.momoFees.month ?? 0)} UGX
+              </span>
+            </p>
+          </div>
+          <div className="mt-3">
+            <AreaChart
+              data={forecastData}
+              aspectRatio="3 / 1"
+              margin={{ top: 10, right: 12, bottom: 30, left: 72 }}
+            >
+              <Grid horizontal />
+              <Area
+                dataKey="balance"
+                fill="var(--chart-1)"
+                stroke="var(--chart-1)"
+                fillOpacity={0.28}
+                strokeWidth={2.2}
+                fadeBottom={40}
+              />
+              <YAxis formatValue={(value) => formatNumber(value)} />
+              <XAxis />
+              <ChartTooltip />
+            </AreaChart>
+          </div>
+        </Panel>
+
+        <Panel className="col-span-12 p-6 xl:col-span-5">
+          <PanelHeader
+            title="Accounts"
+            hint="Cash, bank and mobile money"
+            action={
+              <Link
+                href="/settings"
+                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+              >
+                Manage <Icon icon={ArrowUpRight01Icon} className="size-3.5" />
+              </Link>
+            }
+            className="p-0 pb-4"
+          />
+          <div className="space-y-2">
+            {(stats?.accounts ?? []).map((entry) => (
+              <div
+                key={entry.id}
+                className="flex items-center gap-3 rounded-xl border border-border/70 px-3 py-2.5"
+              >
+                <span
+                  className="grid size-8 place-items-center rounded-lg"
+                  style={{ background: `color-mix(in oklab, ${entry.color} 14%, transparent)` }}
+                >
+                  <Icon icon={accountIcon(entry.type)} className="size-4" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[13px]">{entry.name}</p>
+                  <p className="text-[10px] text-muted-foreground">
+                    {entry.provider ?? entry.type}
+                  </p>
+                </div>
+                <Money value={entry.balanceUgx} size="sm" />
+              </div>
+            ))}
+          </div>
+        </Panel>
+      </div>
 
       <div className="grid grid-cols-12 gap-5">
         <Panel className="col-span-12 overflow-hidden p-6 xl:col-span-8">
@@ -215,147 +401,120 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-5 lg:grid-cols-4">
-        <StatCard
-          label="Today"
-          value={stats?.totals.today ?? 0}
-          spark={spark.slice(-10)}
-          foot="Rolling today"
-        />
-        <StatCard
-          label="This week"
-          value={stats?.totals.week ?? 0}
-          spark={spark.slice(-7)}
-          foot="Last seven days"
-        />
-        <StatCard
-          label="Daily average"
-          value={stats?.totals.avgPerDay ?? 0}
-          spark={spark}
-          foot={`Across ${stats?.daily.length ?? 0} days`}
-        />
-        <StatCard
-          label="Largest expense"
-          value={stats?.totals.largest ?? 0}
-          spark={spark}
-          foot={`${stats?.totals.count ?? 0} entries this month`}
-        />
+      <div className="grid grid-cols-12 gap-5">
+        <Panel className="col-span-12 p-6 xl:col-span-7">
+          <PanelHeader
+            title="Recent activity"
+            hint="Latest entries, newest first"
+            action={
+              <Link
+                href="/expenses"
+                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+              >
+                All expenses <Icon icon={ArrowUpRight01Icon} className="size-3.5" />
+              </Link>
+            }
+            className="p-0 pb-4"
+          />
+          <ul className="divide-y divide-border/70">
+            {(stats?.recent ?? []).map((transaction) => {
+              const category = categoryOf(transaction.category || "other");
+              const transfer = transaction.type === "transfer";
+              const description =
+                transaction.note ||
+                (transfer ? "Transfer" : category.label);
+              return (
+                <li key={transaction.id}>
+                  <button
+                    type="button"
+                    onClick={() => openTransaction(transaction)}
+                    className="flex w-full items-center gap-3 px-1 py-3 text-left transition-colors hover:bg-muted/50"
+                  >
+                    <span
+                      className="grid size-9 shrink-0 place-items-center rounded-lg"
+                      style={{ background: `color-mix(in oklab, ${category.color} 14%, transparent)` }}
+                    >
+                      <Icon
+                        icon={transfer ? ArrowLeftRightIcon : category.icon}
+                        className="size-4"
+                      />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm">{description}</span>
+                      <span className="block text-[11px] text-muted-foreground">
+                        {relativeDay(transaction.spentOn, today)},{" "}
+                        {transfer ? "Transfer" : category.label}
+                      </span>
+                    </span>
+                    <span className="flex items-center gap-1">
+                      {!transfer ? (
+                        <span
+                          className={cn(
+                            "text-sm font-semibold",
+                            transaction.type === "income"
+                              ? "text-emerald-600 dark:text-emerald-400"
+                              : "text-muted-foreground",
+                          )}
+                        >
+                          {transaction.type === "income" ? "+" : "−"}
+                        </span>
+                      ) : null}
+                      <Money value={transaction.amountUgx} size="sm" />
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </Panel>
+
+        <Panel className="col-span-12 p-6 xl:col-span-5">
+          <PanelHeader
+            title="Categories"
+            hint={`${stats?.monthLabel ?? "This month"}, share of spend`}
+            className="p-0 pb-4"
+          />
+          <div className="space-y-4">
+            {(stats?.byCategory ?? []).map((entry) => (
+              <div key={entry.id} className="space-y-1.5">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="flex items-center gap-2 text-muted-foreground">
+                    <Icon icon={categoryOf(entry.id).icon} className="size-3.5" />
+                    {entry.label}
+                  </span>
+                  <span className="tnum text-foreground">{formatNumber(entry.value)} UGX</span>
+                </div>
+                <div className="h-1.5 overflow-hidden rounded-full bg-muted">
+                  <div
+                    className="h-full rounded-full"
+                    style={{
+                      width: `${(entry.value / Math.max(1, spent)) * 100}%`,
+                      background: entry.color,
+                    }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </Panel>
       </div>
 
-      <div className="flex justify-center">
-        <ExpandableTabs
-          defaultValue="recent"
-          classNames={{ bar: "justify-center gap-2" }}
-          items={[
-            {
-              id: "recent",
-              label: "Recent",
-              icon: <Icon icon={ReceiptTextIcon} className="size-4" />,
-              content: (
-                <div className={DECK}>
-                  <div className="flex items-start justify-between px-1 pb-3">
-                    <div>
-                      <p className="text-[13px] font-medium">Recent activity</p>
-                      <p className="mt-0.5 text-xs text-muted-foreground">Latest entries, newest first</p>
-                    </div>
-                    <Link
-                      href="/expenses"
-                      className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
-                    >
-                      All expenses <Icon icon={ArrowUpRight01Icon} className="size-3.5" />
-                    </Link>
-                  </div>
-                  <ul className="divide-y divide-border/70">
-                    {(stats?.recent ?? []).map((expense) => {
-                      const category = categoryOf(expense.category);
-                      return (
-                        <li key={expense.id}>
-                          <button
-                            type="button"
-                            onClick={() => openExpense(expense)}
-                            className="flex w-full items-center gap-3 px-1 py-3 text-left transition-colors hover:bg-muted/50"
-                          >
-                            <span
-                              className="grid size-9 shrink-0 place-items-center rounded-lg"
-                              style={{ background: `color-mix(in oklab, ${category.color} 14%, transparent)` }}
-                            >
-                              <Icon icon={category.icon} className="size-4" />
-                            </span>
-                            <span className="min-w-0 flex-1">
-                              <span className="block truncate text-sm">{expense.note || category.label}</span>
-                              <span className="block text-[11px] text-muted-foreground">
-                                {relativeDay(expense.spentOn, today)}, {category.label}
-                              </span>
-                            </span>
-                            <Money value={expense.amountUgx} size="sm" />
-                          </button>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </div>
-              ),
-            },
-            {
-              id: "categories",
-              label: "Categories",
-              icon: <Icon icon={PieChartIcon} className="size-4" />,
-              content: (
-                <div className={DECK}>
-                  <p className="px-1 pb-4 text-[13px] font-medium">
-                    {stats?.monthLabel}, share of spend
-                  </p>
-                  <div className="space-y-4 px-1">
-                    {(stats?.byCategory ?? []).map((entry) => (
-                      <div key={entry.id} className="space-y-1.5">
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="flex items-center gap-2 text-muted-foreground">
-                            <Icon icon={categoryOf(entry.id).icon} className="size-3.5" />
-                            {entry.label}
-                          </span>
-                          <span className="tnum text-foreground">{formatNumber(entry.value)} UGX</span>
-                        </div>
-                        <div className="h-1.5 overflow-hidden rounded-full bg-muted">
-                          <div
-                            className="h-full rounded-full"
-                            style={{
-                              width: `${(entry.value / Math.max(1, spent)) * 100}%`,
-                              background: entry.color,
-                            }}
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ),
-            },
-            {
-              id: "months",
-              label: "Months",
-              icon: <Icon icon={TrendingUpIcon} className="size-4" />,
-              content: (
-                <div className={DECK}>
-                  <p className="px-1 pb-2 text-[13px] font-medium">Last eight months</p>
-                  <BarChart
-                    data={stats?.months ?? []}
-                    xDataKey="label"
-                    aspectRatio="3 / 1"
-                    barGap={0.35}
-                    margin={{ top: 10, right: 10, bottom: 30, left: 80 }}
-                  >
-                    <Grid horizontal />
-                    <YAxis formatValue={(value) => formatNumber(value)} />
-                    <Bar dataKey="total" fill="var(--chart-1)" lineCap="round" />
-                    <BarXAxis />
-                    <ChartTooltip />
-                  </BarChart>
-                </div>
-              ),
-            },
-          ]}
-        />
-      </div>
+      <Panel className="p-6">
+        <PanelHeader title="Months" hint="Last eight months" className="p-0 pb-4" />
+        <BarChart
+          data={stats?.months ?? []}
+          xDataKey="label"
+          aspectRatio="3 / 1"
+          barGap={0.35}
+          margin={{ top: 10, right: 10, bottom: 30, left: 80 }}
+        >
+          <Grid horizontal />
+          <YAxis formatValue={(value) => formatNumber(value)} />
+          <Bar dataKey="total" fill="var(--chart-1)" lineCap="round" />
+          <BarXAxis />
+          <ChartTooltip />
+        </BarChart>
+      </Panel>
 
       <Panel className="p-6">
         <PanelHeader
@@ -403,23 +562,46 @@ function StatCard({
   value,
   spark,
   foot,
+  money = true,
+  sparkKey = "expense",
 }: {
   label: string;
   value: number;
-  spark: { day: string; value: number }[];
+  spark: PeriodStats["spark"];
   foot: string;
+  money?: boolean;
+  sparkKey?: "expense" | "income" | "net" | "count";
 }) {
   return (
     <Panel className="p-5">
       <p className="text-[13px] text-muted-foreground">{label}</p>
       <div className="mt-2">
-        <Money value={value} size="lg" />
+        {money ? (
+          <span className="tnum inline-flex items-baseline gap-1.5">
+            <span className="text-[11px] font-medium text-muted-foreground">UGX</span>
+            <AnimatedNumber
+              value={value}
+              duration={0.6}
+              startOnView={false}
+              format={formatNumber}
+              className="text-2xl font-semibold leading-none tracking-[-0.02em]"
+            />
+          </span>
+        ) : (
+          <AnimatedNumber
+            value={value}
+            duration={0.6}
+            startOnView={false}
+            format={(n) => String(Math.round(n))}
+            className="text-2xl font-semibold leading-none tracking-[-0.02em]"
+          />
+        )}
       </div>
       <p className="mt-1.5 text-[11px] text-muted-foreground">{foot}</p>
       <div className="mt-3">
         <AreaSparkline
           data={spark.length > 1 ? spark : [...spark, ...spark]}
-          dataKey="value"
+          dataKey={sparkKey}
           height={40}
           color="var(--chart-1)"
           fill="gradient"

@@ -84,8 +84,10 @@ export default function StatsPage() {
         </p>
       </header>
 
-      <div className="grid grid-cols-2 gap-5 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-5 lg:grid-cols-3">
         <MetricCard label="Spent this month" value={total} />
+        <MetricCard label="Income this month" value={stats?.totals.income ?? 0} />
+        <MetricCard label="Net" value={stats?.totals.net ?? 0} />
         <MetricCard label="Entries" value={stats?.totals.count ?? 0} money={false} />
         <MetricCard label="Average day" value={stats?.totals.avgPerDay ?? 0} />
         <MetricCard label="Largest single" value={stats?.totals.largest ?? 0} />

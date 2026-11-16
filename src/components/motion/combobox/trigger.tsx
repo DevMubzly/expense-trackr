@@ -87,12 +87,15 @@ export interface ComboboxInputProps
   > {
   ref?: Ref<HTMLInputElement>;
   wrapperClassName?: string;
+  /** Show the leading search glyph. Set false for a plain select-style trigger. */
+  showIcon?: boolean;
 }
 
 export function ComboboxInput({
   ref,
   className,
   wrapperClassName,
+  showIcon = true,
   "aria-label": ariaLabel,
   onChange,
   onClick,
@@ -145,7 +148,9 @@ export function ComboboxInput({
         wrapperClassName,
       )}
     >
-      <Icon icon={Search01Icon} aria-hidden className="size-4 shrink-0 text-muted-foreground" />
+      {showIcon ? (
+        <Icon icon={Search01Icon} aria-hidden className="size-4 shrink-0 text-muted-foreground" />
+      ) : null}
       <input
         {...props}
         ref={mergeRefs(ref, context.inputRef)}

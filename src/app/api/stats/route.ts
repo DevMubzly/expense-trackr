@@ -1,9 +1,12 @@
 import { connection, type NextRequest } from "next/server";
 import { computeStats } from "@/lib/db";
+import { isStatPeriod } from "@/lib/periods";
 
 
 export async function GET(request: NextRequest) {
   await connection();
-  const month = request.nextUrl.searchParams.get("month") ?? undefined;
-  return Response.json(computeStats(month));
+  const params = request.nextUrl.searchParams;
+  const month = params.get("month") ?? undefined;
+  const period = params.get("period");
+  return Response.json(computeStats(month, isStatPeriod(period) ? period : undefined));
 }
