@@ -26,16 +26,20 @@ export function AccountSelect({
   accounts,
   onValueChange,
   compact = false,
+  hideLabel = false,
 }: {
   label: string;
   value: string;
   accounts: Account[];
   onValueChange: (value: string) => void;
   compact?: boolean;
+  hideLabel?: boolean;
 }) {
   return (
     <div>
-      {!compact ? <p className="mb-1 text-[13px] text-muted-foreground">{label}</p> : null}
+      {!compact && !hideLabel ? (
+        <p className="mb-1 text-[13px] text-muted-foreground">{label}</p>
+      ) : null}
       <Combobox value={value} onValueChange={onValueChange}>
         <ComboboxTrigger
           className={

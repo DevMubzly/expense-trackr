@@ -29,8 +29,7 @@ export default function MonthsPage() {
   return (
     <div className="space-y-8">
       <header>
-        <p className="text-[13px] text-muted-foreground">Archive</p>
-        <h1 className="mt-2 font-display text-5xl leading-none md:text-[56px]">
+        <h1 className="font-display text-5xl leading-none md:text-[56px]">
           A folder for every month.
         </h1>
         <p className="mt-4 max-w-2xl text-sm leading-relaxed text-muted-foreground">

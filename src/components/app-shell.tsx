@@ -54,7 +54,6 @@ const MENU_ITEMS = [
   { label: "Expense", icon: glyph(ReceiptTextIcon) },
   { label: "Income", icon: glyph(Money01Icon) },
   { label: "Transfer", icon: glyph(ArrowLeftRightIcon) },
-  { label: "Quick add", icon: glyph(SparklesIcon) },
   { label: "Plan", icon: glyph(Target02Icon) },
   { label: "Assistant", icon: glyph(SparklesIcon) },
   { label: "Insights", icon: glyph(PieChartIcon) },
@@ -64,7 +63,7 @@ const MENU_ITEMS = [
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { version, openTransaction, openQuickAdd } = useTransactionDialog();
+  const { version, openTransaction } = useTransactionDialog();
   const { data: stats } = useApi<Stats>(`/api/stats?v=${version}`);
   const [commandOpen, setCommandOpen] = useState(false);
   const [islandView, setIslandView] = useState<string | null>(null);
@@ -116,15 +115,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         keywords: ["move", "momo", "bank", "cash"],
         onSelect: () => openTransaction(undefined, "transfer"),
       },
-      {
-        id: "quick-add",
-        label: "Quick add from text",
-        group: "Actions",
-        hint: "AI",
-        icon: SparklesIcon,
-        keywords: ["sentence", "parse", "multiple", "ai"],
-        onSelect: openQuickAdd,
-      },
       ...NAV.map((item) => ({
         id: item.href,
         label: item.label,
@@ -142,7 +132,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         onSelect: () => router.push("/convert"),
       },
     ],
-    [openQuickAdd, openTransaction, router],
+    [openTransaction, router],
   );
 
   const today = stats?.totals.todayNet ?? 0;
@@ -250,12 +240,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <div className="fixed bottom-24 right-6 z-50">
         <BloomMenu
           items={MENU_ITEMS}
-          labels={{ create: "Quick add", close: "Close quick add" }}
+          labels={{ create: "Actions", close: "Close menu" }}
           onSelect={(label) => {
             if (label === "Expense") openTransaction(undefined, "expense");
             if (label === "Income") openTransaction(undefined, "income");
             if (label === "Transfer") openTransaction(undefined, "transfer");
-            if (label === "Quick add") openQuickAdd();
             if (label === "Plan") router.push("/plan");
             if (label === "Assistant") router.push("/assistant");
             if (label === "Insights") router.push("/stats");

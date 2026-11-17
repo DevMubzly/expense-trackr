@@ -3,7 +3,6 @@
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
 import { gooeyToast } from "goey-toast";
 import {
-  ArrowRight01Icon,
   Camera01Icon,
   Cancel01Icon,
   Delete02Icon,
@@ -14,6 +13,7 @@ import { MorphingModal } from "@/components/motion/morphing-modal";
 import { WheelPicker } from "@/components/motion/wheel-picker";
 import { Input } from "@/components/motion/input";
 import { AccountSelect } from "@/components/account-select";
+import { CategorySelect } from "@/components/category-select";
 import { Icon } from "@/components/huge-icon";
 import { Button } from "@/components/ui/button";
 import { api, useApi } from "@/lib/use-api";
@@ -52,6 +52,13 @@ export const ExpenseDialogProvider = TransactionDialogProvider;
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const PRESETS = [5000, 10000, 20000, 50000];
+/** Temporarily hidden: quick amounts and mock receipt scan. */
+const SHOW_AMOUNT_SHORTCUTS = false;
+const UNDERLINE_FIELD = {
+  field:
+    "h-10 rounded-none border-x-0 border-t-0 border-b border-border bg-transparent data-[state=focused]:ring-0",
+  input: "text-sm",
+};
 const TYPES: { value: TransactionType; label: string }[] = [
   { value: "expense", label: "Expense" },
   { value: "income", label: "Income" },
@@ -130,7 +137,6 @@ export function TransactionDialogProvider({ children }: { children: React.ReactN
             settings={settingsData}
             onSaved={saved}
             onCancel={close}
-            onQuickAdd={openQuickAdd}
           />
         ) : null}
         {mode === "quick-add" ? (
@@ -158,7 +164,6 @@ function TransactionForm({
   settings,
   onSaved,
   onCancel,
-  onQuickAdd,
 }: {
   transaction: Transaction | null;
   initialType: TransactionType;
@@ -166,7 +171,6 @@ function TransactionForm({
   settings: Settings | null;
   onSaved: () => void;
   onCancel: () => void;
-  onQuickAdd: () => void;
 }) {
   const initial = transaction ? parseYmd(transaction.spentOn) : new Date();
   const years = [initial.getFullYear() - 2, initial.getFullYear() - 1, initial.getFullYear()];
@@ -200,7 +204,6 @@ function TransactionForm({
   const numeric = Number(amount);
   const selectedAccount = accounts.find((account) => account.id === accountId);
   const showFee = type !== "income" && selectedAccount?.type === "momo";
-  const categories = categoriesFor(type === "income" ? "income" : "expense");
   const valid =
     Number.isFinite(numeric) &&
     numeric > 0 &&
@@ -308,23 +311,6 @@ function TransactionForm({
             {transaction ? "Fix the details and save." : "Takes a few seconds."}
           </p>
         </div>
-        {!isTransfer ? (
-          <div className="flex rounded-full border border-border bg-muted p-0.5">
-            {(["UGX", "USD"] as Currency[]).map((code) => (
-              <button
-                key={code}
-                type="button"
-                onClick={() => setCurrency(code)}
-                className={cn(
-                  "rounded-full px-3 py-1 text-xs font-medium transition-colors",
-                  currency === code ? "bg-card text-foreground shadow-sm" : "text-muted-foreground",
-                )}
-              >
-                {code}
-              </button>
-            ))}
-          </div>
-        ) : null}
       </div>
 
       <div className="flex rounded-full border border-border bg-muted p-0.5">
@@ -361,56 +347,67 @@ function TransactionForm({
         />
       </div>
 
-      <div className="flex flex-wrap items-center gap-2">
-        {PRESETS.map((preset) => (
-          <button
-            key={preset}
-            type="button"
-            onClick={() => setAmount(String(preset))}
-            className="rounded-full border border-border px-3 py-1 text-xs text-muted-foreground transition-colors hover:border-primary/30 hover:text-foreground"
-          >
-            {formatNumber(preset)}
-          </button>
-        ))}
-        {type === "expense" ? (
-          <label className="ml-auto inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-border px-3 py-1 text-xs text-muted-foreground transition-colors hover:border-primary/30 hover:text-foreground">
-            <Icon icon={Camera01Icon} className="size-3.5" /> Scan receipt
-            <input
-              type="file"
-              accept="image/*"
-              className="sr-only"
-              onChange={(event) => {
-                scanReceipt(event.target.files?.[0]);
-                event.target.value = "";
-              }}
-            />
-          </label>
-        ) : null}
-      </div>
+      {/* Temporarily disabled: quick amount presets and mock receipt scan. */}
+      {SHOW_AMOUNT_SHORTCUTS ? (
+        <div className="flex flex-wrap items-center gap-2">
+          {PRESETS.map((preset) => (
+            <button
+              key={preset}
+              type="button"
+              onClick={() => setAmount(String(preset))}
+              className="rounded-full border border-border px-3 py-1 text-xs text-muted-foreground transition-colors hover:border-primary/30 hover:text-foreground"
+            >
+              {formatNumber(preset)}
+            </button>
+          ))}
+          {type === "expense" ? (
+            <label className="ml-auto inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-border px-3 py-1 text-xs text-muted-foreground transition-colors hover:border-primary/30 hover:text-foreground">
+              <Icon icon={Camera01Icon} className="size-3.5" /> Scan receipt
+              <input
+                type="file"
+                accept="image/*"
+                className="sr-only"
+                onChange={(event) => {
+                  scanReceipt(event.target.files?.[0]);
+                  event.target.value = "";
+                }}
+              />
+            </label>
+          ) : null}
+        </div>
+      ) : null}
 
       {isTransfer ? (
-        <div className="grid grid-cols-[1fr_auto_1fr] items-end gap-2">
+        <div className="space-y-3">
+          <FieldRow label="From">
+            <AccountSelect
+              label="From"
+              value={accountId}
+              accounts={accounts}
+              onValueChange={setAccountId}
+              hideLabel
+            />
+          </FieldRow>
+          <FieldRow label="To">
+            <AccountSelect
+              label="To"
+              value={toAccountId}
+              accounts={accounts}
+              onValueChange={setToAccountId}
+              hideLabel
+            />
+          </FieldRow>
+        </div>
+      ) : (
+        <FieldRow label="Account">
           <AccountSelect
-            label="From"
+            label="Account"
             value={accountId}
             accounts={accounts}
             onValueChange={setAccountId}
+            hideLabel
           />
-          <Icon icon={ArrowRight01Icon} className="mb-3 size-4 text-muted-foreground" />
-          <AccountSelect
-            label="To"
-            value={toAccountId}
-            accounts={accounts}
-            onValueChange={setToAccountId}
-          />
-        </div>
-      ) : (
-        <AccountSelect
-          label="Account"
-          value={accountId}
-          accounts={accounts}
-          onValueChange={setAccountId}
-        />
+        </FieldRow>
       )}
 
       {showFee ? (
@@ -419,38 +416,19 @@ function TransactionForm({
           value={fee}
           onChange={(value) => setFee(value.replace(/[^0-9]/g, ""))}
           placeholder="0"
+          classNames={UNDERLINE_FIELD}
         />
       ) : null}
 
       {!isTransfer ? (
-        <div>
-          <p className="mb-2 text-[13px] text-muted-foreground">Category</p>
-          <div className="grid grid-cols-4 gap-2">
-            {categories.map((option) => {
-              const selected = option.id === category;
-              return (
-                <button
-                  key={option.id}
-                  type="button"
-                  onClick={() => setCategory(option.id)}
-                  className={cn(
-                    "flex items-center gap-2 rounded-xl border px-2.5 py-2 text-left text-xs transition-colors",
-                    selected
-                      ? "border-primary/40 bg-primary/[0.06] text-foreground"
-                      : "border-border text-muted-foreground hover:text-foreground",
-                  )}
-                >
-                  <Icon
-                    icon={option.icon}
-                    className="size-4"
-                    strokeWidth={selected ? 1.9 : 1.6}
-                  />
-                  <span className="truncate">{option.label}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
+        <FieldRow label="Category">
+          <CategorySelect
+            value={category}
+            onValueChange={setCategory}
+            kind={type === "income" ? "income" : "expense"}
+            label="Category"
+          />
+        </FieldRow>
       ) : null}
 
       <div>
@@ -462,7 +440,7 @@ function TransactionForm({
             onValueChange={(value) => setDay(Number(value))}
             visibleCount={3}
             itemHeight={34}
-            className="flex-1"
+            className="flex-1 rounded-none border-0 bg-transparent"
             aria-label="Day"
           />
           <WheelPicker
@@ -471,7 +449,7 @@ function TransactionForm({
             onValueChange={(value) => setMonth(Number(value))}
             visibleCount={3}
             itemHeight={34}
-            className="flex-1"
+            className="flex-1 rounded-none border-0 bg-transparent"
             aria-label="Month"
           />
           <WheelPicker
@@ -480,23 +458,19 @@ function TransactionForm({
             onValueChange={(value) => setYear(Number(value))}
             visibleCount={3}
             itemHeight={34}
-            className="flex-1"
+            className="flex-1 rounded-none border-0 bg-transparent"
             aria-label="Year"
           />
         </div>
       </div>
 
-      <Input label="Note" value={note} onChange={setNote} placeholder="What was it?" />
-
-      {!transaction ? (
-        <button
-          type="button"
-          onClick={onQuickAdd}
-          className="text-left text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
-        >
-          Or add several at once from a sentence
-        </button>
-      ) : null}
+      <Input
+        label="Note"
+        value={note}
+        onChange={setNote}
+        placeholder="What was it?"
+        classNames={UNDERLINE_FIELD}
+      />
 
       <div className="flex items-center justify-between gap-2 pt-1">
         {transaction ? (
@@ -519,6 +493,21 @@ function TransactionForm({
                 : "Log it"}
         </Button>
       </div>
+    </div>
+  );
+}
+
+function FieldRow({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-center gap-3">
+      <p className="w-20 shrink-0 text-[13px] text-muted-foreground">{label}</p>
+      <div className="min-w-0 flex-1">{children}</div>
     </div>
   );
 }

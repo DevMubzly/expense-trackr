@@ -6,9 +6,6 @@ import {
   ArrowLeftRightIcon,
   ArrowUpRight01Icon,
   PlusSignIcon,
-  SparklesIcon,
-  TrendingDownIcon,
-  TrendingUpIcon,
 } from "@hugeicons/core-free-icons";
 import {
   Area,
@@ -23,8 +20,8 @@ import {
   XAxis,
   YAxis,
 } from "@/components/charts";
+import { AnimatedBadge } from "@/components/motion/animated-badge";
 import { AnimatedNumber } from "@/components/motion/animated-number";
-import { TiltCard } from "@/components/motion/tilt-card";
 import { Loader } from "@/components/motion/loader";
 import {
   Combobox,
@@ -43,13 +40,13 @@ import { useTransactionDialog } from "@/components/expense-dialog";
 import { useApi } from "@/lib/use-api";
 import { useNow } from "@/lib/use-now";
 import { categoryOf } from "@/lib/categories";
-import { formatNumber, parseYmd, relativeDay, ymd } from "@/lib/format";
+import { daysInMonth, formatNumber, parseYmd, relativeDay, ymd } from "@/lib/format";
 import { PERIOD_LABELS, PERIOD_OPTIONS } from "@/lib/periods";
 import type { PeriodStats, StatPeriod, Stats } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 export default function DashboardPage() {
-  const { version, openTransaction, openQuickAdd } = useTransactionDialog();
+  const { version, openTransaction } = useTransactionDialog();
   const [period, setPeriod] = useState<StatPeriod>("30d");
   const { data: stats, loading } = useApi<Stats>(
     `/api/stats?period=${period}&v=${version}`,
@@ -83,6 +80,10 @@ export default function DashboardPage() {
   const pct = budget > 0 ? Math.min(100, (spent / budget) * 100) : 0;
   const remaining = Math.max(0, budget - spent);
   const over = spent > budget;
+  const dayOfMonth = stats?.daily.length ?? 0;
+  const daysInMonthCount = stats ? daysInMonth(stats.month) : 0;
+  const paceNow = stats?.cumulative.at(-1)?.pace ?? 0;
+  const paceDelta = spent - paceNow;
 
   if (loading && !stats) {
     return (
@@ -161,13 +162,6 @@ export default function DashboardPage() {
           </Combobox>
           <button
             type="button"
-            onClick={openQuickAdd}
-            className="inline-flex h-9 items-center gap-2 rounded-full border border-border bg-card px-3 text-[13px] text-muted-foreground transition-colors hover:text-foreground"
-          >
-            <Icon icon={SparklesIcon} className="size-4" /> Quick add
-          </button>
-          <button
-            type="button"
             onClick={() => openTransaction(undefined, "expense")}
             className="inline-flex h-9 items-center gap-2 rounded-full bg-primary px-4 text-[13px] font-medium text-primary-foreground transition-transform active:scale-[0.98]"
           >
@@ -209,7 +203,131 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-12 gap-5">
-        <Panel className="col-span-12 overflow-hidden p-6 xl:col-span-7">
+        <Panel className="col-span-12 overflow-hidden p-6">
+          <div className="grid gap-6 md:min-h-[27rem] md:grid-cols-[minmax(0,1fr)_1px_minmax(0,2fr)]">
+            <div className="flex flex-col justify-start gap-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <p className="text-xs text-muted-foreground">Spent</p>
+                  <Money value={spent} size="md" className="mt-1" />
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-muted-foreground">Left</p>
+                  <Money value={remaining} size="md" className="mt-1" />
+                </div>
+              </div>
+              <div className="flex flex-col items-center">
+                <Gauge
+                  value={pct}
+                  centerValue={Math.round(pct)}
+                  suffix="%"
+                  defaultLabel="used"
+                  totalNotches={36}
+                  height={170}
+                  width={240}
+                  activeFill="var(--chart-1)"
+                  inactiveFill="var(--muted)"
+                  needle="line"
+                />
+              </div>
+            </div>
+
+            <div className="h-px w-full self-center bg-border/70 md:h-auto md:w-px md:self-stretch md:my-3" />
+
+            <div>
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                    Month pace
+                  </p>
+                  <p className="mt-1.5 text-xs text-muted-foreground">
+                    Spend against a straight-line budget · Day {dayOfMonth} of {daysInMonthCount}
+                  </p>
+                </div>
+                <AnimatedBadge
+                  status={
+                    stats && stats.vsLastMonth !== 0
+                      ? stats.vsLastMonth > 0
+                        ? "danger"
+                        : "success"
+                      : "neutral"
+                  }
+                  size="sm"
+                  contentKey={stats?.vsLastMonth ?? 0}
+                >
+                  {Math.abs(stats?.vsLastMonth ?? 0)}%{" "}
+                  {stats && stats.vsLastMonth > 0
+                    ? "more"
+                    : stats && stats.vsLastMonth < 0
+                      ? "less"
+                      : ""}{" "}
+                  vs last month
+                </AnimatedBadge>
+              </div>
+
+              <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-3 rounded-xl border border-border/60 bg-muted/20 px-4 py-3">
+                <div className="flex items-center gap-2">
+                  <span className="size-2 rounded-full bg-primary" />
+                  <span className="text-[11px] text-muted-foreground">Spent</span>
+                  <span className="tnum text-sm font-semibold">
+                    {formatNumber(spent)}
+                    <span className="ml-1 text-[10px] font-normal text-muted-foreground">UGX</span>
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="size-2 rounded-full bg-muted-foreground/50" />
+                  <span className="text-[11px] text-muted-foreground">Budget pace</span>
+                  <span className="tnum text-sm font-semibold">
+                    {formatNumber(paceNow)}
+                    <span className="ml-1 text-[10px] font-normal text-muted-foreground">UGX</span>
+                  </span>
+                </div>
+                <AnimatedBadge
+                  className="ml-auto"
+                  status={paceDelta > 0 ? "danger" : paceDelta < 0 ? "success" : "neutral"}
+                  size="sm"
+                  contentKey={paceDelta}
+                >
+                  {paceDelta === 0
+                    ? "On pace"
+                    : `${paceDelta > 0 ? "Ahead" : "Under"} by ${formatNumber(Math.abs(paceDelta))} UGX`}
+                </AnimatedBadge>
+              </div>
+
+              <div className="mt-4">
+                <AreaChart
+                  data={areaData}
+                  aspectRatio="1.8 / 1"
+                  margin={{ top: 12, right: 12, bottom: 30, left: 72 }}
+                >
+                  <Grid horizontal />
+                  <Area
+                    dataKey="pace"
+                    fill="var(--muted-foreground)"
+                    fillOpacity={0}
+                    stroke="var(--muted-foreground)"
+                    strokeWidth={1.5}
+                  />
+                  <Area
+                    dataKey="spent"
+                    fill="var(--chart-1)"
+                    stroke="var(--chart-1)"
+                    fillOpacity={0.32}
+                    strokeWidth={2.5}
+                    fadeBottom={45}
+                  />
+                  <YAxis formatValue={(value) => formatNumber(value)} />
+                  <XAxis />
+                  <ChartTooltip dotHaloScale={0} dotHaloOpacity={0} dotStrokeWidth={0} />
+                </AreaChart>
+              </div>
+            </div>
+          </div>
+        </Panel>
+      </div>
+
+      <div className="grid grid-cols-12 gap-5">
+        <Panel className="col-span-12 overflow-hidden p-6 xl:col-span-8">
           <PanelHeader
             title="Safe to spend"
             hint="Per day until payday, after your buffer"
@@ -264,12 +382,12 @@ export default function DashboardPage() {
               />
               <YAxis formatValue={(value) => formatNumber(value)} />
               <XAxis />
-              <ChartTooltip />
+              <ChartTooltip dotHaloScale={0} dotHaloOpacity={0} dotStrokeWidth={0} />
             </AreaChart>
           </div>
         </Panel>
 
-        <Panel className="col-span-12 p-6 xl:col-span-5">
+        <Panel className="col-span-12 p-6 xl:col-span-4">
           <PanelHeader
             title="Accounts"
             hint="Cash, bank and mobile money"
@@ -306,99 +424,6 @@ export default function DashboardPage() {
             ))}
           </div>
         </Panel>
-      </div>
-
-      <div className="grid grid-cols-12 gap-5">
-        <Panel className="col-span-12 overflow-hidden p-6 xl:col-span-8">
-          <PanelHeader
-            title="Month pace"
-            hint="Spend against a straight-line budget"
-            action={
-              stats ? (
-                <span
-                  className={cn(
-                    "flex items-center gap-1 text-xs",
-                    stats.vsLastMonth > 0 ? "text-destructive" : "text-emerald-600",
-                  )}
-                >
-                  <Icon
-                    icon={stats.vsLastMonth > 0 ? TrendingUpIcon : TrendingDownIcon}
-                    className="size-3.5"
-                  />
-                  {Math.abs(stats.vsLastMonth)}% versus last month
-                </span>
-              ) : null
-            }
-            className="p-0"
-          />
-          <div className="mt-4 flex items-center gap-5 text-xs text-muted-foreground">
-            <span className="flex items-center gap-1.5">
-              <span className="h-1.5 w-4 rounded-full bg-primary" /> Spent
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="h-1.5 w-4 rounded-full bg-muted-foreground/50" /> Budget pace
-            </span>
-          </div>
-          <div className="mt-2">
-            <AreaChart
-              data={areaData}
-              aspectRatio="2.6 / 1"
-              margin={{ top: 12, right: 12, bottom: 30, left: 72 }}
-            >
-              <Grid horizontal />
-              <Area
-                dataKey="pace"
-                fill="var(--muted-foreground)"
-                fillOpacity={0}
-                stroke="var(--muted-foreground)"
-                strokeWidth={1.5}
-              />
-              <Area
-                dataKey="spent"
-                fill="var(--chart-1)"
-                stroke="var(--chart-1)"
-                fillOpacity={0.32}
-                strokeWidth={2.5}
-                fadeBottom={45}
-              />
-              <YAxis formatValue={(value) => formatNumber(value)} />
-              <XAxis />
-              <ChartTooltip />
-            </AreaChart>
-          </div>
-        </Panel>
-
-        <div className="col-span-12 xl:col-span-4">
-          <TiltCard max={5} className="h-full">
-            <Panel className="flex h-full flex-col justify-between p-6">
-              <PanelHeader title="Budget" hint="This month" className="p-0" />
-              <div className="flex flex-col items-center py-2">
-                <Gauge
-                  value={pct}
-                  centerValue={Math.round(pct)}
-                  suffix="%"
-                  defaultLabel="used"
-                  totalNotches={36}
-                  height={170}
-                  width={240}
-                  activeFill="var(--chart-1)"
-                  inactiveFill="var(--muted)"
-                  needle="line"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-3 border-t border-border/70 pt-4">
-                <div>
-                  <p className="text-xs text-muted-foreground">Spent</p>
-                  <Money value={spent} size="md" className="mt-1" />
-                </div>
-                <div className="text-right">
-                  <p className="text-xs text-muted-foreground">Left</p>
-                  <Money value={remaining} size="md" className="mt-1" />
-                </div>
-              </div>
-            </Panel>
-          </TiltCard>
-        </div>
       </div>
 
       <div className="grid grid-cols-12 gap-5">

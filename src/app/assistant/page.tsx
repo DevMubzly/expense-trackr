@@ -75,8 +75,7 @@ export default function AssistantPage() {
     <div className="space-y-8">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="text-[13px] text-muted-foreground">Assistant</p>
-          <h1 className="mt-2 font-display text-5xl leading-none md:text-[56px]">
+          <h1 className="font-display text-5xl leading-none md:text-[56px]">
             Ask your money anything.
           </h1>
           <p className="mt-4 max-w-2xl text-sm leading-relaxed text-muted-foreground">

@@ -15,12 +15,12 @@ import {
   PencilEdit01Icon,
   PlusSignIcon,
   Search01Icon,
-  SparklesIcon,
 } from "@hugeicons/core-free-icons";
 import { accountIcon } from "@/components/account-select";
 import { Checkbox } from "@/components/motion/checkbox";
 import { Input } from "@/components/motion/input";
 import { Loader } from "@/components/motion/loader";
+import { MorphingModal } from "@/components/motion/morphing-modal";
 import {
   Combobox,
   ComboboxContent,
@@ -93,7 +93,7 @@ function typeClass(type: TransactionType) {
 }
 
 export default function ExpensesPage() {
-  const { version, openTransaction, openQuickAdd } = useTransactionDialog();
+  const { version, bumpVersion, openTransaction } = useTransactionDialog();
   const now = useNow();
   const today = now ? ymd(now) : "";
 
@@ -101,9 +101,13 @@ export default function ExpensesPage() {
   const [appliedQuery, setAppliedQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
   const [category, setCategory] = useState("all");
-  const [account, setAccount] = useState("all");
   const [range, setRange] = useState<DateRange | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
+  const [confirmDelete, setConfirmDelete] = useState<{
+    ids: string[];
+    label: string;
+  } | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [page, setPage] = useState(1);
   const [sort, setSort] = useState<SortState>({ key: "spentOn", direction: "desc" });
 
@@ -119,12 +123,11 @@ export default function ExpensesPage() {
   if (appliedQuery) params.set("q", appliedQuery);
   if (typeFilter !== "all") params.set("type", typeFilter);
   if (category !== "all") params.set("category", category);
-  if (account !== "all") params.set("account", account);
   if (range?.from) params.set("from", range.from);
   if (range?.to) params.set("to", range.to);
   if (range?.from && !range.to) params.set("to", range.from);
 
-  const { data, loading, refresh } = useApi<Transaction[]>(
+  const { data, loading } = useApi<Transaction[]>(
     `/api/transactions?${params.toString()}`,
   );
   const { data: accountsData } = useApi<Account[]>(`/api/accounts?v=${version}`);
@@ -223,23 +226,38 @@ export default function ExpensesPage() {
     resetPage();
   }
 
-  async function deleteSelected() {
-    if (!selected.length) return;
-    await Promise.all(selected.map((id) => api.delete(`/api/transactions/${id}`)));
-    gooeyToast.success(`${selected.length} transactions deleted`);
-    setSelected([]);
-    refresh();
+  async function deleteConfirmed() {
+    if (!confirmDelete || deleting) return;
+    setDeleting(true);
+    try {
+      await Promise.all(
+        confirmDelete.ids.map((id) => api.delete(`/api/transactions/${id}`)),
+      );
+      gooeyToast.success(
+        `${confirmDelete.ids.length} transaction${confirmDelete.ids.length === 1 ? "" : "s"} deleted`,
+      );
+      setSelected((current) =>
+        current.filter((id) => !confirmDelete.ids.includes(id)),
+      );
+      setConfirmDelete(null);
+      bumpVersion();
+    } catch (error) {
+      gooeyToast.error("Could not delete", {
+        description: (error as Error).message,
+      });
+    } finally {
+      setDeleting(false);
+    }
   }
 
   const filtered =
-    typeFilter !== "all" || account !== "all" || category !== "all" || Boolean(range || query);
+    typeFilter !== "all" || category !== "all" || Boolean(range || query);
 
   return (
     <div className="space-y-6">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="text-[13px] text-muted-foreground">Ledger</p>
-          <h1 className="mt-2 font-display text-5xl leading-none">Every shilling.</h1>
+          <h1 className="font-display text-5xl leading-none">Every shilling.</h1>
           <p className="mt-3 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
             {transactions.length} entries,
             <Money value={net} size="sm" /> net
@@ -247,38 +265,23 @@ export default function ExpensesPage() {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {selected.length > 0 ? (
-            <Button variant="destructive" onClick={deleteSelected}>
+            <Button
+              variant="destructive"
+              onClick={() =>
+                setConfirmDelete({
+                  ids: selected,
+                  label: `${selected.length} transactions`,
+                })
+              }
+            >
               <Icon icon={Delete02Icon} className="size-4" /> Delete {selected.length}
             </Button>
           ) : null}
-          <Button variant="outline" onClick={openQuickAdd}>
-            <Icon icon={SparklesIcon} className="size-4" /> Quick add
-          </Button>
           <Button onClick={() => openTransaction(undefined, "expense")}>
             <Icon icon={PlusSignIcon} className="size-4" /> Add transaction
           </Button>
         </div>
       </header>
-
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex rounded-full border border-border bg-muted p-0.5">
-          {TYPE_OPTIONS.map((option) => (
-            <button
-              key={option.value}
-              type="button"
-              onClick={() => changeType(option.value)}
-              className={cn(
-                "rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
-                typeFilter === option.value
-                  ? "bg-card text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
-      </div>
 
       <div className="flex flex-wrap items-center gap-2">
         <div className="min-w-56 flex-1">
@@ -287,10 +290,40 @@ export default function ExpensesPage() {
             onChange={setQuery}
             placeholder="Search notes, accounts and amounts"
             leftIcon={<Icon icon={Search01Icon} className="size-4" />}
+            classNames={{
+              field:
+                "h-11 rounded-none border-x-0 border-t-0 border-b border-border bg-transparent data-[state=focused]:ring-0",
+              leftIcon: "left-0",
+              input: "pl-7 text-sm",
+            }}
           />
         </div>
 
         <div className="ml-auto flex items-center gap-2">
+          <Combobox
+            value={typeFilter}
+            onValueChange={(value) => changeType(value as TypeFilter)}
+            className="w-36 shrink-0"
+          >
+            <ComboboxTrigger className="h-11 min-w-0 rounded-xl px-3">
+              <ComboboxInput
+                aria-label="Filter by type"
+                placeholder="Type"
+                showIcon={false}
+              />
+            </ComboboxTrigger>
+            <ComboboxContent className="w-44 rounded-xl">
+              <ComboboxList ariaLabel="Transaction type" className="p-2">
+                <ComboboxEmpty>No transaction types.</ComboboxEmpty>
+                {TYPE_OPTIONS.map((option) => (
+                  <ComboboxItem key={option.value} value={option.value} textValue={option.label}>
+                    {option.label}
+                  </ComboboxItem>
+                ))}
+              </ComboboxList>
+            </ComboboxContent>
+          </Combobox>
+
           {typeFilter !== "transfer" ? (
             <Combobox
               value={category}
@@ -342,39 +375,6 @@ export default function ExpensesPage() {
             </Combobox>
           ) : null}
 
-          <Combobox
-            value={account}
-            onValueChange={(value) => {
-              setAccount(value);
-              resetPage();
-            }}
-            className="w-40 shrink-0"
-          >
-            <ComboboxTrigger className="h-11 min-w-0 rounded-xl px-3">
-              <ComboboxInput
-                aria-label="Filter by account"
-                placeholder="Account"
-                showIcon={false}
-              />
-            </ComboboxTrigger>
-            <ComboboxContent className="w-56 rounded-xl">
-              <ComboboxList ariaLabel="Accounts" className="p-2">
-                <ComboboxEmpty>No accounts.</ComboboxEmpty>
-                <ComboboxItem value="all" textValue="All accounts">
-                  All accounts
-                </ComboboxItem>
-                {accounts.map((option) => (
-                  <ComboboxItem key={option.id} value={option.id} textValue={option.name}>
-                    <span className="flex items-center gap-2">
-                      <Icon icon={accountIcon(option.type)} className="size-4" />
-                      {option.name}
-                    </span>
-                  </ComboboxItem>
-                ))}
-              </ComboboxList>
-            </ComboboxContent>
-          </Combobox>
-
           {today ? (
             <DateRangePicker
               value={range}
@@ -410,7 +410,6 @@ export default function ExpensesPage() {
                 setQuery("");
                 setTypeFilter("all");
                 setCategory("all");
-                setAccount("all");
                 setRange(null);
                 resetPage();
               }}
@@ -439,8 +438,18 @@ export default function ExpensesPage() {
         ) : (
           <>
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[920px] border-collapse text-left">
+              <table className="w-full min-w-[992px] table-fixed border-collapse text-left">
                 <caption className="sr-only">Transactions</caption>
+                <colgroup>
+                  <col className="w-12" />
+                  <col className="w-36" />
+                  <col className="w-60" />
+                  <col className="w-24" />
+                  <col className="w-32" />
+                  <col className="w-32" />
+                  <col className="w-32" />
+                  <col className="w-20" />
+                </colgroup>
                 <thead>
                   <tr className="border-b border-border/70 bg-muted/20">
                     <th scope="col" className="w-12 px-4 py-3">
@@ -451,17 +460,21 @@ export default function ExpensesPage() {
                         aria-label="Select all transactions on this page"
                       />
                     </th>
-                    <th scope="col" className="w-40 px-4 py-3">
+                    <th scope="col" className="w-36 px-4 py-3">
                       <SortHeading label="When" sortKey="spentOn" sort={sort} onToggle={toggleSort} />
                     </th>
-                    <th scope="col" className="px-4 py-3">
+                    <th scope="col" className="w-60 px-4 py-3">
                       <SortHeading label="Description" sortKey="note" sort={sort} onToggle={toggleSort} />
                     </th>
-                    <th scope="col" className="w-20 px-4 py-3">Type</th>
+                    <th scope="col" className="w-24 px-4 py-3">
+                      <HeaderLabel>Type</HeaderLabel>
+                    </th>
                     <th scope="col" className="w-32 px-4 py-3">
                       <SortHeading label="Category" sortKey="category" sort={sort} onToggle={toggleSort} />
                     </th>
-                    <th scope="col" className="w-36 px-4 py-3">Account</th>
+                    <th scope="col" className="w-32 px-4 py-3">
+                      <HeaderLabel>Account</HeaderLabel>
+                    </th>
                     <th scope="col" className="w-32 px-4 py-3 text-right">
                       <SortHeading
                         label="Amount"
@@ -486,9 +499,7 @@ export default function ExpensesPage() {
                       : undefined;
                     const description =
                       row.note ||
-                      (row.type === "transfer"
-                        ? `Transfer${destination ? ` to ${destination.name}` : ""}`
-                        : cat.label);
+                      (row.type === "transfer" ? "Transfer" : cat.label);
                     return (
                       <tr key={row.id} className="transition-colors hover:bg-muted/40">
                         <td className="px-4 py-3">
@@ -530,9 +541,11 @@ export default function ExpensesPage() {
                             </span>
                             <span className="min-w-0">
                               <span className="block truncate text-[13px]">{description}</span>
-                              <span className="block text-[11px] text-muted-foreground">
-                                {row.type === "transfer" ? "Movement between accounts" : cat.label}
-                              </span>
+                              {row.type !== "transfer" ? (
+                                <span className="block text-[11px] text-muted-foreground">
+                                  {cat.label}
+                                </span>
+                              ) : null}
                             </span>
                           </button>
                         </td>
@@ -562,21 +575,36 @@ export default function ExpensesPage() {
                           )}
                         </td>
                         <td className="px-4 py-3">
-                          <div className="flex items-center gap-1.5 text-[12px]">
-                            {source ? (
-                              <Icon
-                                icon={accountIcon(source.type)}
-                                className="size-3.5 text-muted-foreground"
-                              />
-                            ) : null}
-                            <span className="truncate">{source?.name ?? "Account"}</span>
-                            {destination ? (
-                              <>
-                                <Icon icon={ArrowRight01Icon} className="size-3 text-muted-foreground" />
+                          {destination ? (
+                            <div className="flex flex-col gap-1 text-[12px]">
+                              <span className="flex min-w-0 items-center gap-1.5">
+                                {source ? (
+                                  <Icon
+                                    icon={accountIcon(source.type)}
+                                    className="size-3.5 shrink-0 text-muted-foreground"
+                                  />
+                                ) : null}
+                                <span className="truncate">{source?.name ?? "Account"}</span>
+                              </span>
+                              <span className="flex min-w-0 items-center gap-1.5 text-muted-foreground">
+                                <Icon
+                                  icon={ArrowRight01Icon}
+                                  className="size-3 shrink-0"
+                                />
                                 <span className="truncate">{destination.name}</span>
-                              </>
-                            ) : null}
-                          </div>
+                              </span>
+                            </div>
+                          ) : (
+                            <div className="flex min-w-0 items-center gap-1.5 text-[12px]">
+                              {source ? (
+                                <Icon
+                                  icon={accountIcon(source.type)}
+                                  className="size-3.5 shrink-0 text-muted-foreground"
+                                />
+                              ) : null}
+                              <span className="truncate">{source?.name ?? "Account"}</span>
+                            </div>
+                          )}
                         </td>
                         <td className="px-4 py-3 text-right">
                           <div className="flex flex-col items-end">
@@ -614,11 +642,9 @@ export default function ExpensesPage() {
                             </button>
                             <button
                               type="button"
-                              onClick={async () => {
-                                await api.delete(`/api/transactions/${row.id}`);
-                                gooeyToast.success("Transaction deleted");
-                                refresh();
-                              }}
+                              onClick={() =>
+                                setConfirmDelete({ ids: [row.id], label: description })
+                              }
                               aria-label={`Delete ${description}`}
                               className="grid size-8 place-items-center rounded-lg text-muted-foreground outline-none transition-colors hover:bg-destructive/10 hover:text-destructive"
                             >
@@ -683,10 +709,58 @@ export default function ExpensesPage() {
         )}
       </Panel>
 
-      <p className="text-center text-[11px] text-muted-foreground">
-        Select rows to delete in bulk. Click a description to edit it.
-      </p>
+      <MorphingModal
+        viewId={confirmDelete ? "confirm-delete" : null}
+        onClose={() => {
+          if (!deleting) setConfirmDelete(null);
+        }}
+        placement="center"
+        className="max-w-sm"
+        ariaLabel="Confirm delete"
+      >
+        {confirmDelete ? (
+          <div className="space-y-4">
+            <div>
+              <h2 className="text-lg font-semibold tracking-[-0.02em]">
+                {confirmDelete.ids.length > 1
+                  ? `Delete ${confirmDelete.ids.length} transactions?`
+                  : "Delete this transaction?"}
+              </h2>
+              <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">
+                {confirmDelete.ids.length > 1
+                  ? `${confirmDelete.label} will be permanently removed.`
+                  : `“${confirmDelete.label}” will be permanently removed.`}
+              </p>
+            </div>
+            <div className="flex justify-end gap-2 pt-1">
+              <Button
+                variant="ghost"
+                onClick={() => setConfirmDelete(null)}
+                disabled={deleting}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={deleteConfirmed}
+                disabled={deleting}
+              >
+                <Icon icon={Delete02Icon} className="size-4" />
+                {deleting ? "Deleting" : "Delete"}
+              </Button>
+            </div>
+          </div>
+        ) : null}
+      </MorphingModal>
     </div>
+  );
+}
+
+function HeaderLabel({ children }: { children: string }) {
+  return (
+    <span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+      {children}
+    </span>
   );
 }
 

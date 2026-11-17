@@ -213,8 +213,7 @@ function SettingsForm({
   return (
     <div className="space-y-8">
       <header>
-        <p className="text-[13px] text-muted-foreground">Settings</p>
-        <h1 className="mt-2 font-display text-5xl leading-none md:text-[56px]">Make it yours.</h1>
+        <h1 className="font-display text-5xl leading-none md:text-[56px]">Make it yours.</h1>
         <p className="mt-4 max-w-xl text-sm leading-relaxed text-muted-foreground">
           The budget, the accounts, the forecast. Everything here is stored through the mock API.
         </p>

@@ -45,8 +45,7 @@ export default function ConvertPage() {
   return (
     <div className="space-y-8">
       <header>
-        <p className="text-[13px] text-muted-foreground">Converter</p>
-        <h1 className="mt-2 font-display text-5xl leading-none md:text-[56px]">UGX to USD.</h1>
+        <h1 className="font-display text-5xl leading-none md:text-[56px]">UGX to USD.</h1>
         <p className="mt-4 max-w-xl text-sm leading-relaxed text-muted-foreground">
           Flip between shillings and dollars at the rate stored with each expense.
         </p>
