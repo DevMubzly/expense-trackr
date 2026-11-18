@@ -199,7 +199,7 @@ export function BloomMenu({
                 if (next instanceof Node && !ref.current?.contains(next))
                   close(false);
               }}
-              style={{ borderRadius: 16 }}
+              style={{ borderRadius: 8 }}
               className="w-[min(86vw,420px)] overflow-hidden border border-border bg-card"
             >
               <motion.div
@@ -317,7 +317,7 @@ export function BloomMenu({
               type="button"
               layoutId={layoutId}
               transition={morph}
-              style={{ borderRadius: 16 }}
+              style={{ borderRadius: 8 }}
               onClick={() => setOpen(true)}
               aria-haspopup="menu"
               aria-expanded={open}

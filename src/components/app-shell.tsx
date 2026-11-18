@@ -195,7 +195,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <Link
                   href={item.href}
                   aria-label={item.label}
-                  className="flex size-full items-center justify-center rounded-full"
+                  className="flex size-full items-center justify-center rounded-md"
                 >
                   <Icon
                     icon={item.icon}
@@ -213,7 +213,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <Link
                   href={item.href}
                   aria-label={item.label}
-                  className="flex size-full items-center justify-center rounded-full"
+                  className="flex size-full items-center justify-center rounded-md"
                 >
                   <Icon
                     icon={item.icon}
@@ -230,7 +230,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <DockItem aria-label="Toggle theme">
             <ThemeToggle
               variant="circle-blur"
-              className="size-9 rounded-full text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
+              className="size-9 rounded-md text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
               iconClassName="size-[18px]"
             />
           </DockItem>

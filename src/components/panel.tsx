@@ -10,7 +10,7 @@ export function Panel({
   return (
     <div
       className={cn(
-        "rounded-2xl border border-border/70 bg-card/60 shadow-[0_1px_0_0_color-mix(in_oklab,var(--foreground)_4%,transparent)_inset] backdrop-blur-sm",
+        "rounded-md border border-border/70 bg-card/60 shadow-[0_1px_0_0_color-mix(in_oklab,var(--foreground)_4%,transparent)_inset] backdrop-blur-sm",
         className,
       )}
     >

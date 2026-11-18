@@ -83,7 +83,7 @@ export default function AssistantPage() {
             affordability, and how much is safe before payday.
           </p>
         </div>
-        <span className="flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 text-[11px] text-muted-foreground">
+        <span className="flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-[11px] text-muted-foreground">
           <Icon icon={SparklesIcon} className="size-3.5" /> Mock intelligence
         </span>
       </header>
@@ -150,14 +150,14 @@ export default function AssistantPage() {
                 }
               }}
               placeholder="Ask about spending, goals, debts..."
-              className="h-11 min-w-0 flex-1 rounded-full border border-border bg-transparent px-4 text-sm outline-none placeholder:text-muted-foreground/60 focus-visible:ring-2 focus-visible:ring-ring"
+              className="h-11 min-w-0 flex-1 rounded-md border border-border bg-transparent px-4 text-sm outline-none placeholder:text-muted-foreground/60 focus-visible:ring-2 focus-visible:ring-ring"
               aria-label="Ask the assistant"
             />
             <Button
               onClick={() => ask()}
               disabled={!question.trim()}
               size="icon"
-              className="size-11 rounded-full"
+              className="size-11 rounded-md"
               aria-label="Send question"
             >
               <Icon icon={ArrowUp02Icon} className="size-4" />

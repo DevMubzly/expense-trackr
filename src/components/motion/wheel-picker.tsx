@@ -490,7 +490,7 @@ export function WheelPicker({
     return (
       <div
         className={cn(
-          "relative overflow-hidden rounded-2xl border border-border bg-card",
+          "relative overflow-hidden rounded-md border border-border bg-card",
           disabled && "pointer-events-none opacity-50",
           className,
         )}
@@ -545,7 +545,7 @@ export function WheelPicker({
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerUp}
       className={cn(
-        "relative touch-none overflow-hidden rounded-2xl border border-border bg-card outline-none focus-visible:ring-2 focus-visible:ring-foreground/20",
+        "relative touch-none overflow-hidden rounded-md border border-border bg-card outline-none focus-visible:ring-2 focus-visible:ring-foreground/20",
         // The drum owns the whole gesture; iOS must not open its callout or
         // start a drag out of the same press and cancel ours.
         TOUCH_GESTURE_CLASS,

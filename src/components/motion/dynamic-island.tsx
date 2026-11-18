@@ -40,7 +40,7 @@ const CONTENT_SPRING = {
 // Constant radius — never animated. The browser clamps it to half the shell
 // height, so the pill-to-rounded-rect morph falls out of the resize for free
 // with zero chance of corner glitches.
-const RADIUS = 32;
+const RADIUS = 8;
 
 // iPhone pill dimensions. Also the shell's pre-measure animate target: if the
 // first commit already has a view active (e.g. a click replayed after

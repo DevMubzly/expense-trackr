@@ -289,7 +289,7 @@
   --legend-muted: oklch(0.968 0.003 95);
   --legend-muted-foreground: oklch(0.52 0.012 285);
   --legend-track: oklch(0.205 0.008 285 / 7%);
-  --radius: 0.75rem;
+  --radius: 0.5rem;
 }
 
 .dark {
@@ -376,5 +376,11 @@
   }
   .no-scrollbar {
     scrollbar-width: none;
+  }
+
+  /* Flat, consistent rounding across the app. */
+  .rounded,
+  [class*="rounded-"]:not(.rounded-none) {
+    border-radius: 0.5rem !important;
   }
 }

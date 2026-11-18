@@ -80,6 +80,10 @@ function expenseTime(iso: string) {
     : date.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
 }
 
+function transactionTime(transaction: Transaction) {
+  return transaction.spentTime || expenseTime(transaction.createdAt);
+}
+
 function typeLabel(type: TransactionType) {
   if (type === "expense") return "Expense";
   if (type === "income") return "Income";
@@ -168,7 +172,9 @@ export default function ExpensesPage() {
         case "spentOn":
         default:
           result =
-            a.spentOn.localeCompare(b.spentOn) || a.createdAt.localeCompare(b.createdAt);
+            a.spentOn.localeCompare(b.spentOn) ||
+            transactionTime(a).localeCompare(transactionTime(b)) ||
+            a.createdAt.localeCompare(b.createdAt);
           break;
       }
       return result * direction;
@@ -258,9 +264,10 @@ export default function ExpensesPage() {
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="font-display text-5xl leading-none">Every shilling.</h1>
-          <p className="mt-3 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-            {transactions.length} entries,
-            <Money value={net} size="sm" /> net
+          <p className="mt-2 text-[11px] text-muted-foreground">
+            {transactions.length}{" "}
+            {transactions.length === 1 ? "entry" : "entries"}, UGX{" "}
+            {formatNumber(net)} net
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -518,7 +525,7 @@ export default function ExpensesPage() {
                                 month: "short",
                                 year: "numeric",
                               })}{" "}
-                              · {expenseTime(row.createdAt)}
+                              · {transactionTime(row)}
                             </span>
                           </div>
                         </td>

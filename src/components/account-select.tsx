@@ -44,8 +44,8 @@ export function AccountSelect({
         <ComboboxTrigger
           className={
             compact
-              ? "h-9 min-w-0 rounded-lg px-2 text-[12px]"
-              : "h-10 min-w-0 rounded-xl px-3"
+              ? "h-9 min-w-0 rounded-md px-2 text-[12px]"
+              : "h-10 min-w-0 rounded-md px-3"
           }
         >
           <ComboboxInput
@@ -54,7 +54,7 @@ export function AccountSelect({
             showIcon={false}
           />
         </ComboboxTrigger>
-        <ComboboxContent className="w-64 rounded-xl">
+        <ComboboxContent className="w-56 rounded-md">
           <ComboboxList ariaLabel={label} className="p-2">
             <ComboboxEmpty>No accounts.</ComboboxEmpty>
             {accounts.map((account) => (
@@ -62,9 +62,6 @@ export function AccountSelect({
                 <span className="flex items-center gap-2">
                   <Icon icon={accountIcon(account.type)} className="size-4" />
                   <span className="min-w-0 flex-1 truncate">{account.name}</span>
-                  <span className="text-[10px] text-muted-foreground">
-                    {account.provider ?? account.type}
-                  </span>
                 </span>
               </ComboboxItem>
             ))}

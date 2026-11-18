@@ -36,8 +36,8 @@ export function CategorySelect({
       <ComboboxTrigger
         className={
           compact
-            ? "h-9 min-w-0 rounded-lg px-2 text-[12px]"
-            : "h-10 min-w-0 rounded-xl px-3"
+            ? "h-9 min-w-0 rounded-md px-2 text-[12px]"
+            : "h-10 min-w-0 rounded-md px-3"
         }
       >
         <ComboboxInput
@@ -46,7 +46,7 @@ export function CategorySelect({
           showIcon={false}
         />
       </ComboboxTrigger>
-      <ComboboxContent className="w-56 rounded-xl">
+      <ComboboxContent className="w-56 rounded-md">
         <ComboboxList ariaLabel={label} className="p-2">
           <ComboboxEmpty>No categories.</ComboboxEmpty>
           {allLabel ? (

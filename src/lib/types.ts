@@ -30,6 +30,8 @@ export type Transaction = {
   note: string;
   /** YYYY-MM-DD */
   spentOn: string;
+  /** Local time of the entry, HH:mm. */
+  spentTime: string;
   /** ISO timestamp */
   createdAt: string;
   source: TransactionSource;
@@ -45,6 +47,7 @@ export type NewTransaction = {
   feeUgx?: number;
   note?: string;
   spentOn: string;
+  spentTime?: string;
   usdRate?: number;
   source?: TransactionSource;
 };

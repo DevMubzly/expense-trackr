@@ -109,6 +109,19 @@ function sumFees(transactions: Transaction[]): number {
   return transactions.reduce((total, transaction) => total + (transaction.feeUgx ?? 0), 0);
 }
 
+function nowTime(): string {
+  const now = new Date();
+  return `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+}
+
+function timeOf(transaction: Transaction): string {
+  if (transaction.spentTime) return transaction.spentTime;
+  const date = new Date(transaction.createdAt);
+  return Number.isNaN(date.getTime())
+    ? "00:00"
+    : `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+}
+
 function ofType(transactions: Transaction[], type: TransactionType): Transaction[] {
   return transactions.filter((transaction) => transaction.type === type);
 }
@@ -160,6 +173,9 @@ export function listTransactions(filters: TransactionFilters = {}): Transaction[
     })
     .sort((a, b) => {
       if (a.spentOn !== b.spentOn) return a.spentOn < b.spentOn ? 1 : -1;
+      const aTime = timeOf(a);
+      const bTime = timeOf(b);
+      if (aTime !== bTime) return aTime < bTime ? 1 : -1;
       return a.createdAt < b.createdAt ? 1 : -1;
     })
     .slice(0, limit ?? Number.POSITIVE_INFINITY);
@@ -194,6 +210,7 @@ export function addTransaction(input: NewTransaction): Transaction {
     feeUgx: feeUgx > 0 ? feeUgx : undefined,
     note: input.note?.trim() || "",
     spentOn: input.spentOn,
+    spentTime: input.spentTime || nowTime(),
     createdAt: new Date().toISOString(),
     source: input.source ?? "manual",
   };
@@ -241,6 +258,7 @@ export function updateTransaction(
     feeUgx: feeUgx > 0 ? feeUgx : undefined,
     note: patch.note ?? current.note,
     spentOn: patch.spentOn ?? current.spentOn,
+    spentTime: patch.spentTime ?? current.spentTime ?? timeOf(current),
     source: patch.source ?? current.source,
   };
 
@@ -739,7 +757,13 @@ export function computeStats(month?: string, period: StatPeriod = "30d"): Stats 
     months,
     heat,
     recent: [...state.transactions]
-      .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))
+      .sort((a, b) => {
+        if (a.spentOn !== b.spentOn) return a.spentOn < b.spentOn ? 1 : -1;
+        const aTime = timeOf(a);
+        const bTime = timeOf(b);
+        if (aTime !== bTime) return aTime < bTime ? 1 : -1;
+        return a.createdAt < b.createdAt ? 1 : -1;
+      })
       .slice(0, 8),
     accounts,
     forecast: computeForecast(now, state.transactions, state.settings, liquidBalance),

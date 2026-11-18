@@ -137,7 +137,7 @@ export default function DashboardPage() {
             onValueChange={(value) => setPeriod(value as StatPeriod)}
             className="w-44 shrink-0"
           >
-            <ComboboxTrigger className="h-9 min-w-0 rounded-full px-3">
+            <ComboboxTrigger className="h-9 min-w-0 rounded-md px-3">
               <ComboboxInput
                 aria-label="Timeframe"
                 placeholder="Timeframe"
@@ -163,7 +163,7 @@ export default function DashboardPage() {
           <button
             type="button"
             onClick={() => openTransaction(undefined, "expense")}
-            className="inline-flex h-9 items-center gap-2 rounded-full bg-primary px-4 text-[13px] font-medium text-primary-foreground transition-transform active:scale-[0.98]"
+            className="inline-flex h-9 items-center gap-2 rounded-md bg-primary px-4 text-[13px] font-medium text-primary-foreground transition-transform active:scale-[0.98]"
           >
             <Icon icon={PlusSignIcon} className="size-4" /> Log expense
           </button>

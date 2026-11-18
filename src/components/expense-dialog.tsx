@@ -2,6 +2,8 @@
 
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
 import { gooeyToast } from "goey-toast";
+import { AnimatePresence, motion } from "motion/react";
+import { EASE_OUT, SPRING_LAYOUT } from "@/lib/ease";
 import {
   Camera01Icon,
   Cancel01Icon,
@@ -14,6 +16,7 @@ import { WheelPicker } from "@/components/motion/wheel-picker";
 import { Input } from "@/components/motion/input";
 import { AccountSelect } from "@/components/account-select";
 import { CategorySelect } from "@/components/category-select";
+import { TimeSelect } from "@/components/time-select";
 import { Icon } from "@/components/huge-icon";
 import { Button } from "@/components/ui/button";
 import { api, useApi } from "@/lib/use-api";
@@ -52,6 +55,15 @@ export const ExpenseDialogProvider = TransactionDialogProvider;
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const PRESETS = [5000, 10000, 20000, 50000];
+
+function timeFromDate(date: Date): string {
+  return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+}
+
+function timeFromIso(iso: string): string {
+  const date = new Date(iso);
+  return Number.isNaN(date.getTime()) ? timeFromDate(new Date()) : timeFromDate(date);
+}
 /** Temporarily hidden: quick amounts and mock receipt scan. */
 const SHOW_AMOUNT_SHORTCUTS = false;
 const UNDERLINE_FIELD = {
@@ -119,7 +131,11 @@ export function TransactionDialogProvider({ children }: { children: React.ReactN
         viewId={mode}
         onClose={close}
         placement="center"
-        className={mode === "quick-add" ? "max-w-2xl" : "max-w-xl"}
+        className={
+          mode === "quick-add"
+            ? "max-w-2xl"
+            : "h-[620px] max-h-[calc(100dvh-2rem)] max-w-xl"
+        }
         ariaLabel={
           mode === "quick-add"
             ? "Quick add transactions"
@@ -192,6 +208,9 @@ function TransactionForm({
   );
   const [fee, setFee] = useState(transaction?.feeUgx ? String(transaction.feeUgx) : "");
   const [note, setNote] = useState(transaction?.note ?? "");
+  const [spentTime, setSpentTime] = useState(
+    transaction?.spentTime ?? timeFromIso(transaction?.createdAt ?? new Date().toISOString()),
+  );
   const [year, setYear] = useState(initial.getFullYear());
   const [month, setMonth] = useState(initial.getMonth());
   const [day, setDay] = useState(initial.getDate());
@@ -252,6 +271,7 @@ function TransactionForm({
         feeUgx: showFee ? Number(fee) || 0 : 0,
         note,
         spentOn,
+        spentTime: spentTime || undefined,
         source: transaction?.source ?? "manual",
       };
       if (transaction) {
@@ -295,8 +315,9 @@ function TransactionForm({
   }
 
   return (
-    <div className="space-y-5">
-      <div className="flex items-start justify-between gap-3">
+    <div className="flex h-[580px] max-h-[calc(100dvh-4.5rem)] flex-col">
+      <div className="min-h-0 flex-1 space-y-5 overflow-y-auto pr-1">
+        <div className="flex items-start justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold tracking-[-0.02em]">
             {transaction
@@ -313,38 +334,48 @@ function TransactionForm({
         </div>
       </div>
 
-      <div className="flex rounded-full border border-border bg-muted p-0.5">
-        {TYPES.map((option) => (
-          <button
-            key={option.value}
-            type="button"
-            onClick={() => changeType(option.value)}
-            className={cn(
-              "flex-1 rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
-              type === option.value
-                ? "bg-card text-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground",
-            )}
-          >
-            {option.label}
-          </button>
-        ))}
+      <div className="flex rounded-md border border-border bg-muted p-0.5">
+        {TYPES.map((option) => {
+          const active = type === option.value;
+          return (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => changeType(option.value)}
+              className={cn(
+                "relative flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
+                active ? "text-foreground" : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {active ? (
+                <motion.span
+                  layoutId="transaction-type-pill"
+                  className="absolute inset-0 rounded-md bg-card shadow-sm"
+                  transition={SPRING_LAYOUT}
+                />
+              ) : null}
+              <span className="relative z-10">{option.label}</span>
+            </button>
+          );
+        })}
       </div>
 
-      <div className="flex items-baseline gap-2 border-b border-border pb-2">
-        <span className="text-sm font-medium text-muted-foreground">
+      <div className="flex w-56 items-end gap-2 pb-2">
+        <span className="pb-1 text-sm font-medium text-muted-foreground">
           {isTransfer ? "UGX" : currency === "UGX" ? "UGX" : "USD"}
         </span>
-        <input
-          autoFocus
-          value={amount}
-          onChange={(event) => setAmount(event.target.value.replace(/[^0-9.]/g, ""))}
-          onKeyDown={(event) => event.key === "Enter" && submit()}
-          inputMode="decimal"
-          placeholder="0"
-          className="tnum w-full bg-transparent text-5xl font-semibold tracking-[-0.03em] outline-none placeholder:text-muted-foreground/35"
-          aria-label="Amount"
-        />
+        <div className="min-w-0 flex-1 border-b border-border">
+          <input
+            autoFocus
+            value={amount}
+            onChange={(event) => setAmount(event.target.value.replace(/[^0-9.]/g, ""))}
+            onKeyDown={(event) => event.key === "Enter" && submit()}
+            inputMode="decimal"
+            placeholder="0"
+            className="tnum w-full bg-transparent text-4xl font-semibold tracking-[-0.03em] outline-none placeholder:text-muted-foreground/35"
+            aria-label="Amount"
+          />
+        </div>
       </div>
 
       {/* Temporarily disabled: quick amount presets and mock receipt scan. */}
@@ -377,63 +408,73 @@ function TransactionForm({
         </div>
       ) : null}
 
-      {isTransfer ? (
-        <div className="space-y-3">
-          <FieldRow label="From">
-            <AccountSelect
-              label="From"
-              value={accountId}
-              accounts={accounts}
-              onValueChange={setAccountId}
-              hideLabel
-            />
-          </FieldRow>
-          <FieldRow label="To">
-            <AccountSelect
-              label="To"
-              value={toAccountId}
-              accounts={accounts}
-              onValueChange={setToAccountId}
-              hideLabel
-            />
-          </FieldRow>
-        </div>
-      ) : (
-        <FieldRow label="Account">
-          <AccountSelect
-            label="Account"
-            value={accountId}
-            accounts={accounts}
-            onValueChange={setAccountId}
-            hideLabel
-          />
-        </FieldRow>
-      )}
+      <AnimatePresence initial={false} mode="popLayout">
+        <motion.div
+          key={type}
+          initial={{ opacity: 0, y: -4 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -4 }}
+          transition={{ duration: 0.18, ease: EASE_OUT }}
+          className="space-y-3"
+        >
+          {isTransfer ? (
+            <>
+              <div className="grid grid-cols-[80px_176px_auto] items-center gap-2">
+                <p className="text-[13px] text-muted-foreground">From:</p>
+                <AccountSelect
+                  label="From"
+                  value={accountId}
+                  accounts={accounts}
+                  onValueChange={setAccountId}
+                  hideLabel
+                />
+                <AnimatePresence initial={false}>
+                  {showFee ? <FeeField key="fee" fee={fee} onChange={setFee} /> : null}
+                </AnimatePresence>
+              </div>
+              <div className="grid grid-cols-[80px_176px] items-center gap-2">
+                <p className="text-[13px] text-muted-foreground">To:</p>
+                <AccountSelect
+                  label="To"
+                  value={toAccountId}
+                  accounts={accounts}
+                  onValueChange={setToAccountId}
+                  hideLabel
+                />
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="grid grid-cols-[80px_176px_auto] items-center gap-2">
+                <p className="text-[13px] text-muted-foreground">Account:</p>
+                <AccountSelect
+                  label="Account"
+                  value={accountId}
+                  accounts={accounts}
+                  onValueChange={setAccountId}
+                  hideLabel
+                />
+                <AnimatePresence initial={false}>
+                  {showFee ? <FeeField key="fee" fee={fee} onChange={setFee} /> : null}
+                </AnimatePresence>
+              </div>
+              <div className="grid grid-cols-[80px_176px] items-center gap-2">
+                <p className="text-[13px] text-muted-foreground">Category:</p>
+                <CategorySelect
+                  value={category}
+                  onValueChange={setCategory}
+                  kind={type === "income" ? "income" : "expense"}
+                  label="Category"
+                />
+              </div>
+            </>
+          )}
+        </motion.div>
+      </AnimatePresence>
 
-      {showFee ? (
-        <Input
-          label="MoMo fee (UGX)"
-          value={fee}
-          onChange={(value) => setFee(value.replace(/[^0-9]/g, ""))}
-          placeholder="0"
-          classNames={UNDERLINE_FIELD}
-        />
-      ) : null}
-
-      {!isTransfer ? (
-        <FieldRow label="Category">
-          <CategorySelect
-            value={category}
-            onValueChange={setCategory}
-            kind={type === "income" ? "income" : "expense"}
-            label="Category"
-          />
-        </FieldRow>
-      ) : null}
-
-      <div>
-        <p className="mb-1 text-[13px] text-muted-foreground">When</p>
-        <div className="flex items-center gap-1">
+      <div className="flex items-center gap-2">
+        <p className="w-20 shrink-0 text-[13px] text-muted-foreground">When:</p>
+        <div className="flex min-w-0 flex-1 items-center gap-1">
           <WheelPicker
             options={Array.from({ length: maxDay }, (_, index) => String(index + 1))}
             value={String(safeDay)}
@@ -464,15 +505,27 @@ function TransactionForm({
         </div>
       </div>
 
-      <Input
-        label="Note"
-        value={note}
-        onChange={setNote}
-        placeholder="What was it?"
-        classNames={UNDERLINE_FIELD}
-      />
+      <div className="flex items-center gap-2">
+        <p className="w-20 shrink-0 text-[13px] text-muted-foreground">Time:</p>
+        <TimeSelect value={spentTime} onValueChange={setSpentTime} />
+      </div>
 
-      <div className="flex items-center justify-between gap-2 pt-1">
+      <div className="flex items-center gap-2">
+        <p className="w-20 shrink-0 text-[13px] text-muted-foreground">Note:</p>
+        <div className="min-w-0 flex-1">
+          <Input
+            value={note}
+            onChange={setNote}
+            placeholder="What was it?"
+            aria-label="Note"
+            classNames={UNDERLINE_FIELD}
+          />
+        </div>
+      </div>
+
+      </div>
+
+      <div className="mt-3 flex shrink-0 items-center justify-between gap-2 pt-4">
         {transaction ? (
           <Button variant="ghost" onClick={remove} disabled={saving} className="text-destructive">
             <Icon icon={Delete02Icon} className="size-4" /> Delete
@@ -497,17 +550,31 @@ function TransactionForm({
   );
 }
 
-function FieldRow({
-  label,
-  children,
+function FeeField({
+  fee,
+  onChange,
 }: {
-  label: string;
-  children: React.ReactNode;
+  fee: string;
+  onChange: (value: string) => void;
 }) {
   return (
-    <div className="flex items-center gap-3">
-      <p className="w-20 shrink-0 text-[13px] text-muted-foreground">{label}</p>
-      <div className="min-w-0 flex-1">{children}</div>
-    </div>
+    <motion.div
+      initial={{ opacity: 0, scale: 0.96 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.96 }}
+      transition={{ duration: 0.16, ease: EASE_OUT }}
+      className="flex items-center gap-2"
+    >
+      <p className="shrink-0 text-[13px] text-muted-foreground">Transaction fee:</p>
+      <div className="w-28">
+        <Input
+          value={fee}
+          onChange={(value) => onChange(value.replace(/[^0-9]/g, ""))}
+          placeholder="0"
+          aria-label="Transaction fee (UGX)"
+          classNames={UNDERLINE_FIELD}
+        />
+      </div>
+    </motion.div>
   );
 }

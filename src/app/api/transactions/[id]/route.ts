@@ -6,6 +6,12 @@ import type { Currency, TransactionSource, TransactionType } from "@/lib/types";
 const TYPES: TransactionType[] = ["expense", "income", "transfer"];
 const SOURCES: TransactionSource[] = ["manual", "ai", "receipt", "recurring", "import"];
 
+function isTime(value: string): boolean {
+  const match = /^(\d{2}):(\d{2})$/.exec(value);
+  if (!match) return false;
+  return Number(match[1]) <= 23 && Number(match[2]) <= 59;
+}
+
 export async function PATCH(
   request: NextRequest,
   ctx: { params: Promise<{ id: string }> },
@@ -46,6 +52,14 @@ export async function PATCH(
     typeof body.spentOn === "string" ? body.spentOn : current.spentOn;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(spentOn)) {
     return Response.json({ error: "spentOn must be YYYY-MM-DD" }, { status: 400 });
+  }
+
+  let spentTime = current.spentTime;
+  if (body.spentTime !== undefined) {
+    if (typeof body.spentTime !== "string" || !isTime(body.spentTime)) {
+      return Response.json({ error: "spentTime must be HH:mm" }, { status: 400 });
+    }
+    spentTime = body.spentTime;
   }
 
   let category = "";
@@ -94,6 +108,7 @@ export async function PATCH(
           ? body.note.slice(0, 240)
           : current.note,
       spentOn,
+      spentTime,
       source,
     }),
   );

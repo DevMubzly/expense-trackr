@@ -6,6 +6,12 @@ import type { Currency, TransactionSource, TransactionType } from "@/lib/types";
 const TYPES: TransactionType[] = ["expense", "income", "transfer"];
 const SOURCES: TransactionSource[] = ["manual", "ai", "receipt", "recurring", "import"];
 
+function isTime(value: string): boolean {
+  const match = /^(\d{2}):(\d{2})$/.exec(value);
+  if (!match) return false;
+  return Number(match[1]) <= 23 && Number(match[2]) <= 59;
+}
+
 export async function GET(request: NextRequest) {
   await connection();
   const params = request.nextUrl.searchParams;
@@ -54,6 +60,14 @@ export async function POST(request: NextRequest) {
     return Response.json({ error: "spentOn must be YYYY-MM-DD" }, { status: 400 });
   }
 
+  let spentTime: string | undefined;
+  if (body.spentTime !== undefined) {
+    if (typeof body.spentTime !== "string" || !isTime(body.spentTime)) {
+      return Response.json({ error: "spentTime must be HH:mm" }, { status: 400 });
+    }
+    spentTime = body.spentTime;
+  }
+
   let category = "";
   let toAccountId: string | undefined;
   if (type === "transfer") {
@@ -87,6 +101,7 @@ export async function POST(request: NextRequest) {
     feeUgx,
     note: typeof body.note === "string" ? body.note.slice(0, 240) : "",
     spentOn,
+    spentTime,
     source,
   });
 

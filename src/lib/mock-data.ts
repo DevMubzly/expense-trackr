@@ -153,6 +153,7 @@ export function createTransactions(): Transaction[] {
       feeUgx: options.feeUgx,
       note: options.note ?? (type === "income" ? categoryId : notes[Math.floor(rand() * notes.length)]),
       spentOn: day,
+      spentTime: `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`,
       createdAt: new Date(
         date.getFullYear(),
         date.getMonth(),
