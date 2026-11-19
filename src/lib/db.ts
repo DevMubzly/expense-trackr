@@ -21,7 +21,6 @@ import type {
   ForecastPoint,
   Goal,
   HouseholdMember,
-  MonthSummary,
   MonthTotal,
   NetWorth,
   NewAccount,
@@ -850,33 +849,6 @@ export function computeStats(
     forecast: computeForecast(now, state.transactions, state.settings, liquidBalance),
     momoFees: { month: monthFees, period: periodFees },
   };
-}
-
-export function listMonths(): MonthSummary[] {
-  const state = store();
-  const now = new Date();
-  return Array.from({ length: 8 }, (_, index) => {
-    const date = new Date(now.getFullYear(), now.getMonth() - index, 1);
-    const monthId = ymd(date).slice(0, 7);
-    const transactions = state.transactions.filter(
-      (transaction) =>
-        transaction.spentOn.startsWith(monthId) && transaction.type !== "transfer",
-    );
-    const expenses = ofType(transactions, "expense");
-    const income = ofType(transactions, "income");
-    return {
-      month: monthId,
-      label: monthLabel(monthId),
-      shortLabel: monthLabel(monthId, true),
-      total: sum(expenses),
-      income: sum(income),
-      net: sum(income) - sum(expenses),
-      count: expenses.length,
-      top: [...expenses]
-        .sort((a, b) => b.amountUgx - a.amountUgx)
-        .slice(0, 5),
-    };
-  });
 }
 
 /* -------------------------------------------------------------------------- */

@@ -6,7 +6,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeftRightIcon,
   ChartLineData01Icon,
-  Folder01Icon,
   Home01Icon,
   Money01Icon,
   PlusSignIcon,
@@ -34,7 +33,6 @@ const NAV = [
   { href: "/expenses", label: "Expenses", icon: ReceiptTextIcon },
   { href: "/stats", label: "Insights", icon: ChartLineData01Icon },
   { href: "/plan", label: "Plan", icon: Target02Icon },
-  { href: "/months", label: "Months", icon: Folder01Icon },
   { href: "/settings", label: "Settings", icon: Settings01Icon },
 ];
 

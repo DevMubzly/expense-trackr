@@ -119,18 +119,6 @@ export type MonthTotal = {
   total: number;
 };
 
-export type MonthSummary = {
-  month: string;
-  label: string;
-  shortLabel: string;
-  /** Expenses for the month. */
-  total: number;
-  income: number;
-  net: number;
-  count: number;
-  top: Transaction[];
-};
-
 export type StatPeriod = "all" | "today" | "7d" | "30d" | "90d" | "6m" | "1y";
 
 export type PeriodPoint = {
