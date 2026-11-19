@@ -9,6 +9,7 @@ export { ChartTooltip } from "./tooltip";
 export { PieChart } from "./pie-chart";
 export { PieSlice } from "./pie-slice";
 export { PieCenter } from "./pie-center";
+export { PieTicks } from "./pie-ticks";
 export { Gauge } from "./gauge";
 export { RadialChart } from "./radial-chart";
 export { RadialAxis } from "./radial-axis";

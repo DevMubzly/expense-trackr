@@ -46,12 +46,12 @@ export interface AnimatedBadgeProps extends Omit<
 }
 
 const STATUS_CLASS: Record<AnimatedBadgeStatus, string> = {
-  neutral: "border-border bg-card text-muted-foreground",
-  info: "border-primary/30 bg-muted text-primary",
-  success: "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
-  warning: "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400",
-  danger: "border-destructive/30 bg-destructive/10 text-destructive",
-  loading: "border-primary/30 bg-muted text-primary",
+  neutral: "bg-card text-muted-foreground",
+  info: "bg-muted text-primary",
+  success: "bg-muted text-emerald-600 dark:text-emerald-400",
+  warning: "bg-muted text-amber-600 dark:text-amber-400",
+  danger: "bg-muted text-destructive",
+  loading: "bg-muted text-primary",
 };
 
 const SIZE_CLASS: Record<AnimatedBadgeSize, string> = {
@@ -122,7 +122,7 @@ export function AnimatedBadge({
   size = "md",
   children,
   icon,
-  showIcon = true,
+  showIcon = false,
   pulse = status === "loading",
   contentKey,
   className,
@@ -149,7 +149,7 @@ export function AnimatedBadge({
       transition={SPRING_LAYOUT}
       style={style}
       className={cn(
-        "relative inline-flex shrink-0 items-center overflow-hidden whitespace-nowrap rounded-md border font-medium tabular-nums",
+        "relative inline-flex shrink-0 items-center overflow-hidden whitespace-nowrap rounded-full font-medium tabular-nums",
         "transition-colors duration-300",
         STATUS_CLASS[status],
         SIZE_CLASS[size],
@@ -162,7 +162,7 @@ export function AnimatedBadge({
       {pulse && !reduce ? (
         <motion.span
           aria-hidden
-          className="absolute inset-0 rounded-md bg-current"
+          className="absolute inset-0 rounded-full bg-current"
           initial={{ opacity: 0.06 }}
           animate={{ opacity: [0.06, 0.18, 0.06] }}
           transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}

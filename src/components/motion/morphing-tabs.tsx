@@ -69,6 +69,10 @@ export interface MorphingTabsProps {
   ariaLabel?: string;
   className?: string;
   classNames?: MorphingTabsClassNames;
+  /** Align the tab row to the start or center of the surface. Default `start`. */
+  align?: "start" | "center";
+  /** Show the focus/active outline on tab surfaces. Default `true`. */
+  showTabBorders?: boolean;
   /** Override any built-in string. */
   labels?: Partial<MorphingTabsMessages>;
 }
@@ -305,6 +309,8 @@ export function MorphingTabs({
   ariaLabel,
   className,
   classNames,
+  align = "start",
+  showTabBorders = true,
   labels,
 }: MorphingTabsProps) {
   const t = useMessages("morphingTabs", morphingTabsMessages, labels);
@@ -406,12 +412,19 @@ export function MorphingTabs({
     return { tabWidth: Math.max(0, widthAt(0)), slotGap: 0 };
   }, [order.length, surfaceWidth, tabGap]);
 
+  const slotStart = useMemo(() => {
+    const rowWidth =
+      tabWidth * order.length + slotGap * Math.max(0, order.length - 1);
+    if (align !== "center" || surfaceWidth <= 0) return SURFACE_INSET;
+    return Math.max(SURFACE_INSET, Math.round((surfaceWidth - rowWidth) / 2));
+  }, [align, order.length, slotGap, surfaceWidth, tabWidth]);
+
   const slotLefts = useMemo(
     () =>
       order.map(
-        (_, index) => SURFACE_INSET + index * (tabWidth + slotGap),
+        (_, index) => slotStart + index * (tabWidth + slotGap),
       ),
-    [order, slotGap, tabWidth],
+    [order, slotGap, slotStart, tabWidth],
   );
 
   const dragStartIndex = draggingId ? order.indexOf(draggingId) : -1;
@@ -534,7 +547,7 @@ export function MorphingTabs({
       const startIndex = orderRef.current.indexOf(id);
       if (startIndex < 0) return;
       const capturedSlots = orderRef.current.map(
-        (_, index) => SURFACE_INSET + index * (tabWidth + slotGap),
+        (_, index) => slotStart + index * (tabWidth + slotGap),
       );
       const startLeft = capturedSlots[startIndex];
 
@@ -554,7 +567,7 @@ export function MorphingTabs({
         slotLefts: capturedSlots,
       };
     },
-    [dragLeft, itemMap, slotGap, tabWidth],
+    [dragLeft, itemMap, slotGap, slotStart, tabWidth],
   );
 
   const moveDrag = useCallback(
@@ -862,15 +875,17 @@ export function MorphingTabs({
                       classNames?.tab,
                     )}
                   >
-                    <span
-                      aria-hidden
-                      className={cn(
-                        "pointer-events-none absolute inset-x-1 top-1 opacity-0 transition-opacity group-focus-visible:opacity-100",
-                        isActive
-                          ? "bottom-0 rounded-t-[1.25rem] border-x-2 border-t-2 border-black/20"
-                          : "bottom-2 rounded-[1rem] border-2 border-white/60",
-                      )}
-                    />
+                    {showTabBorders ? (
+                      <span
+                        aria-hidden
+                        className={cn(
+                          "pointer-events-none absolute inset-x-1 top-1 opacity-0 transition-opacity group-focus-visible:opacity-100",
+                          isActive
+                            ? "bottom-0 rounded-t-[1.25rem] border-x-2 border-t-2 border-black/20"
+                            : "bottom-2 rounded-[1rem] border-2 border-white/60",
+                        )}
+                      />
+                    ) : null}
                     {item.icon ? (
                       <span
                         aria-hidden

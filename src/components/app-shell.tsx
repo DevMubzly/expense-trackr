@@ -9,20 +9,16 @@ import {
   Folder01Icon,
   Home01Icon,
   Money01Icon,
-  PieChartIcon,
   PlusSignIcon,
   ReceiptTextIcon,
   Search01Icon,
   Settings01Icon,
-  SparklesIcon,
   Target02Icon,
 } from "@hugeicons/core-free-icons";
-import type { IconSvgElement } from "@hugeicons/react";
 import { Dock, DockItem, DockSeparator } from "@/components/motion/dock";
 import { ThemeToggle } from "@/components/motion/theme-toggle";
 import { DynamicIsland, DynamicIslandView } from "@/components/motion/dynamic-island";
 import { CommandPalette, type CommandItem } from "@/components/motion/command-palette";
-import { BloomMenu } from "@/components/motion/bloom-menu";
 import { useTransactionDialog } from "@/components/expense-dialog";
 import { Icon } from "@/components/huge-icon";
 import { useApi } from "@/lib/use-api";
@@ -35,29 +31,11 @@ const FRAME =
 
 const NAV = [
   { href: "/", label: "Dashboard", icon: Home01Icon },
-  { href: "/expenses", label: "Ledger", icon: ReceiptTextIcon },
+  { href: "/expenses", label: "Expenses", icon: ReceiptTextIcon },
   { href: "/stats", label: "Insights", icon: ChartLineData01Icon },
   { href: "/plan", label: "Plan", icon: Target02Icon },
-  { href: "/assistant", label: "Assistant", icon: SparklesIcon },
   { href: "/months", label: "Months", icon: Folder01Icon },
-  { href: "/convert", label: "Convert", icon: ArrowLeftRightIcon },
   { href: "/settings", label: "Settings", icon: Settings01Icon },
-];
-
-function glyph(icon: IconSvgElement) {
-  return function Glyph({ className }: { className?: string }) {
-    return <Icon icon={icon} className={className} />;
-  };
-}
-
-const MENU_ITEMS = [
-  { label: "Expense", icon: glyph(ReceiptTextIcon) },
-  { label: "Income", icon: glyph(Money01Icon) },
-  { label: "Transfer", icon: glyph(ArrowLeftRightIcon) },
-  { label: "Plan", icon: glyph(Target02Icon) },
-  { label: "Assistant", icon: glyph(SparklesIcon) },
-  { label: "Insights", icon: glyph(PieChartIcon) },
-  { label: "Months", icon: glyph(Folder01Icon) },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -123,14 +101,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         keywords: [item.href],
         onSelect: () => router.push(item.href),
       })),
-      {
-        id: "convert",
-        label: "Convert UGX to USD",
-        group: "Actions",
-        icon: ArrowLeftRightIcon,
-        keywords: ["dollar", "rate", "exchange"],
-        onSelect: () => router.push("/convert"),
-      },
     ],
     [openTransaction, router],
   );
@@ -142,7 +112,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="flex min-h-dvh flex-col">
       <main className={cn("flex-1 pb-40 pt-10", FRAME)}>{children}</main>
 
-      <div className="pointer-events-none fixed inset-x-0 bottom-6 z-50 flex flex-col items-center gap-3">
+      <div className="pointer-events-none fixed inset-x-0 bottom-4 z-50 flex flex-col items-center gap-2">
         <button
           ref={islandRef}
           type="button"
@@ -156,26 +126,26 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             compact={
               <span className="flex items-center gap-2 whitespace-nowrap px-3 text-[11px] font-medium">
                 Today net
-                <span className="text-background/50">·</span>
-                <span className="text-background/60">UGX</span>
+                <span className="text-white/50">·</span>
+                <span className="text-white/60">UGX</span>
                 {formatNumber(today)}
               </span>
             }
           >
-            <DynamicIslandView id="today">
-              <div className="flex items-center gap-5 whitespace-nowrap px-4 py-2.5">
+            <DynamicIslandView id="today" className="py-1">
+              <div className="flex items-center gap-5 whitespace-nowrap px-4 py-0">
                 <div>
-                  <p className="text-[10px] text-background/60">Today net</p>
+                  <p className="text-[10px] text-white/60">Today net</p>
                   <p className="tnum text-sm font-semibold">
-                    <span className="mr-1 text-[10px] font-normal text-background/60">UGX</span>
+                    <span className="mr-1 text-white/60">UGX</span>
                     {formatNumber(today)}
                   </p>
                 </div>
-                <div className="h-6 w-px bg-background/20" />
+                <div className="h-6 w-px bg-white/20" />
                 <div>
-                  <p className="text-[10px] text-background/60">Left in budget</p>
+                  <p className="text-[10px] text-white/60">Left in budget</p>
                   <p className="tnum text-sm font-semibold">
-                    <span className="mr-1 text-[10px] font-normal text-background/60">UGX</span>
+                    <span className="mr-1 text-white/60">UGX</span>
                     {formatNumber(remaining)}
                   </p>
                 </div>
@@ -199,7 +169,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 >
                   <Icon
                     icon={item.icon}
-                    className={cn("size-[18px]", active ? "text-foreground" : "text-muted-foreground")}
+                    className={cn("size-[18px] transition-colors", active ? "text-white" : "text-white/55 hover:text-white")}
                   />
                 </Link>
               </DockItem>
@@ -217,7 +187,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 >
                   <Icon
                     icon={item.icon}
-                    className={cn("size-[18px]", active ? "text-foreground" : "text-muted-foreground")}
+                    className={cn("size-[18px] transition-colors", active ? "text-white" : "text-white/55 hover:text-white")}
                   />
                 </Link>
               </DockItem>
@@ -225,32 +195,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           })}
           <DockSeparator />
           <DockItem onClick={() => setCommandOpen(true)} aria-label="Search">
-            <Icon icon={Search01Icon} className="size-[18px] text-muted-foreground" />
+            <Icon icon={Search01Icon} className="size-[18px] text-white/55 transition-colors hover:text-white" />
           </DockItem>
           <DockItem aria-label="Toggle theme">
             <ThemeToggle
               variant="circle-blur"
-              className="size-9 rounded-md text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
+              className="size-9 rounded-md text-white/60 transition-colors hover:text-white"
               iconClassName="size-[18px]"
             />
           </DockItem>
         </Dock>
-      </div>
-
-      <div className="fixed bottom-24 right-6 z-50">
-        <BloomMenu
-          items={MENU_ITEMS}
-          labels={{ create: "Actions", close: "Close menu" }}
-          onSelect={(label) => {
-            if (label === "Expense") openTransaction(undefined, "expense");
-            if (label === "Income") openTransaction(undefined, "income");
-            if (label === "Transfer") openTransaction(undefined, "transfer");
-            if (label === "Plan") router.push("/plan");
-            if (label === "Assistant") router.push("/assistant");
-            if (label === "Insights") router.push("/stats");
-            if (label === "Months") router.push("/months");
-          }}
-        />
       </div>
 
       <CommandPalette items={commands} open={commandOpen} onOpenChange={setCommandOpen} />

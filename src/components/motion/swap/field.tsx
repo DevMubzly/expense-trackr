@@ -34,7 +34,8 @@ export function Field({
 }) {
   const t = useMessages("swap", swapMessages, labels);
   const id = useId();
-  const usdValue = (Number(amount) || 0) * (token.usd ?? 0);
+  const usdValue =
+    (Number(amount.replace(/,/g, "")) || 0) * (token.usd ?? 0);
 
   return (
     <div className="relative rounded-2xl border border-border/50 bg-background/40 p-3.5">

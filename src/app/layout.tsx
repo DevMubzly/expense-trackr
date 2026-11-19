@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Bricolage_Grotesque, Inter } from "next/font/google";
 import "./globals.css";
 import "goey-toast/styles.css";
 import { Providers } from "@/components/providers";
@@ -11,6 +11,12 @@ const inter = Inter({
   display: "swap",
 });
 
+const bricolage = Bricolage_Grotesque({
+  variable: "--font-bricolage",
+  subsets: ["latin"],
+  display: "swap",
+});
+
 export const metadata: Metadata = {
   title: "Expense Trackr",
   description: "A desktop expense tracker for UGX and USD.",
@@ -18,7 +24,11 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" suppressHydrationWarning className={`${inter.variable} h-full antialiased`}>
+    <html
+      lang="en"
+      suppressHydrationWarning
+      className={`${inter.variable} ${bricolage.variable} h-full antialiased`}
+    >
       <body className="min-h-full">
         <Providers>
           <AppShell>{children}</AppShell>

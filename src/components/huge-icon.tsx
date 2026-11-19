@@ -25,7 +25,7 @@ export function Icon({
       icon={icon}
       size={size}
       strokeWidth={strokeWidth}
-      className={cn("size-4 shrink-0", className)}
+      className={cn("app-icon size-4 shrink-0", className)}
     />
   );
 }

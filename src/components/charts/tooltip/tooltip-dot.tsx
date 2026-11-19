@@ -21,10 +21,10 @@ export interface TooltipDotProps {
   strokeWidth?: number;
   /**
    * `dot` variant: halo radius as a multiple of `size`. The halo is a soft disc
-   * in the series color behind the core. `0` hides it. Default: `2.6`
+   * in the series color behind the core. `0` hides it. Default: `0`
    */
   haloScale?: number;
-  /** `dot` variant: halo opacity (0–1). Default: `0.3` */
+  /** `dot` variant: halo opacity (0–1). Default: `0` */
   haloOpacity?: number;
   /**
    * `dot` variant: Gaussian blur (px) on the halo, turning the disc into a
@@ -44,8 +44,8 @@ export interface TooltipDotProps {
   animate?: boolean;
 }
 
-const DEFAULT_HALO_SCALE = 2.6;
-const DEFAULT_HALO_OPACITY = 0.3;
+const DEFAULT_HALO_SCALE = 0;
+const DEFAULT_HALO_OPACITY = 0;
 /** Entrance spring for the core + halo radius (position uses the tooltip spring). */
 const HALO_SPRING = { type: "spring", stiffness: 420, damping: 28 } as const;
 

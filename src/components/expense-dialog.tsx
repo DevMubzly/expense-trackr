@@ -20,7 +20,15 @@ import { TimeSelect } from "@/components/time-select";
 import { Icon } from "@/components/huge-icon";
 import { Button } from "@/components/ui/button";
 import { api, useApi } from "@/lib/use-api";
-import { daysInMonth, formatAmount, formatNumber, parseYmd, ymd } from "@/lib/format";
+import {
+  daysInMonth,
+  formatAmount,
+  formatNumber,
+  formatNumericInput,
+  parseNumericInput,
+  parseYmd,
+  ymd,
+} from "@/lib/format";
 import type {
   Account,
   Currency,
@@ -192,10 +200,14 @@ function TransactionForm({
   const years = [initial.getFullYear() - 2, initial.getFullYear() - 1, initial.getFullYear()];
   const defaultAccountId = settings?.defaultAccountId ?? accounts[0]?.id ?? "";
   const [type, setType] = useState<TransactionType>(transaction?.type ?? initialType);
-  const [amount, setAmount] = useState(transaction ? String(transaction.amount) : "");
-  const [currency, setCurrency] = useState<Currency>(
-    transaction?.currency ?? settings?.defaultCurrency ?? "UGX",
+  const initialCurrency: Currency =
+    transaction?.currency ?? settings?.defaultCurrency ?? "UGX";
+  const [amount, setAmount] = useState(
+    transaction
+      ? formatNumericInput(String(transaction.amount), initialCurrency === "USD")
+      : "",
   );
+  const [currency, setCurrency] = useState<Currency>(initialCurrency);
   const [accountId, setAccountId] = useState(transaction?.accountId ?? defaultAccountId);
   const [toAccountId, setToAccountId] = useState(
     transaction?.toAccountId ?? accounts.find((account) => account.id !== (transaction?.accountId ?? defaultAccountId))?.id ?? "",
@@ -206,7 +218,9 @@ function TransactionForm({
         (transaction?.type ?? initialType) === "income" ? "income" : "expense",
       )[0].id,
   );
-  const [fee, setFee] = useState(transaction?.feeUgx ? String(transaction.feeUgx) : "");
+  const [fee, setFee] = useState(
+    transaction?.feeUgx ? formatNumericInput(String(transaction.feeUgx)) : "",
+  );
   const [note, setNote] = useState(transaction?.note ?? "");
   const [spentTime, setSpentTime] = useState(
     transaction?.spentTime ?? timeFromIso(transaction?.createdAt ?? new Date().toISOString()),
@@ -220,7 +234,7 @@ function TransactionForm({
   const maxDay = daysInMonth(`${year}-${String(month + 1).padStart(2, "0")}`);
   const safeDay = Math.min(day, maxDay);
   const spentOn = ymd(new Date(year, month, safeDay));
-  const numeric = Number(amount);
+  const numeric = parseNumericInput(amount);
   const selectedAccount = accounts.find((account) => account.id === accountId);
   const showFee = type !== "income" && selectedAccount?.type === "momo";
   const valid =
@@ -248,7 +262,7 @@ function TransactionForm({
 
   function scanReceipt(file: File | undefined) {
     if (!file) return;
-    setAmount("48500");
+    setAmount(formatNumericInput("48500"));
     setCurrency("UGX");
     setCategory("shopping");
     setNote("Supermarket receipt");
@@ -268,33 +282,50 @@ function TransactionForm({
         category: isTransfer ? "" : category,
         accountId,
         toAccountId: isTransfer ? toAccountId : undefined,
-        feeUgx: showFee ? Number(fee) || 0 : 0,
+        feeUgx: showFee ? parseNumericInput(fee) : 0,
         note,
         spentOn,
         spentTime: spentTime || undefined,
         source: transaction?.source ?? "manual",
       };
+      const spentLabel = parseYmd(spentOn).toLocaleDateString("en-GB", {
+        day: "numeric",
+        month: "short",
+      });
+      const amountLabel = formatAmount(numeric, isTransfer ? "UGX" : currency);
+      const categoryLabel = categoryOf(category).label;
+      const transferFrom = selectedAccount?.name ?? "account";
+      const transferTo =
+        accounts.find((account) => account.id === toAccountId)?.name ??
+        "account";
+
       if (transaction) {
         await api.patch(`/api/transactions/${transaction.id}`, payload);
         gooeyToast.success("Transaction updated", {
           description: isTransfer
-            ? formatAmount(numeric, "UGX")
-            : `${formatAmount(numeric, currency)}, ${categoryOf(category).label}`,
+            ? `${amountLabel} moved from ${transferFrom} to ${transferTo} on ${spentLabel}.`
+            : `${amountLabel} · ${categoryLabel} on ${spentLabel}.`,
         });
       } else {
         await api.post("/api/transactions", payload);
         gooeyToast.success(
-          type === "income" ? "Income added" : type === "transfer" ? "Transfer saved" : "Expense logged",
+          type === "income"
+            ? "Income added"
+            : type === "transfer"
+              ? "Transfer saved"
+              : "Expense logged",
           {
             description: isTransfer
-              ? formatAmount(numeric, "UGX")
-              : `${formatAmount(numeric, currency)}, ${categoryOf(category).label}`,
+              ? `${amountLabel} moved from ${transferFrom} to ${transferTo} on ${spentLabel}.`
+              : `${amountLabel} · ${categoryLabel} on ${spentLabel}.`,
           },
         );
       }
       onSaved();
     } catch (error) {
-      gooeyToast.error("Could not save", { description: (error as Error).message });
+      gooeyToast.error("Could not save transaction", {
+        description: (error as Error).message,
+      });
     } finally {
       setSaving(false);
     }
@@ -305,10 +336,17 @@ function TransactionForm({
     setSaving(true);
     try {
       await api.delete(`/api/transactions/${transaction.id}`);
-      gooeyToast.success("Transaction deleted");
+      gooeyToast.success("Transaction deleted", {
+        description: `${formatAmount(
+          transaction.amountUgx,
+          transaction.currency,
+        )} was removed from your ledger.`,
+      });
       onSaved();
     } catch (error) {
-      gooeyToast.error("Could not delete", { description: (error as Error).message });
+      gooeyToast.error("Could not delete transaction", {
+        description: (error as Error).message,
+      });
     } finally {
       setSaving(false);
     }
@@ -334,7 +372,7 @@ function TransactionForm({
         </div>
       </div>
 
-      <div className="flex rounded-md border border-border bg-muted p-0.5">
+      <div className="flex rounded-full border border-border bg-muted p-0.5">
         {TYPES.map((option) => {
           const active = type === option.value;
           return (
@@ -350,7 +388,7 @@ function TransactionForm({
               {active ? (
                 <motion.span
                   layoutId="transaction-type-pill"
-                  className="absolute inset-0 rounded-md bg-card shadow-sm"
+                  className="absolute inset-0 rounded-full bg-card shadow-sm"
                   transition={SPRING_LAYOUT}
                 />
               ) : null}
@@ -368,7 +406,9 @@ function TransactionForm({
           <input
             autoFocus
             value={amount}
-            onChange={(event) => setAmount(event.target.value.replace(/[^0-9.]/g, ""))}
+            onChange={(event) =>
+              setAmount(formatNumericInput(event.target.value, currency === "USD"))
+            }
             onKeyDown={(event) => event.key === "Enter" && submit()}
             inputMode="decimal"
             placeholder="0"
@@ -385,7 +425,7 @@ function TransactionForm({
             <button
               key={preset}
               type="button"
-              onClick={() => setAmount(String(preset))}
+              onClick={() => setAmount(formatNumericInput(String(preset)))}
               className="rounded-full border border-border px-3 py-1 text-xs text-muted-foreground transition-colors hover:border-primary/30 hover:text-foreground"
             >
               {formatNumber(preset)}
@@ -569,7 +609,7 @@ function FeeField({
       <div className="w-28">
         <Input
           value={fee}
-          onChange={(value) => onChange(value.replace(/[^0-9]/g, ""))}
+          onChange={(value) => onChange(formatNumericInput(value))}
           placeholder="0"
           aria-label="Transaction fee (UGX)"
           classNames={UNDERLINE_FIELD}

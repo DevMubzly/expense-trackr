@@ -19,7 +19,7 @@ import {
 import { accountIcon } from "@/components/account-select";
 import { Checkbox } from "@/components/motion/checkbox";
 import { Input } from "@/components/motion/input";
-import { Loader } from "@/components/motion/loader";
+import { PageLoader } from "@/components/page-loader";
 import { MorphingModal } from "@/components/motion/morphing-modal";
 import {
   Combobox,
@@ -56,8 +56,14 @@ import {
   INCOME_CATEGORIES,
   categoryOf,
 } from "@/lib/categories";
-import { formatNumber, parseYmd, relativeDay, ymd } from "@/lib/format";
-import type { Account, Transaction, TransactionType } from "@/lib/types";
+import { addDays, formatNumber, parseYmd, relativeDay, ymd } from "@/lib/format";
+import { PERIOD_OPTIONS } from "@/lib/periods";
+import type {
+  Account,
+  StatPeriod,
+  Transaction,
+  TransactionType,
+} from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 const PAGE_SIZE = 10;
@@ -84,6 +90,38 @@ function transactionTime(transaction: Transaction) {
   return transaction.spentTime || expenseTime(transaction.createdAt);
 }
 
+function shiftMonths(date: Date, months: number): Date {
+  const day = date.getDate();
+  const shifted = new Date(date.getFullYear(), date.getMonth() + months, 1);
+  const lastDay = new Date(shifted.getFullYear(), shifted.getMonth() + 1, 0).getDate();
+  shifted.setDate(Math.min(day, lastDay));
+  return shifted;
+}
+
+function periodWindow(
+  period: StatPeriod,
+  now: Date | null,
+): { from?: string; to?: string } {
+  if (!now || period === "all") return {};
+  const to = ymd(now);
+  switch (period) {
+    case "today":
+      return { from: to, to };
+    case "7d":
+      return { from: ymd(addDays(now, -6)), to };
+    case "30d":
+      return { from: ymd(addDays(now, -29)), to };
+    case "90d":
+      return { from: ymd(addDays(now, -89)), to };
+    case "6m":
+      return { from: ymd(shiftMonths(now, -6)), to };
+    case "1y":
+      return { from: ymd(shiftMonths(now, -12)), to };
+    default:
+      return {};
+  }
+}
+
 function typeLabel(type: TransactionType) {
   if (type === "expense") return "Expense";
   if (type === "income") return "Income";
@@ -105,6 +143,7 @@ export default function ExpensesPage() {
   const [appliedQuery, setAppliedQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
   const [category, setCategory] = useState("all");
+  const [period, setPeriod] = useState<StatPeriod>("all");
   const [range, setRange] = useState<DateRange | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
   const [confirmDelete, setConfirmDelete] = useState<{
@@ -127,9 +166,20 @@ export default function ExpensesPage() {
   if (appliedQuery) params.set("q", appliedQuery);
   if (typeFilter !== "all") params.set("type", typeFilter);
   if (category !== "all") params.set("category", category);
-  if (range?.from) params.set("from", range.from);
-  if (range?.to) params.set("to", range.to);
-  if (range?.from && !range.to) params.set("to", range.from);
+
+  const periodRange = periodWindow(period, now);
+  const rangeFrom = range?.from;
+  const rangeTo = range?.to ?? range?.from;
+  const fromCandidates = [periodRange.from, rangeFrom].filter(Boolean) as string[];
+  const toCandidates = [periodRange.to, rangeTo].filter(Boolean) as string[];
+  const from = fromCandidates.length
+    ? fromCandidates.reduce((a, b) => (a > b ? a : b))
+    : undefined;
+  const to = toCandidates.length
+    ? toCandidates.reduce((a, b) => (a < b ? a : b))
+    : undefined;
+  if (from) params.set("from", from);
+  if (to) params.set("to", to);
 
   const { data, loading } = useApi<Transaction[]>(
     `/api/transactions?${params.toString()}`,
@@ -239,8 +289,12 @@ export default function ExpensesPage() {
       await Promise.all(
         confirmDelete.ids.map((id) => api.delete(`/api/transactions/${id}`)),
       );
+      const count = confirmDelete.ids.length;
       gooeyToast.success(
-        `${confirmDelete.ids.length} transaction${confirmDelete.ids.length === 1 ? "" : "s"} deleted`,
+        `${count} transaction${count === 1 ? "" : "s"} deleted`,
+        {
+          description: "Your ledger totals have been updated.",
+        },
       );
       setSelected((current) =>
         current.filter((id) => !confirmDelete.ids.includes(id)),
@@ -248,7 +302,7 @@ export default function ExpensesPage() {
       setConfirmDelete(null);
       bumpVersion();
     } catch (error) {
-      gooeyToast.error("Could not delete", {
+      gooeyToast.error("Could not delete transactions", {
         description: (error as Error).message,
       });
     } finally {
@@ -257,7 +311,10 @@ export default function ExpensesPage() {
   }
 
   const filtered =
-    typeFilter !== "all" || category !== "all" || Boolean(range || query);
+    typeFilter !== "all" ||
+    category !== "all" ||
+    period !== "all" ||
+    Boolean(range || query);
 
   return (
     <div className="space-y-6">
@@ -265,7 +322,7 @@ export default function ExpensesPage() {
         <div>
           <h1 className="font-display text-5xl leading-none">Every shilling.</h1>
           <p className="mt-2 text-[11px] text-muted-foreground">
-            {transactions.length}{" "}
+            {formatNumber(transactions.length)}{" "}
             {transactions.length === 1 ? "entry" : "entries"}, UGX{" "}
             {formatNumber(net)} net
           </p>
@@ -310,16 +367,16 @@ export default function ExpensesPage() {
           <Combobox
             value={typeFilter}
             onValueChange={(value) => changeType(value as TypeFilter)}
-            className="w-36 shrink-0"
+            className="w-28 shrink-0"
           >
-            <ComboboxTrigger className="h-11 min-w-0 rounded-xl px-3">
+            <ComboboxTrigger className="h-11 min-w-0 rounded-full px-3">
               <ComboboxInput
                 aria-label="Filter by type"
                 placeholder="Type"
                 showIcon={false}
               />
             </ComboboxTrigger>
-            <ComboboxContent className="w-44 rounded-xl">
+            <ComboboxContent className="w-44 rounded-2xl">
               <ComboboxList ariaLabel="Transaction type" className="p-2">
                 <ComboboxEmpty>No transaction types.</ComboboxEmpty>
                 {TYPE_OPTIONS.map((option) => (
@@ -338,16 +395,16 @@ export default function ExpensesPage() {
                 setCategory(value);
                 resetPage();
               }}
-              className="w-44 shrink-0"
+              className="w-32 shrink-0"
             >
-              <ComboboxTrigger className="h-11 min-w-0 rounded-xl px-3">
+              <ComboboxTrigger className="h-11 min-w-0 rounded-full px-3">
                 <ComboboxInput
                   aria-label="Filter by category"
                   placeholder="Category"
                   showIcon={false}
                 />
               </ComboboxTrigger>
-              <ComboboxContent className="w-56 rounded-xl">
+              <ComboboxContent className="w-56 rounded-2xl">
                 <ComboboxList ariaLabel="Categories" className="p-2">
                   <ComboboxEmpty>No categories.</ComboboxEmpty>
                   <ComboboxItem value="all" textValue="All categories">
@@ -381,6 +438,37 @@ export default function ExpensesPage() {
               </ComboboxContent>
             </Combobox>
           ) : null}
+
+          <Combobox
+            value={period}
+            onValueChange={(value) => {
+              setPeriod(value as StatPeriod);
+              resetPage();
+            }}
+            className="w-32 shrink-0"
+          >
+            <ComboboxTrigger className="h-11 min-w-0 rounded-full px-3">
+              <ComboboxInput
+                aria-label="Filter by period"
+                placeholder="All time"
+                showIcon={false}
+              />
+            </ComboboxTrigger>
+            <ComboboxContent className="w-44 rounded-2xl">
+              <ComboboxList ariaLabel="Period" className="p-2">
+                <ComboboxEmpty>No periods.</ComboboxEmpty>
+                {PERIOD_OPTIONS.map((option) => (
+                  <ComboboxItem
+                    key={option.value}
+                    value={option.value}
+                    textValue={option.label}
+                  >
+                    {option.label}
+                  </ComboboxItem>
+                ))}
+              </ComboboxList>
+            </ComboboxContent>
+          </Combobox>
 
           {today ? (
             <DateRangePicker
@@ -417,6 +505,7 @@ export default function ExpensesPage() {
                 setQuery("");
                 setTypeFilter("all");
                 setCategory("all");
+                setPeriod("all");
                 setRange(null);
                 resetPage();
               }}
@@ -427,12 +516,10 @@ export default function ExpensesPage() {
         </div>
       </div>
 
+      {loading && !data ? <PageLoader variant="helix" size={26} /> : null}
+
       <Panel className="overflow-hidden">
-        {loading && !data ? (
-          <div className="flex justify-center py-20">
-            <Loader variant="helix" size={26} />
-          </div>
-        ) : sortedRows.length === 0 ? (
+        {loading && !data ? null : sortedRows.length === 0 ? (
           <EmptyState
             title="Nothing here"
             hint="No transactions match those filters. Loosen them, or add something new."
@@ -508,8 +595,15 @@ export default function ExpensesPage() {
                       row.note ||
                       (row.type === "transfer" ? "Transfer" : cat.label);
                     return (
-                      <tr key={row.id} className="transition-colors hover:bg-muted/40">
-                        <td className="px-4 py-3">
+                      <tr
+                        key={row.id}
+                        onClick={() => openTransaction(row)}
+                        className="cursor-pointer transition-colors hover:bg-muted/40"
+                      >
+                        <td
+                          className="px-4 py-3"
+                          onClick={(event) => event.stopPropagation()}
+                        >
                           <Checkbox
                             checked={selected.includes(row.id)}
                             onCheckedChange={(checked) => toggleRow(row.id, checked)}
@@ -532,7 +626,10 @@ export default function ExpensesPage() {
                         <td className="px-4 py-3">
                           <button
                             type="button"
-                            onClick={() => openTransaction(row)}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              openTransaction(row);
+                            }}
                             className="flex items-center gap-2.5 text-left"
                           >
                             <span
@@ -571,12 +668,11 @@ export default function ExpensesPage() {
                             <span className="text-[11px] text-muted-foreground">—</span>
                           ) : (
                             <span
-                              className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px]"
+                              className="inline-flex items-center rounded-full px-2.5 py-1 text-[11px]"
                               style={{
                                 background: `color-mix(in oklab, ${cat.color} 12%, transparent)`,
                               }}
                             >
-                              <Icon icon={cat.icon} className="size-3.5" />
                               {cat.label}
                             </span>
                           )}
@@ -637,7 +733,10 @@ export default function ExpensesPage() {
                             ) : null}
                           </div>
                         </td>
-                        <td className="px-4 py-3">
+                        <td
+                          className="px-4 py-3"
+                          onClick={(event) => event.stopPropagation()}
+                        >
                           <div className="flex items-center justify-end gap-0.5">
                             <button
                               type="button"
@@ -668,7 +767,8 @@ export default function ExpensesPage() {
 
             <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border/70 px-4 py-3">
               <p className="text-[11px] text-muted-foreground">
-                Showing {start}–{end} of {sortedRows.length}
+                Showing {formatNumber(start)}–{formatNumber(end)} of{" "}
+                {formatNumber(sortedRows.length)}
               </p>
               <div className="flex items-center gap-1">
                 <Button

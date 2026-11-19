@@ -13,9 +13,10 @@ export function truncateAddress(v: string) {
 
 export function sanitizeAmount(v: string) {
   const cleaned = v.replace(/[^0-9.]/g, "");
-  const parts = cleaned.split(".");
-  if (parts.length <= 1) return cleaned;
-  return `${parts[0]}.${parts.slice(1).join("")}`;
+  const [whole = "", ...rest] = cleaned.split(".");
+  const grouped = whole.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  const decimals = rest.join("").slice(0, 6);
+  return rest.length > 0 ? `${grouped}.${decimals}` : grouped;
 }
 
 export function formatAmount(n: number, max = 6) {

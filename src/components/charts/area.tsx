@@ -90,6 +90,10 @@ export interface AreaProps {
    * Useful for projecting incomplete periods, e.g. dashed from yesterday through today.
    */
   dashFromIndex?: number;
+  /** Index where the area fill starts fading out toward the right edge. */
+  fillFadeFromIndex?: number;
+  /** Fade the area fill in from the left edge. */
+  fillFadeLeft?: boolean;
   /** Dash pattern for the tail segment when `dashFromIndex` is set. Default: "6,4" */
   dashArray?: string;
   /** Pulse stroke color while chart is loading. Default: var(--foreground) */
@@ -155,7 +159,7 @@ export function Area({
   fill = chartCssVars.linePrimary,
   fillOpacity = 0.4,
   stroke,
-  strokeWidth = 2,
+  strokeWidth = 1.5,
   curve = curveMonotoneX,
   animate = true,
   showLine = true,
@@ -167,6 +171,8 @@ export function Area({
   showMarkers = false,
   markers,
   dashFromIndex,
+  fillFadeFromIndex,
+  fillFadeLeft = false,
   dashArray = "6,4",
   loading,
   loadingStroke = chartCssVars.foreground,
@@ -274,6 +280,21 @@ export function Area({
     (d: Record<string, unknown>) => xScale(xAccessor(d)) ?? 0,
     [xAccessor, xScale]
   );
+  const fadeMaskId = `area-fade-${useId().replace(/:/g, "")}`;
+  const fadeGradientId = `${fadeMaskId}-gradient`;
+  const fadeStartIndex =
+    fillFadeFromIndex == null
+      ? null
+      : Math.max(0, Math.min(renderData.length - 1, fillFadeFromIndex));
+  const fadeStartX =
+    fadeStartIndex == null ? null : getX(renderData[fadeStartIndex]);
+  const fadeStartPct =
+    fadeStartX == null
+      ? 100
+      : Math.max(0, Math.min(100, (fadeStartX / innerWidth) * 100));
+  const leftFadePct = Math.min(20, fadeStartPct);
+  const showFillMask =
+    fillFadeLeft || (fadeStartX != null && fadeStartX < innerWidth);
   const areaPathD = useMemo(
     () =>
       showFill
@@ -291,7 +312,62 @@ export function Area({
 
   const seriesLayers = (
     <>
-      {showFill ? <path d={areaPathD} fill={areaFill} /> : null}
+      {showFill ? (
+        showFillMask ? (
+          <>
+            <defs>
+              <linearGradient
+                id={fadeGradientId}
+                gradientUnits="userSpaceOnUse"
+                x1={0}
+                x2={innerWidth}
+                y1={0}
+                y2={0}
+              >
+                <stop
+                  offset="0%"
+                  stopColor="#fff"
+                  stopOpacity={fillFadeLeft ? "0" : "1"}
+                />
+                {fillFadeLeft ? (
+                  <stop
+                    offset={`${leftFadePct}%`}
+                    stopColor="#fff"
+                    stopOpacity="1"
+                  />
+                ) : null}
+                {fadeStartX != null ? (
+                  <stop
+                    offset={`${fadeStartPct}%`}
+                    stopColor="#fff"
+                    stopOpacity="1"
+                  />
+                ) : null}
+                <stop offset="100%" stopColor="#fff" stopOpacity="0" />
+              </linearGradient>
+              <mask
+                id={fadeMaskId}
+                maskUnits="userSpaceOnUse"
+                x={0}
+                y={0}
+                width={innerWidth}
+                height={innerHeight}
+              >
+                <rect
+                  fill={`url(#${fadeGradientId})`}
+                  height={innerHeight}
+                  width={innerWidth}
+                  x={0}
+                  y={0}
+                />
+              </mask>
+            </defs>
+            <path d={areaPathD} fill={areaFill} mask={`url(#${fadeMaskId})`} />
+          </>
+        ) : (
+          <path d={areaPathD} fill={areaFill} />
+        )
+      ) : null}
 
       {shouldMeasurePath ? (
         <>

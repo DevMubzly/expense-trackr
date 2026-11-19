@@ -103,10 +103,10 @@ export interface ChartTooltipProps {
   dotSize?: number;
   /**
    * `dot` variant: halo radius as a multiple of the core radius. `0` hides the halo.
-   * Default: `2.6`
+   * Default: `0`
    */
   dotHaloScale?: number;
-  /** `dot` variant: halo opacity (0–1). Default: `0.3` */
+  /** `dot` variant: halo opacity (0–1). Default: `0` */
   dotHaloOpacity?: number;
   /** `dot` variant: blur (px) on the halo for a soft glow. `0` = crisp disc. Default: `0` */
   dotHaloBlur?: number;

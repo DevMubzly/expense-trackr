@@ -90,7 +90,7 @@ export function NotFoundGlitch({
         >
           <Scramble text={code} />
         </span>
-        <h1 className="relative">
+        <h1 className="relative font-display">
           <Scramble text={code} />
         </h1>
       </div>

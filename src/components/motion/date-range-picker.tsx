@@ -771,7 +771,7 @@ export function DateRangePickerTrigger({
           props["aria-label"] ?? ctx.t("triggerLabel", { label: ctx.label, summary })
         }
         className={cn(
-          "inline-flex h-9 w-fit max-w-full items-center gap-2 rounded-md border border-border bg-background px-3 text-[13px] font-medium text-foreground transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-40",
+          "inline-flex h-9 w-fit max-w-full items-center gap-2 rounded-full border border-border bg-background px-2.5 text-[13px] font-medium text-foreground transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-40",
           className,
         )}
       >
@@ -845,7 +845,7 @@ export function DateRangePickerContent({
   return (
     <MorphPopoverContent
       align="start"
-      radius={16}
+      radius={20}
       shadow={false}
       {...props}
       className={cn("w-80 max-w-[calc(100vw-1.5rem)]", className)}

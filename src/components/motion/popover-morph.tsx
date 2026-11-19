@@ -328,7 +328,7 @@ function MorphPopoverSurface({
   side = "bottom",
   align = "end",
   sideOffset = 8,
-  radius = 16,
+  radius = 20,
   shadow = true,
   onOpenAutoFocus,
   initialFocus,

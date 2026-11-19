@@ -27,10 +27,14 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/huge-icon";
 import { Money } from "@/components/money";
 import { Panel, PanelHeader } from "@/components/panel";
-import { Loader } from "@/components/motion/loader";
+import { PageLoader } from "@/components/page-loader";
 import { useApi, api } from "@/lib/use-api";
 import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from "@/lib/categories";
-import { formatNumber } from "@/lib/format";
+import {
+  formatNumber,
+  formatNumericInput,
+  parseNumericInput,
+} from "@/lib/format";
 import { useTransactionDialog } from "@/components/expense-dialog";
 import type {
   Account,
@@ -52,11 +56,7 @@ export default function SettingsPage() {
   );
 
   if (loading && !data) {
-    return (
-      <div className="flex min-h-[60vh] items-center justify-center">
-        <Loader variant="helix" size={30} />
-      </div>
-    );
+    return <PageLoader variant="helix" size={30} />;
   }
   if (!data) return null;
 
@@ -91,7 +91,9 @@ function SettingsForm({
   bumpVersion: () => void;
 }) {
   const [budget, setBudget] = useState(settings.monthlyBudget);
-  const [rate, setRate] = useState(String(settings.usdRate));
+  const [rate, setRate] = useState(
+    formatNumericInput(String(settings.usdRate), true),
+  );
   const [payday, setPayday] = useState(settings.payday);
   const [buffer, setBuffer] = useState(settings.forecastBufferUgx);
   const [defaultAccountId, setDefaultAccountId] = useState(settings.defaultAccountId);
@@ -109,17 +111,22 @@ function SettingsForm({
     try {
       await api.patch("/api/settings", {
         monthlyBudget: budget,
-        usdRate: Number(rate) || settings.usdRate,
+        usdRate: parseNumericInput(rate) || settings.usdRate,
         payday,
         forecastBufferUgx: buffer,
         defaultAccountId,
         weekPlan,
       });
-      gooeyToast.success("Settings saved");
+      gooeyToast.success("Settings updated", {
+        description:
+          "Budget, USD rate, payday and forecast settings are up to date.",
+      });
       onSaved();
       bumpVersion();
     } catch (error) {
-      gooeyToast.error("Could not save", { description: (error as Error).message });
+      gooeyToast.error("Could not save settings", {
+        description: (error as Error).message,
+      });
     } finally {
       setSaving(false);
     }
@@ -137,11 +144,17 @@ function SettingsForm({
 
   async function archiveAccount(account: Account) {
     if (account.id === settings.defaultAccountId) {
-      gooeyToast.error("Choose another default account first");
+      gooeyToast.error("Default account required", {
+        description:
+          "Choose another default account before archiving this one.",
+      });
       return;
     }
     await api.delete(`/api/accounts/${account.id}`);
-    gooeyToast.success(`${account.name} archived`);
+    gooeyToast.success(`${account.name} archived`, {
+      description:
+        "The account is no longer included in balances, but its transactions remain.",
+    });
     refreshAccounts();
     bumpVersion();
   }
@@ -154,7 +167,9 @@ function SettingsForm({
         email: inviteEmail.trim(),
         role: "member",
       });
-      gooeyToast.success("Household member invited");
+      gooeyToast.success("Household member invited", {
+        description: `${inviteName.trim()} can now share this ledger.`,
+      });
       setInviteName("");
       setInviteEmail("");
       refreshMembers();
@@ -169,7 +184,9 @@ function SettingsForm({
   async function removeMember(member: HouseholdMember) {
     try {
       await api.delete(`/api/household/${member.id}`);
-      gooeyToast.success(`${member.name} removed`);
+      gooeyToast.success(`${member.name} removed`, {
+        description: "They no longer have access to this household ledger.",
+      });
       refreshMembers();
       bumpVersion();
     } catch (error) {
@@ -191,6 +208,12 @@ function SettingsForm({
         : "expense-trackr-backup.json";
     link.click();
     URL.revokeObjectURL(url);
+    gooeyToast.success("Backup downloaded", {
+      description:
+        format === "csv"
+          ? "Your transactions were exported as a CSV file."
+          : "A full JSON backup was saved to your downloads.",
+    });
   }
 
   async function importBackup(file: File | undefined) {
@@ -198,7 +221,9 @@ function SettingsForm({
     try {
       const data = JSON.parse(await file.text());
       await api.post("/api/import", data);
-      gooeyToast.success("Backup imported");
+      gooeyToast.success("Backup imported", {
+        description: `${file.name} restored transactions, accounts and planning data.`,
+      });
       onSaved();
       refreshAccounts();
       refreshMembers();
@@ -247,7 +272,7 @@ function SettingsForm({
             <Input
               label="USD rate (UGX per 1 USD)"
               value={rate}
-              onChange={(value) => setRate(value.replace(/[^0-9.]/g, ""))}
+              onChange={(value) => setRate(formatNumericInput(value, true))}
               placeholder="3720"
             />
             <div className="flex flex-col justify-end gap-2">
@@ -287,7 +312,7 @@ function SettingsForm({
             {EXPENSE_CATEGORIES.map((category) => (
               <li
                 key={category.id}
-                className="flex items-center gap-3 rounded-xl border border-border/70 px-3 py-2"
+                className="flex items-center gap-3 rounded-2xl bg-muted/20 px-3 py-2"
               >
                 <span
                   className="grid size-8 place-items-center rounded-lg"
@@ -305,7 +330,7 @@ function SettingsForm({
             {INCOME_CATEGORIES.map((category) => (
               <li
                 key={category.id}
-                className="flex items-center gap-3 rounded-xl border border-border/70 px-3 py-2"
+                className="flex items-center gap-3 rounded-2xl bg-muted/20 px-3 py-2"
               >
                 <span
                   className="grid size-8 place-items-center rounded-lg"
@@ -335,7 +360,7 @@ function SettingsForm({
             {accounts.map((account) => (
               <li
                 key={account.id}
-                className="flex items-center gap-3 rounded-xl border border-border/70 px-3 py-2.5"
+                className="flex items-center gap-3 rounded-2xl bg-muted/20 px-3 py-2.5"
               >
                 <span
                   className="grid size-9 place-items-center rounded-lg"
@@ -429,7 +454,7 @@ function SettingsForm({
             {members.map((member) => (
               <li
                 key={member.id}
-                className="flex items-center gap-3 rounded-xl border border-border/70 px-3 py-2.5"
+                className="flex items-center gap-3 rounded-2xl bg-muted/20 px-3 py-2.5"
               >
                 <span className="grid size-9 place-items-center rounded-full bg-muted text-[12px] font-semibold text-muted-foreground">
                   {member.name.charAt(0).toUpperCase()}
@@ -569,7 +594,7 @@ function AccountForm({
   const [type, setType] = useState<AccountType>(account?.type ?? "cash");
   const [provider, setProvider] = useState(account?.provider ?? "");
   const [openingBalance, setOpeningBalance] = useState(
-    account ? String(account.openingBalanceUgx) : "0",
+    account ? formatNumericInput(String(account.openingBalanceUgx)) : "0",
   );
   const [saving, setSaving] = useState(false);
 
@@ -581,14 +606,20 @@ function AccountForm({
         name: name.trim(),
         type,
         provider: type === "momo" ? provider.trim() || undefined : undefined,
-        openingBalanceUgx: Number(openingBalance) || 0,
+        openingBalanceUgx: parseNumericInput(openingBalance),
       };
       if (account) {
         await api.patch(`/api/accounts/${account.id}`, payload);
-        gooeyToast.success("Account updated");
+        gooeyToast.success("Account updated", {
+          description: `${name.trim()} is synced across your ledger.`,
+        });
       } else {
         await api.post("/api/accounts", payload);
-        gooeyToast.success("Account added");
+        gooeyToast.success("Account added", {
+          description: `${name.trim()} is ready with a UGX ${formatNumber(
+            parseNumericInput(openingBalance),
+          )} opening balance.`,
+        });
       }
       onSaved();
     } catch (error) {
@@ -646,7 +677,7 @@ function AccountForm({
       <Input
         label="Opening balance (UGX)"
         value={openingBalance}
-        onChange={(value) => setOpeningBalance(value.replace(/[^0-9]/g, ""))}
+        onChange={(value) => setOpeningBalance(formatNumericInput(value))}
         placeholder="0"
       />
 

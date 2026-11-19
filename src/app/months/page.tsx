@@ -3,7 +3,7 @@
 import { CreditCardIcon, Folder01Icon } from "@hugeicons/core-free-icons";
 import { ProjectFolder } from "@/components/motion/project-folder";
 import { CardFolder } from "@/components/motion/card-folder";
-import { Loader } from "@/components/motion/loader";
+import { PageLoader } from "@/components/page-loader";
 import { Icon } from "@/components/huge-icon";
 import { Money } from "@/components/money";
 import { Panel, PanelHeader } from "@/components/panel";
@@ -16,11 +16,7 @@ export default function MonthsPage() {
   const { data, loading } = useApi<MonthSummary[]>("/api/months");
 
   if (loading && !data) {
-    return (
-      <div className="flex min-h-[60vh] items-center justify-center">
-        <Loader variant="dither" size={30} />
-      </div>
-    );
+    return <PageLoader variant="dither" size={30} />;
   }
 
   const months = data ?? [];
@@ -83,7 +79,7 @@ export default function MonthsPage() {
                   defaultOpen
                   cardNumber={`UGX ${formatNumber(current.total)}`}
                   expiry={current.shortLabel}
-                  cvv={`${current.count} entries`}
+                  cvv={`${formatNumber(current.count)} entries`}
                   actionLabel="Open month"
                   card={
                     <div className="flex h-40 w-full flex-col justify-between rounded-2xl bg-gradient-to-br from-primary via-primary to-primary/75 p-4 text-primary-foreground shadow-xl">
@@ -152,14 +148,16 @@ export default function MonthsPage() {
           {rest.map((month) => (
             <div
               key={month.month}
-              className="flex items-center gap-3 rounded-xl border border-border/70 p-3"
+              className="flex items-center gap-3 rounded-2xl bg-muted/20 p-3"
             >
               <span className="grid size-9 place-items-center rounded-lg bg-muted text-muted-foreground">
                 <Icon icon={Folder01Icon} className="size-4" />
               </span>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-[13px]">{month.label}</p>
-                <p className="text-[11px] text-muted-foreground">{month.count} entries</p>
+                <p className="text-[11px] text-muted-foreground">
+                  {formatNumber(month.count)} entries
+                </p>
               </div>
               <Money value={month.total} size="sm" />
             </div>

@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/huge-icon";
 import { api } from "@/lib/use-api";
 import { categoryOf } from "@/lib/categories";
-import { parseYmd } from "@/lib/format";
+import { formatNumber, parseNumericInput, parseYmd } from "@/lib/format";
 import { parseQuickAdd, type QuickDraft } from "@/lib/quick-add";
 import type { Account, Settings } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -86,6 +86,9 @@ export function QuickAddForm({
       );
       gooeyToast.success(
         `${selectedDrafts.length} transaction${selectedDrafts.length === 1 ? "" : "s"} added`,
+        {
+          description: "Drafts were posted to your ledger.",
+        },
       );
       onSaved();
     } catch (error) {
@@ -242,11 +245,9 @@ function DraftRow({
 
       <div className="mt-2 grid gap-2 sm:grid-cols-2">
         <input
-          value={String(draft.amount || "")}
+          value={draft.amount ? formatNumber(draft.amount) : ""}
           onChange={(event) =>
-            onChange({
-              amount: Number(event.target.value.replace(/[^0-9.]/g, "")) || 0,
-            })
+            onChange({ amount: parseNumericInput(event.target.value) })
           }
           inputMode="decimal"
           aria-label="Amount"
@@ -306,7 +307,7 @@ function DraftRow({
           value={draft.spentOn}
           onChange={(event) => onChange({ spentOn: event.target.value })}
           aria-label="Date"
-          className="h-8 rounded-lg border border-border bg-transparent px-2 text-[11px] text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="h-8 rounded-none border-x-0 border-t-0 border-b border-border bg-transparent px-0 text-[11px] text-muted-foreground outline-none focus-visible:border-foreground/50 focus-visible:ring-0"
         />
         <span className="sr-only">
           {parseYmd(draft.spentOn).toLocaleDateString("en-GB")}

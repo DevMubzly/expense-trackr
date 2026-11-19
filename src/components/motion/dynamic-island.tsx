@@ -40,7 +40,7 @@ const CONTENT_SPRING = {
 // Constant radius — never animated. The browser clamps it to half the shell
 // height, so the pill-to-rounded-rect morph falls out of the resize for free
 // with zero chance of corner glitches.
-const RADIUS = 8;
+const RADIUS = 9999;
 
 // iPhone pill dimensions. Also the shell's pre-measure animate target: if the
 // first commit already has a view active (e.g. a click replayed after
@@ -168,7 +168,7 @@ export function DynamicIsland({
         // island in its parent (like under a notch) to complete the effect.
         className={cn(
           "relative inline-flex items-start justify-center overflow-hidden",
-          "bg-foreground text-background shadow-2xl",
+          "bg-zinc-950 text-white shadow-2xl ring-1 ring-white/15",
           className,
         )}
       >

@@ -544,7 +544,7 @@ export function ContextMenuContent({
         onKeyDown={onKeyDown}
         onContextMenu={(event) => event.preventDefault()}
         className={cn(
-          "min-w-56 overflow-hidden rounded-xl border border-border bg-card p-1.5 text-foreground outline-none",
+          "min-w-56 overflow-hidden rounded-2xl border border-border bg-card p-1.5 text-foreground outline-none",
           className,
         )}
       >
@@ -610,7 +610,7 @@ function ContextMenuItemBase({
         if (closeOnSelect) context.setOpen(false);
       }}
       className={cn(
-        "relative isolate flex w-full select-none items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[13px] outline-none",
+        "relative isolate flex w-full select-none items-center gap-2.5 rounded-full px-2.5 py-2 text-left text-[13px] outline-none",
         "focus-visible:ring-2 focus-visible:ring-foreground/15",
         "disabled:pointer-events-none disabled:opacity-40",
         inset && "pl-8",
@@ -622,7 +622,7 @@ function ContextMenuItemBase({
         <motion.span
           layoutId={`${context.menuId}-active`}
           className={cn(
-            "absolute inset-0 -z-10 rounded-lg",
+            "absolute inset-0 -z-10 rounded-full",
             tone === "destructive"
               ? "bg-destructive/10"
               : "bg-foreground/[0.065]",

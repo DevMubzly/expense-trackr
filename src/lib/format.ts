@@ -13,6 +13,25 @@ export function formatAmount(n: number, currency: Currency = "UGX"): string {
     : `USD ${n.toLocaleString("en-US", { maximumFractionDigits: 2 })}`;
 }
 
+/** Group digits in a free-form numeric input string while typing. */
+export function formatNumericInput(value: string, allowDecimal = false): string {
+  const cleaned = value.replace(allowDecimal ? /[^\d.]/g : /[^\d]/g, "");
+  if (!allowDecimal) {
+    const normalized = cleaned.replace(/^0+(?=\d)/, "");
+    return normalized.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  }
+  const [whole = "", ...rest] = cleaned.split(".");
+  const normalized = whole.replace(/^0+(?=\d)/, "");
+  const decimals = rest.join("").slice(0, 2);
+  const grouped = normalized.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  return rest.length > 0 ? `${grouped}.${decimals}` : grouped;
+}
+
+export function parseNumericInput(value: string): number {
+  const parsed = Number(value.replace(/,/g, ""));
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
 export function toUsd(ugx: number, rate: number): number {
   return rate > 0 ? ugx / rate : 0;
 }

@@ -8,5 +8,15 @@ export async function GET(request: NextRequest) {
   const params = request.nextUrl.searchParams;
   const month = params.get("month") ?? undefined;
   const period = params.get("period");
-  return Response.json(computeStats(month, isStatPeriod(period) ? period : undefined));
+  const dayOffset = Math.max(
+    0,
+    Number.parseInt(params.get("dayOffset") ?? "0", 10) || 0,
+  );
+  return Response.json(
+    computeStats(
+      month,
+      isStatPeriod(period) ? period : undefined,
+      dayOffset,
+    ),
+  );
 }

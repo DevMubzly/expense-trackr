@@ -435,6 +435,13 @@ function startOfPeriod(period: StatPeriod, now: Date, transactions: Transaction[
   }
 }
 
+function sparkDateLabel(date: Date): string {
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  });
+}
+
 function computePeriodStats(
   period: StatPeriod,
   now: Date,
@@ -463,34 +470,70 @@ function computePeriodStats(
     byDay.set(transaction.spentOn, entry);
   }
 
-  // Daily points for short ranges; weekly buckets keep long sparklines legible.
+  // Today reads as an intraday line; longer ranges use daily points, and
+  // weekly buckets keep long sparklines legible.
   const bucketDays = days > 90 ? 7 : 1;
   const last = parseYmd(to);
   const spark: PeriodStats["spark"] = [];
-  let cursor = parseYmd(from);
 
-  while (cursor <= last) {
-    const bucketEnd = new Date(
-      Math.min(addDays(cursor, bucketDays - 1).getTime(), last.getTime()),
-    );
-    let bucketExpense = 0;
-    let bucketIncome = 0;
-    let bucketCount = 0;
-    for (let day = new Date(cursor); day <= bucketEnd; day = addDays(day, 1)) {
-      const entry = byDay.get(ymd(day));
-      if (!entry) continue;
-      bucketExpense += entry.expense;
-      bucketIncome += entry.income;
-      bucketCount += entry.count;
+  if (period === "today") {
+    const byHour = new Map<
+      number,
+      { expense: number; income: number; count: number }
+    >();
+    for (const transaction of inRange) {
+      const hour = Math.min(
+        23,
+        Math.max(0, Number.parseInt(timeOf(transaction), 10) || 0),
+      );
+      const entry = byHour.get(hour) ?? { expense: 0, income: 0, count: 0 };
+      if (transaction.type === "expense") entry.expense += transaction.amountUgx;
+      if (transaction.type === "income") entry.income += transaction.amountUgx;
+      entry.count += 1;
+      byHour.set(hour, entry);
     }
-    spark.push({
-      day: ymd(cursor),
-      expense: bucketExpense,
-      income: bucketIncome,
-      net: bucketIncome - bucketExpense,
-      count: bucketCount,
-    });
-    cursor = addDays(bucketEnd, 1);
+
+    for (let hour = 0; hour < 24; hour += 1) {
+      const entry = byHour.get(hour) ?? { expense: 0, income: 0, count: 0 };
+      spark.push({
+        day: from,
+        label: `${String(hour).padStart(2, "0")}:00`,
+        expense: entry.expense,
+        income: entry.income,
+        net: entry.income - entry.expense,
+        count: entry.count,
+      });
+    }
+  } else {
+    let cursor = parseYmd(from);
+
+    while (cursor <= last) {
+      const bucketEnd = new Date(
+        Math.min(addDays(cursor, bucketDays - 1).getTime(), last.getTime()),
+      );
+      let bucketExpense = 0;
+      let bucketIncome = 0;
+      let bucketCount = 0;
+      for (let day = new Date(cursor); day <= bucketEnd; day = addDays(day, 1)) {
+        const entry = byDay.get(ymd(day));
+        if (!entry) continue;
+        bucketExpense += entry.expense;
+        bucketIncome += entry.income;
+        bucketCount += entry.count;
+      }
+      spark.push({
+        day: ymd(cursor),
+        label:
+          bucketDays === 7
+            ? `Week of ${sparkDateLabel(cursor)}`
+            : sparkDateLabel(cursor),
+        expense: bucketExpense,
+        income: bucketIncome,
+        net: bucketIncome - bucketExpense,
+        count: bucketCount,
+      });
+      cursor = addDays(bucketEnd, 1);
+    }
   }
 
   return {
@@ -526,6 +569,18 @@ function computeForecast(
   if (paydayDate <= today) {
     paydayDate = dateForPayday(now.getFullYear(), now.getMonth() + 1, payday);
   }
+  let previousPaydayDate = dateForPayday(
+    now.getFullYear(),
+    now.getMonth(),
+    payday,
+  );
+  if (previousPaydayDate > today) {
+    previousPaydayDate = dateForPayday(
+      now.getFullYear(),
+      now.getMonth() - 1,
+      payday,
+    );
+  }
   const daysToPayday = Math.max(
     1,
     Math.round((paydayDate.getTime() - today.getTime()) / 86_400_000),
@@ -560,17 +615,23 @@ function computeForecast(
 
   const historyBalances = new Map<string, number>();
   let running = liquidBalance;
-  const historyStart = parseYmd(ymd(addDays(now, -29)));
-  for (let day = new Date(today); day >= historyStart; day = addDays(day, -1)) {
+  for (
+    let day = new Date(today);
+    day >= previousPaydayDate;
+    day = addDays(day, -1)
+  ) {
     const key = ymd(day);
     historyBalances.set(key, Math.round(running));
     running -= dailyNet.get(key) ?? 0;
   }
 
   const points: ForecastPoint[] = [];
-  for (let offset = 29; offset >= 0; offset -= 1) {
-    const date = addDays(now, -offset);
-    const key = ymd(date);
+  for (
+    let day = new Date(previousPaydayDate);
+    day <= today;
+    day = addDays(day, 1)
+  ) {
+    const key = ymd(day);
     points.push({
       date: key,
       balance: historyBalances.get(key) ?? 0,
@@ -602,7 +663,11 @@ function computeForecast(
 /* Stats                                                                      */
 /* -------------------------------------------------------------------------- */
 
-export function computeStats(month?: string, period: StatPeriod = "30d"): Stats {
+export function computeStats(
+  month?: string,
+  period: StatPeriod = "30d",
+  dayOffset = 0,
+): Stats {
   const state = store();
   const now = new Date();
   const today = ymd(now);
@@ -669,8 +734,23 @@ export function computeStats(month?: string, period: StatPeriod = "30d"): Stats 
     });
   }
 
-  const weekdayTotals = Array.from({ length: 7 }, () => 0);
-  for (const expense of monthExpenses) {
+  const allExpenses = ofType(state.transactions, "expense");
+  const dailyEnd = dayOffset > 0 ? addDays(now, -dayOffset * 30) : now;
+  const daily30: DailyPoint[] = Array.from({ length: 30 }, (_, index) => {
+    const date = ymd(addDays(dailyEnd, -(29 - index)));
+    const dayExpenses = allExpenses.filter(
+      (expense) => expense.spentOn === date,
+    );
+    const point: DailyPoint = { date, total: sum(dayExpenses) };
+    for (const category of EXPENSE_CATEGORIES) {
+      point[category.id] = sum(
+        dayExpenses.filter((expense) => expense.category === category.id),
+      );
+    }
+    return point;
+  });
+
+  const weekdayTotals = Array.from({ length: 7 }, () => 0);  for (const expense of monthExpenses) {
     const [y, m, d] = expense.spentOn.split("-").map(Number);
     weekdayTotals[new Date(y, m - 1, d).getDay()] += expense.amountUgx;
   }
@@ -679,8 +759,8 @@ export function computeStats(month?: string, period: StatPeriod = "30d"): Stats 
     value: weekdayTotals[index],
   }));
 
-  const months: MonthTotal[] = Array.from({ length: 8 }, (_, index) => {
-    const date = new Date(now.getFullYear(), now.getMonth() - (7 - index), 1);
+  const months: MonthTotal[] = Array.from({ length: 24 }, (_, index) => {
+    const date = new Date(now.getFullYear(), now.getMonth() - (23 - index), 1);
     const monthId = ymd(date).slice(0, 7);
     return {
       month: monthId,
@@ -707,14 +787,14 @@ export function computeStats(month?: string, period: StatPeriod = "30d"): Stats 
 
   const heat = Array.from({ length: 240 }, (_, index) => {
     const date = ymd(addDays(now, -(239 - index)));
+    const dayExpenses = state.transactions.filter(
+      (transaction) =>
+        transaction.type === "expense" && transaction.spentOn === date,
+    );
     return {
       date,
-      total: sum(
-        state.transactions.filter(
-          (transaction) =>
-            transaction.type === "expense" && transaction.spentOn === date,
-        ),
-      ),
+      total: sum(dayExpenses),
+      count: dayExpenses.length,
     };
   });
 
@@ -752,6 +832,7 @@ export function computeStats(month?: string, period: StatPeriod = "30d"): Stats 
       lastMonthTotal > 0 ? Math.round(((monthTotal - lastMonthTotal) / lastMonthTotal) * 100) : 0,
     byCategory,
     daily,
+    daily30,
     cumulative,
     weekday,
     months,

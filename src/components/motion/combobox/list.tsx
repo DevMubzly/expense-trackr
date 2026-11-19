@@ -158,7 +158,7 @@ export function ComboboxItem({
         context.select(value);
       }}
       className={cn(
-        "relative flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm outline-none transition-colors duration-150",
+        "relative flex w-full items-center gap-2 rounded-full px-2 py-2 text-left text-sm outline-none transition-colors duration-150",
         active ? "text-foreground" : "text-muted-foreground",
         "disabled:pointer-events-none disabled:opacity-45",
         className,
@@ -167,7 +167,7 @@ export function ComboboxItem({
         <motion.span
           aria-hidden
           layoutId={context.activeLayoutId}
-          className="absolute inset-0 -z-10 rounded-md bg-muted"
+          className="absolute inset-0 -z-10 rounded-full bg-muted"
           transition={context.reduce ? { duration: 0 } : SPRING_LAYOUT}
         />
       ) : null}

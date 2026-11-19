@@ -9,12 +9,18 @@ import { getHeatmapColumnMonthAnchor } from "./heatmap-utils";
 export interface HeatmapXAxisProps {
   /** Additional class name for labels */
   className?: string;
+  /**
+   * Minimum horizontal gap between labels in px. Labels that would sit closer
+   * than this are skipped so partial start months don't collide. Default: 0.
+   */
+  minLabelGap?: number;
 }
 
 const monthFmt = new Intl.DateTimeFormat("en-US", { month: "short" });
 
 export const HeatmapXAxis = memo(function HeatmapXAxis({
   className,
+  minLabelGap = 0,
 }: HeatmapXAxisProps) {
   const { containerRef, data, margin, xScale } = useHeatmap();
   const [mounted, setMounted] = useState(false);
@@ -26,6 +32,7 @@ export const HeatmapXAxis = memo(function HeatmapXAxis({
   const labels = useMemo(() => {
     const ticks: { label: string; x: number; key: string }[] = [];
     let lastMonthKey = "";
+    let lastX = Number.NEGATIVE_INFINITY;
 
     for (let columnIndex = 0; columnIndex < data.length; columnIndex++) {
       const column = data[columnIndex];
@@ -43,16 +50,22 @@ export const HeatmapXAxis = memo(function HeatmapXAxis({
         continue;
       }
 
+      const x = margin.left + xScale(columnIndex);
+      if (ticks.length > 0 && x - lastX < minLabelGap) {
+        continue;
+      }
+
       ticks.push({
         label: monthFmt.format(monthAnchor),
-        x: margin.left + xScale(columnIndex),
+        x,
         key: monthKey,
       });
+      lastX = x;
       lastMonthKey = monthKey;
     }
 
     return ticks;
-  }, [data, margin.left, xScale]);
+  }, [data, margin.left, minLabelGap, xScale]);
 
   const container = containerRef.current;
   if (!(mounted && container)) {

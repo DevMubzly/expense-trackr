@@ -54,7 +54,7 @@ export function MultiChainSwap({
   const fromChain = findChain(chains, from.chainId);
   const toChain = findChain(chains, to.chainId);
 
-  const numericAmount = Number(amount) || 0;
+  const numericAmount = Number(amount.replace(/,/g, "")) || 0;
   const quoteKey = `${numericAmount}:${fromId}:${toId}`;
   const rate = useMemo(() => {
     if (!from.usd || !to.usd) return 1;

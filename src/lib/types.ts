@@ -135,6 +135,8 @@ export type StatPeriod = "all" | "today" | "7d" | "30d" | "90d" | "6m" | "1y";
 
 export type PeriodPoint = {
   day: string;
+  /** Display label for the sparkline tooltip (hour, date, or week). */
+  label: string;
   expense: number;
   income: number;
   net: number;
@@ -265,10 +267,11 @@ export type Stats = {
   vsLastMonth: number;
   byCategory: CategoryTotal[];
   daily: DailyPoint[];
+  daily30: DailyPoint[];
   cumulative: { date: string; spent: number; pace: number }[];
   weekday: { day: string; value: number }[];
   months: MonthTotal[];
-  heat: { date: string; total: number }[];
+  heat: { date: string; total: number; count: number }[];
   recent: Transaction[];
   accounts: AccountBalance[];
   forecast: Forecast;

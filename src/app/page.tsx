@@ -1,28 +1,38 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeftRightIcon,
   ArrowUpRight01Icon,
+  ChartIncreaseIcon,
+  Coffee01Icon,
+  Invoice02Icon,
+  Money03Icon,
+  Moon02Icon,
   PlusSignIcon,
+  ReceiptTextIcon,
+  Sun03Icon,
 } from "@hugeicons/core-free-icons";
 import {
   Area,
   AreaChart,
-  AreaSparkline,
   Bar,
   BarChart,
   BarXAxis,
   ChartTooltip,
   Gauge,
   Grid,
+  PieCenter,
+  PieChart,
+  PieTicks,
   XAxis,
   YAxis,
 } from "@/components/charts";
 import { AnimatedBadge } from "@/components/motion/animated-badge";
 import { AnimatedNumber } from "@/components/motion/animated-number";
-import { Loader } from "@/components/motion/loader";
+import { MetricCard } from "@/components/metric-card";
+import { PageLoader } from "@/components/page-loader";
 import {
   Combobox,
   ComboboxContent,
@@ -39,10 +49,10 @@ import { Panel, PanelHeader } from "@/components/panel";
 import { useTransactionDialog } from "@/components/expense-dialog";
 import { useApi } from "@/lib/use-api";
 import { useNow } from "@/lib/use-now";
-import { categoryOf } from "@/lib/categories";
+import { CATEGORIES, categoryOf } from "@/lib/categories";
 import { daysInMonth, formatNumber, parseYmd, relativeDay, ymd } from "@/lib/format";
 import { PERIOD_LABELS, PERIOD_OPTIONS } from "@/lib/periods";
-import type { PeriodStats, StatPeriod, Stats } from "@/lib/types";
+import type { StatPeriod, Stats } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 export default function DashboardPage() {
@@ -55,23 +65,19 @@ export default function DashboardPage() {
   const today = now ? ymd(now) : "";
   const periodStats = stats?.period;
 
-  const areaData = useMemo(
-    () =>
-      (stats?.cumulative ?? []).map((point) => ({
-        date: parseYmd(point.date),
-        spent: point.spent,
-        pace: point.pace,
-      })),
-    [stats],
-  );
-
   const forecastData = useMemo(
     () =>
       (stats?.forecast.points ?? []).map((point) => ({
         date: parseYmd(point.date),
         balance: point.balance,
+        projected: point.projected,
       })),
     [stats],
+  );
+
+  const historyEndIndex = Math.max(
+    0,
+    (stats?.forecast.points ?? []).filter((point) => !point.projected).length - 1,
   );
 
   const forecast = stats?.forecast;
@@ -79,19 +85,21 @@ export default function DashboardPage() {
   const spent = stats?.totals.month ?? 0;
   const pct = budget > 0 ? Math.min(100, (spent / budget) * 100) : 0;
   const remaining = Math.max(0, budget - spent);
-  const over = spent > budget;
+  const trendStatus: "neutral" | "danger" | "success" =
+    !stats || stats.vsLastMonth === 0
+      ? "neutral"
+      : stats.vsLastMonth > 0
+        ? "danger"
+        : "success";
   const dayOfMonth = stats?.daily.length ?? 0;
   const daysInMonthCount = stats ? daysInMonth(stats.month) : 0;
-  const paceNow = stats?.cumulative.at(-1)?.pace ?? 0;
-  const paceDelta = spent - paceNow;
+  const categoryTotals = (stats?.byCategory ?? []).filter(
+    (entry) => entry.value > 0,
+  );
+  const daily30 = stats?.daily30 ?? [];
 
   if (loading && !stats) {
-    return (
-      <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 text-muted-foreground">
-        <Loader variant="dot-matrix" size={26} />
-        <p className="text-[13px]">Crunching the numbers</p>
-      </div>
-    );
+    return <PageLoader variant="dot-matrix" size={26} label="Crunching the numbers" />;
   }
 
   return (
@@ -99,45 +107,62 @@ export default function DashboardPage() {
       <header className="flex flex-wrap items-end justify-between gap-6">
         <div>
           <p className="text-[13px] text-muted-foreground">
-            {now
-              ? now.toLocaleDateString("en-GB", {
+            {now ? (
+              <>
+                {now.toLocaleDateString("en-GB", {
                   weekday: "long",
                   day: "numeric",
                   month: "long",
                   year: "numeric",
-                })
-              : "\u00a0"}
-          </p>
-          <h1 className="mt-2 font-display text-5xl leading-none md:text-[56px]">
-            {now ? `${greeting(now.getHours())}.` : "Hello."}
-          </h1>
-          <p className="mt-4 max-w-xl text-sm leading-relaxed text-muted-foreground">
-            You have spent{" "}
-            <span className="font-medium text-foreground">
-              {formatNumber(spent)}
-              <span className="ml-1 text-xs font-normal text-muted-foreground">UGX</span>
-            </span>{" "}
-            in {stats?.monthLabel}. That is {Math.round(pct)}% of the budget, with{" "}
-            {over ? (
-              "nothing left."
-            ) : (
-              <>
-                <span className="font-medium text-foreground">
-                  {formatNumber(remaining)}
-                  <span className="ml-1 text-xs font-normal text-muted-foreground">UGX</span>
-                </span>{" "}
-                left.
+                })}
+                <span className="tnum">
+                  {" "}
+                  · <LiveClock />
+                </span>
               </>
+            ) : (
+              "\u00a0"
             )}
           </p>
+          <h1 className="mt-2 flex items-center gap-3 font-display text-5xl leading-none md:text-[56px]">
+            {now ? (
+              <>
+                {greeting(now.getHours())}
+                <span
+                  aria-hidden
+                  className={cn(
+                    "inline-flex",
+                    now.getHours() < 12
+                      ? "text-amber-500"
+                      : now.getHours() < 18
+                        ? "text-orange-500"
+                        : "text-indigo-400",
+                  )}
+                >
+                  <Icon
+                    icon={
+                      now.getHours() < 12
+                        ? Coffee01Icon
+                        : now.getHours() < 18
+                          ? Sun03Icon
+                          : Moon02Icon
+                    }
+                    className="size-8 md:size-9"
+                  />
+                </span>
+              </>
+            ) : (
+              "Hello"
+            )}
+          </h1>
         </div>
         <div className="flex items-center gap-2">
           <Combobox
             value={period}
             onValueChange={(value) => setPeriod(value as StatPeriod)}
-            className="w-44 shrink-0"
+            className="w-36 shrink-0"
           >
-            <ComboboxTrigger className="h-9 min-w-0 rounded-md px-3">
+            <ComboboxTrigger className="h-9 min-w-0 rounded-full px-3">
               <ComboboxInput
                 aria-label="Timeframe"
                 placeholder="Timeframe"
@@ -145,7 +170,7 @@ export default function DashboardPage() {
                 showIcon={false}
               />
             </ComboboxTrigger>
-            <ComboboxContent className="w-52 rounded-xl">
+            <ComboboxContent className="w-52 rounded-2xl">
               <ComboboxList ariaLabel="Timeframe" className="p-2">
                 <ComboboxEmpty>No timeframes.</ComboboxEmpty>
                 {PERIOD_OPTIONS.map((option) => (
@@ -163,231 +188,249 @@ export default function DashboardPage() {
           <button
             type="button"
             onClick={() => openTransaction(undefined, "expense")}
-            className="inline-flex h-9 items-center gap-2 rounded-md bg-primary px-4 text-[13px] font-medium text-primary-foreground transition-transform active:scale-[0.98]"
+            className="inline-flex h-9 items-center gap-2 rounded-full bg-foreground px-2 text-[13px] font-medium text-background transition-transform hover:bg-foreground/90 active:scale-[0.98]"
           >
             <Icon icon={PlusSignIcon} className="size-4" /> Log expense
           </button>
         </div>
       </header>
 
-      <div className="grid grid-cols-2 gap-5 lg:grid-cols-4">
-        <StatCard
-          label="Spent"
-          value={periodStats?.expense ?? 0}
-          spark={periodStats?.spark ?? []}
-          sparkKey="expense"
-          foot={periodStats?.label ?? PERIOD_LABELS[period]}
-        />
-        <StatCard
-          label="Income"
-          value={periodStats?.income ?? 0}
-          spark={periodStats?.spark ?? []}
-          sparkKey="income"
-          foot={periodStats?.label ?? PERIOD_LABELS[period]}
-        />
-        <StatCard
-          label="Net"
-          value={periodStats?.net ?? 0}
-          spark={periodStats?.spark ?? []}
-          sparkKey="net"
-          foot={periodStats?.label ?? PERIOD_LABELS[period]}
-        />
-        <StatCard
-          label="Entries"
-          value={periodStats?.count ?? 0}
-          spark={periodStats?.spark ?? []}
-          sparkKey="count"
-          money={false}
-          foot={periodStats?.label ?? PERIOD_LABELS[period]}
-        />
-      </div>
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
+        <aside className="order-1 grid h-full auto-rows-fr grid-cols-1 gap-4 sm:grid-cols-2 xl:order-2 xl:col-span-5">
+          <MetricCard
+            compact
+            label="Spent"
+            value={periodStats?.expense ?? 0}
+            spark={periodStats?.spark ?? []}
+            sparkKey="expense"
+            foot={periodStats?.label ?? PERIOD_LABELS[period]}
+            icon={ReceiptTextIcon}
+            tone="orange"
+          />
+          <MetricCard
+            compact
+            label="Income"
+            value={periodStats?.income ?? 0}
+            spark={periodStats?.spark ?? []}
+            sparkKey="income"
+            foot={periodStats?.label ?? PERIOD_LABELS[period]}
+            icon={Money03Icon}
+            tone="emerald"
+          />
+          <MetricCard
+            compact
+            label="Net"
+            value={periodStats?.net ?? 0}
+            spark={periodStats?.spark ?? []}
+            sparkKey="net"
+            foot={periodStats?.label ?? PERIOD_LABELS[period]}
+            icon={ChartIncreaseIcon}
+            tone="sky"
+          />
+          <MetricCard
+            compact
+            label="Entries"
+            value={periodStats?.count ?? 0}
+            spark={periodStats?.spark ?? []}
+            sparkKey="count"
+            money={false}
+            foot={periodStats?.label ?? PERIOD_LABELS[period]}
+            icon={Invoice02Icon}
+            tone="violet"
+          />
+        </aside>
 
-      <div className="grid grid-cols-12 gap-5">
-        <Panel className="col-span-12 overflow-hidden p-6">
-          <div className="grid gap-6 md:min-h-[27rem] md:grid-cols-[minmax(0,1fr)_1px_minmax(0,2fr)]">
-            <div className="flex flex-col justify-start gap-4">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <p className="text-xs text-muted-foreground">Spent</p>
-                  <Money value={spent} size="md" className="mt-1" />
-                </div>
-                <div className="text-right">
-                  <p className="text-xs text-muted-foreground">Left</p>
-                  <Money value={remaining} size="md" className="mt-1" />
-                </div>
-              </div>
-              <div className="flex flex-col items-center">
-                <Gauge
-                  value={pct}
-                  centerValue={Math.round(pct)}
-                  suffix="%"
-                  defaultLabel="used"
-                  totalNotches={36}
-                  height={170}
-                  width={240}
-                  activeFill="var(--chart-1)"
-                  inactiveFill="var(--muted)"
-                  needle="line"
-                />
-              </div>
+        <Panel className="order-2 overflow-hidden p-5 xl:order-1 xl:col-span-7">
+          <PanelHeader
+            title="Month pace"
+            hint={
+              <span>
+                Total balance{" "}
+                <span className="tnum font-medium text-foreground">
+                  UGX {formatNumber(forecast?.liquidBalanceUgx ?? 0)}
+                </span>
+              </span>
+            }
+            action={
+              <MonthCalendar
+                month={stats?.month}
+                day={dayOfMonth}
+                days={daysInMonthCount}
+              />
+            }
+            className="p-0"
+          />
+
+          <div className="mt-0 grid grid-cols-2 items-center gap-3 md:grid-cols-[minmax(0,1fr)_240px_minmax(0,1fr)]">
+            <div className="order-1 col-span-2 flex justify-center md:order-2 md:col-span-1">
+              <Gauge
+                value={pct}
+                centerValue={Math.round(pct)}
+                suffix="%"
+                defaultLabel="used"
+                totalNotches={36}
+                height={170}
+                width={240}
+                activeFill="var(--primary)"
+                inactiveFill="var(--muted)"
+                needle="line"
+              />
             </div>
 
-            <div className="h-px w-full self-center bg-border/70 md:h-auto md:w-px md:self-stretch md:my-3" />
-
-            <div>
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                    Month pace
-                  </p>
-                  <p className="mt-1.5 text-xs text-muted-foreground">
-                    Spend against a straight-line budget · Day {dayOfMonth} of {daysInMonthCount}
-                  </p>
-                </div>
-                <AnimatedBadge
-                  status={
-                    stats && stats.vsLastMonth !== 0
-                      ? stats.vsLastMonth > 0
-                        ? "danger"
-                        : "success"
-                      : "neutral"
-                  }
-                  size="sm"
-                  contentKey={stats?.vsLastMonth ?? 0}
-                >
-                  {Math.abs(stats?.vsLastMonth ?? 0)}%{" "}
-                  {stats && stats.vsLastMonth > 0
-                    ? "more"
-                    : stats && stats.vsLastMonth < 0
-                      ? "less"
-                      : ""}{" "}
-                  vs last month
-                </AnimatedBadge>
-              </div>
-
-              <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-3 rounded-xl border border-border/60 bg-muted/20 px-4 py-3">
-                <div className="flex items-center gap-2">
-                  <span className="size-2 rounded-full bg-primary" />
-                  <span className="text-[11px] text-muted-foreground">Spent</span>
-                  <span className="tnum text-sm font-semibold">
-                    {formatNumber(spent)}
-                    <span className="ml-1 text-[10px] font-normal text-muted-foreground">UGX</span>
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="size-2 rounded-full bg-muted-foreground/50" />
-                  <span className="text-[11px] text-muted-foreground">Budget pace</span>
-                  <span className="tnum text-sm font-semibold">
-                    {formatNumber(paceNow)}
-                    <span className="ml-1 text-[10px] font-normal text-muted-foreground">UGX</span>
-                  </span>
-                </div>
-                <AnimatedBadge
-                  className="ml-auto"
-                  status={paceDelta > 0 ? "danger" : paceDelta < 0 ? "success" : "neutral"}
-                  size="sm"
-                  contentKey={paceDelta}
-                >
-                  {paceDelta === 0
-                    ? "On pace"
-                    : `${paceDelta > 0 ? "Ahead" : "Under"} by ${formatNumber(Math.abs(paceDelta))} UGX`}
-                </AnimatedBadge>
-              </div>
-
-              <div className="mt-4">
-                <AreaChart
-                  data={areaData}
-                  aspectRatio="1.8 / 1"
-                  margin={{ top: 12, right: 12, bottom: 30, left: 72 }}
-                >
-                  <Grid horizontal />
-                  <Area
-                    dataKey="pace"
-                    fill="var(--muted-foreground)"
-                    fillOpacity={0}
-                    stroke="var(--muted-foreground)"
-                    strokeWidth={1.5}
-                  />
-                  <Area
-                    dataKey="spent"
-                    fill="var(--chart-1)"
-                    stroke="var(--chart-1)"
-                    fillOpacity={0.32}
-                    strokeWidth={2.5}
-                    fadeBottom={45}
-                  />
-                  <YAxis formatValue={(value) => formatNumber(value)} />
-                  <XAxis />
-                  <ChartTooltip dotHaloScale={0} dotHaloOpacity={0} dotStrokeWidth={0} />
-                </AreaChart>
-              </div>
+            <div className="order-2 flex min-h-[84px] flex-col items-center justify-center gap-1.5 py-3 text-center md:order-1">
+              <span className="text-sm capitalize text-muted-foreground">
+                Spent
+              </span>
+              <Money value={spent} size="sm" />
+            </div>
+            <div className="order-3 flex min-h-[84px] flex-col items-center justify-center gap-1.5 py-3 text-center">
+              <span className="text-sm capitalize text-muted-foreground">
+                Left
+              </span>
+              <Money value={remaining} size="sm" />
             </div>
           </div>
-        </Panel>
-      </div>
 
-      <div className="grid grid-cols-12 gap-5">
-        <Panel className="col-span-12 overflow-hidden p-6 xl:col-span-8">
+          <div className="mt-0 flex justify-center">
+            <AnimatedBadge
+              status={trendStatus}
+              size="sm"
+              contentKey={stats?.vsLastMonth ?? 0}
+            >
+              {Math.abs(stats?.vsLastMonth ?? 0)}%{" "}
+              {stats && stats.vsLastMonth > 0
+                ? "more"
+                : stats && stats.vsLastMonth < 0
+                  ? "less"
+                  : ""}{" "}
+              vs last month
+            </AnimatedBadge>
+          </div>
+
+        </Panel>
+
+        <Panel className="order-3 overflow-hidden p-5 xl:col-span-12">
           <PanelHeader
-            title="Safe to spend"
-            hint="Per day until payday, after your buffer"
+            title="Cash runway"
+            hint="Previous payday to next payday · history filled, projection dashed at your recent burn rate"
             action={
-              <span className="rounded-full bg-muted px-2.5 py-1 text-[11px] text-muted-foreground">
-                {forecast?.daysToPayday ?? 0} days to payday
+              <span className="rounded-full bg-muted px-2.5 py-1 text-[10px] text-muted-foreground">
+                {formatNumber(forecast?.daysToPayday ?? 0)} days to payday
               </span>
             }
             className="p-0"
           />
-          <div className="mt-4 flex flex-wrap items-end justify-between gap-4">
-            <div>
-              <p className="text-[11px] text-muted-foreground">Safe to spend / day</p>
-              <div className="mt-1">
-                <span className="tnum inline-flex items-baseline gap-1.5">
-                  <span className="text-xs font-medium text-muted-foreground">UGX</span>
-                  <AnimatedNumber
-                    value={forecast?.safePerDayUgx ?? 0}
-                    duration={0.6}
-                    startOnView={false}
-                    format={formatNumber}
-                    className="text-4xl font-semibold leading-none tracking-[-0.03em]"
-                  />
-                </span>
+          <div className="mt-8 grid grid-cols-1 divide-y divide-border/60 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+            <div className="py-3 first:pt-0 last:pb-0 sm:min-h-[76px] sm:px-4 sm:py-1 sm:first:pl-0 sm:last:pr-0">
+              <div className="flex items-center gap-2">
+                <Icon
+                  icon={Money03Icon}
+                  className="size-4 text-emerald-600 dark:text-emerald-400"
+                />
+                <p className="text-sm text-foreground">Safe to spend</p>
               </div>
-              <p className="mt-2 flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                Projected at payday
-                <Money value={forecast?.projectedBalanceUgx ?? 0} size="sm" />
-              </p>
-            </div>
-            <p className="text-[11px] text-muted-foreground">
-              MoMo fees this month{" "}
-              <span className="tnum text-foreground">
-                {formatNumber(stats?.momoFees.month ?? 0)} UGX
+              <span className="tnum mt-1 inline-flex items-baseline gap-1.5 text-foreground">
+                <span className="text-sm font-semibold leading-none tracking-[-0.02em] text-muted-foreground">UGX</span>
+                <AnimatedNumber
+                  value={forecast?.safePerDayUgx ?? 0}
+                  duration={0.6}
+                  startOnView={false}
+                  format={formatNumber}
+                  className="text-sm font-semibold leading-none tracking-[-0.02em]"
+                />
+                <span className="text-sm font-normal text-muted-foreground">/ day</span>
               </span>
-            </p>
+            </div>
+            <div className="py-3 first:pt-0 last:pb-0 sm:min-h-[76px] sm:px-4 sm:py-1 sm:first:pl-0 sm:last:pr-0">
+              <div className="flex items-center gap-2">
+                <Icon
+                  icon={ChartIncreaseIcon}
+                  className="size-4 text-sky-600 dark:text-sky-400"
+                />
+                <p className="text-sm text-foreground">Projected at payday</p>
+              </div>
+              <span className="tnum mt-1 inline-flex items-baseline gap-1.5 text-foreground">
+                <span className="text-sm font-semibold leading-none tracking-[-0.02em] text-muted-foreground">UGX</span>
+                <AnimatedNumber
+                  value={forecast?.projectedBalanceUgx ?? 0}
+                  duration={0.6}
+                  startOnView={false}
+                  format={formatNumber}
+                  className="text-sm font-semibold leading-none tracking-[-0.02em]"
+                />
+              </span>
+            </div>
+            <div className="py-3 first:pt-0 last:pb-0 sm:min-h-[76px] sm:px-4 sm:py-1 sm:first:pl-0 sm:last:pr-0">
+              <div className="flex items-center gap-2">
+                <Icon
+                  icon={Invoice02Icon}
+                  className="size-4 text-amber-600 dark:text-amber-400"
+                />
+                <p className="text-sm text-foreground">MoMo fees this month</p>
+              </div>
+              <span className="tnum mt-1 inline-flex items-baseline gap-1.5 text-foreground">
+                <span className="text-sm font-semibold leading-none tracking-[-0.02em] text-muted-foreground">UGX</span>
+                <AnimatedNumber
+                  value={stats?.momoFees.month ?? 0}
+                  duration={0.6}
+                  startOnView={false}
+                  format={formatNumber}
+                  className="text-sm font-semibold leading-none tracking-[-0.02em]"
+                />
+              </span>
+            </div>
           </div>
-          <div className="mt-3">
+          <div className="mt-1">
             <AreaChart
               data={forecastData}
-              aspectRatio="3 / 1"
-              margin={{ top: 10, right: 12, bottom: 30, left: 72 }}
+              aspectRatio="2.6 / 1"
+              margin={{ top: 16, right: 32, bottom: 44, left: 112 }}
             >
               <Grid horizontal />
               <Area
                 dataKey="balance"
                 fill="var(--chart-1)"
                 stroke="var(--chart-1)"
-                fillOpacity={0.28}
-                strokeWidth={2.2}
-                fadeBottom={40}
+                fillOpacity={0.18}
+                strokeWidth={1.5}
+                fadeBottom={75}
+                fillFadeFromIndex={historyEndIndex}
+                fillFadeLeft
+                dashFromIndex={historyEndIndex}
               />
-              <YAxis formatValue={(value) => formatNumber(value)} />
+              <YAxis
+                numTicks={5}
+                formatLargeNumbers={false}
+                formatValue={(value) => `UGX ${formatNumber(value)}`}
+              />
               <XAxis />
-              <ChartTooltip dotHaloScale={0} dotHaloOpacity={0} dotStrokeWidth={0} />
+              <ChartTooltip
+                rows={(point) => [
+                  {
+                    color: "var(--chart-1)",
+                    label: point.projected ? "Projected balance" : "Balance",
+                    value: `UGX ${formatNumber(Number(point.balance) || 0)}`,
+                  },
+                ]}
+                dotHaloScale={0}
+                dotHaloOpacity={0}
+                dotStrokeWidth={0}
+              />
             </AreaChart>
+            <div className="mt-3 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-[10px] text-muted-foreground">
+              <span className="flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full bg-[var(--chart-1)]/40" />
+                Balance history
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-4 border-t border-dashed border-[var(--chart-1)]" />
+                Projected to next payday
+              </span>
+            </div>
           </div>
         </Panel>
 
-        <Panel className="col-span-12 p-6 xl:col-span-4">
+        <Panel className="order-4 p-5 xl:col-span-5">
           <PanelHeader
             title="Accounts"
             hint="Cash, bank and mobile money"
@@ -401,11 +444,11 @@ export default function DashboardPage() {
             }
             className="p-0 pb-4"
           />
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             {(stats?.accounts ?? []).map((entry) => (
               <div
                 key={entry.id}
-                className="flex items-center gap-3 rounded-xl border border-border/70 px-3 py-2.5"
+                className="flex items-center gap-3 rounded-2xl bg-muted/20 px-3 py-2"
               >
                 <span
                   className="grid size-8 place-items-center rounded-lg"
@@ -424,10 +467,8 @@ export default function DashboardPage() {
             ))}
           </div>
         </Panel>
-      </div>
 
-      <div className="grid grid-cols-12 gap-5">
-        <Panel className="col-span-12 p-6 xl:col-span-7">
+        <Panel className="order-7 p-5 xl:col-span-5">
           <PanelHeader
             title="Recent activity"
             hint="Latest entries, newest first"
@@ -453,7 +494,7 @@ export default function DashboardPage() {
                   <button
                     type="button"
                     onClick={() => openTransaction(transaction)}
-                    className="flex w-full items-center gap-3 px-1 py-3 text-left transition-colors hover:bg-muted/50"
+                    className="flex w-full items-center gap-3 px-1 py-2.5 text-left transition-colors hover:bg-muted/50"
                   >
                     <span
                       className="grid size-9 shrink-0 place-items-center rounded-lg"
@@ -493,85 +534,182 @@ export default function DashboardPage() {
           </ul>
         </Panel>
 
-        <Panel className="col-span-12 p-6 xl:col-span-5">
+        <Panel className="order-5 p-5 xl:col-span-7">
           <PanelHeader
             title="Categories"
             hint={`${stats?.monthLabel ?? "This month"}, share of spend`}
             className="p-0 pb-4"
           />
-          <div className="space-y-4">
-            {(stats?.byCategory ?? []).map((entry) => (
-              <div key={entry.id} className="space-y-1.5">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="flex items-center gap-2 text-muted-foreground">
-                    <Icon icon={categoryOf(entry.id).icon} className="size-3.5" />
-                    {entry.label}
-                  </span>
-                  <span className="tnum text-foreground">{formatNumber(entry.value)} UGX</span>
-                </div>
-                <div className="h-1.5 overflow-hidden rounded-full bg-muted">
-                  <div
-                    className="h-full rounded-full"
-                    style={{
-                      width: `${(entry.value / Math.max(1, spent)) * 100}%`,
-                      background: entry.color,
-                    }}
+          {categoryTotals.length > 0 ? (
+            <div className="grid gap-5 sm:grid-cols-[220px_minmax(0,1fr)] sm:items-center">
+              <div className="flex justify-center">
+                <PieChart
+                  data={categoryTotals.map((entry) => ({
+                    label: entry.label,
+                    value: entry.value,
+                    color: entry.color,
+                  }))}
+                  size={220}
+                  innerRadius={62}
+                  hoverOffset={8}
+                >
+                  <PieTicks
+                    count={96}
+                    strokeWidth={3}
+                    sliceGap={2}
+                    hoverEffect="slice"
+                    fadedOpacity={0.25}
                   />
+                  <PieCenter defaultLabel="Total">
+                    {({ value, label }) => (
+                      <div className="text-center">
+                        <p className="text-[10px] text-muted-foreground">UGX</p>
+                        <AnimatedNumber
+                          value={value}
+                          duration={0.4}
+                          startOnView={false}
+                          format={formatNumber}
+                          className="mt-0.5 text-sm font-semibold leading-none text-foreground"
+                        />
+                        <p className="mt-0.5 text-[10px] text-muted-foreground">
+                          {label}
+                        </p>
+                      </div>
+                    )}
+                  </PieCenter>
+                </PieChart>
+              </div>
+
+              <div>
+                <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                  Key
+                </p>
+                <div className="mt-2 space-y-2">
+                  {categoryTotals.map((entry) => (
+                    <div
+                      key={entry.id}
+                      className="flex items-center justify-between gap-3 text-[11px]"
+                    >
+                      <span className="flex min-w-0 items-center gap-2 text-muted-foreground">
+                        <span
+                          className="size-2 shrink-0 rounded-full"
+                          style={{ background: entry.color }}
+                        />
+                        <span className="truncate">{entry.label}</span>
+                      </span>
+                      <span className="tnum shrink-0 text-sm text-foreground">
+                        {formatNumber(entry.value)}{" "}
+                        <span className="text-muted-foreground">UGX</span>
+                        <span className="ml-2 text-muted-foreground">
+                          {Math.round((entry.value / Math.max(1, spent)) * 100)}%
+                        </span>
+                      </span>
+                    </div>
+                  ))}
                 </div>
               </div>
+            </div>
+          ) : (
+            <p className="py-8 text-center text-sm text-muted-foreground">
+              No spending recorded for this month yet.
+            </p>
+          )}
+        </Panel>
+
+        <Panel className="order-6 flex flex-col p-5 xl:col-span-7">
+          <PanelHeader
+            title="Daily flow"
+            hint="Last 30 days, by category"
+            className="p-0 pb-4"
+          />
+          <div className="relative min-h-[280px] flex-1">
+            <BarChart
+              data={daily30.map((point) => ({
+                ...point,
+                label: parseYmd(point.date).toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                }),
+              }))}
+              xDataKey="label"
+              stacked
+              className="absolute inset-0"
+              aspectRatio="auto"
+              barGap={0.25}
+              stackGap={1}
+              margin={{ top: 8, right: 8, bottom: 44, left: 56 }}
+            >
+              <Grid horizontal />
+              <YAxis formatValue={(value) => formatNumber(value)} />
+              {CATEGORIES.map((category) => (
+                <Bar
+                  key={category.id}
+                  dataKey={category.id}
+                  fill={category.color}
+                  lineCap={2}
+                />
+              ))}
+              <BarXAxis maxLabels={6} />
+              <ChartTooltip
+                content={({ point }) => {
+                  const rows = CATEGORIES.map((category) => ({
+                    ...category,
+                    value: Number(point[category.id]) || 0,
+                  })).filter((entry) => entry.value > 0);
+
+                  return (
+                    <div className="w-max px-3.5 py-3">
+                      <p className="mb-2 text-[11px] font-medium text-chart-tooltip-muted">
+                        {String(point.label ?? "")}
+                      </p>
+                      {rows.length > 0 ? (
+                        <div className="space-y-1.5">
+                          {rows.map((entry) => (
+                            <div
+                              key={entry.id}
+                              className="flex items-center justify-between gap-6 whitespace-nowrap"
+                            >
+                              <span className="flex items-center gap-2 text-sm text-chart-tooltip-muted">
+                                <span
+                                  className="size-2 shrink-0 rounded-full"
+                                  style={{ background: entry.color }}
+                                />
+                                {entry.label}
+                              </span>
+                              <span className="tnum text-right text-sm font-medium text-chart-tooltip-foreground">
+                                <span className="text-chart-tooltip-muted">UGX</span>{" "}
+                                {formatNumber(entry.value)}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="whitespace-nowrap text-sm text-chart-tooltip-muted">
+                          No spending
+                        </p>
+                      )}
+                    </div>
+                  );
+                }}
+              />
+            </BarChart>
+          </div>
+          <div className="mt-3 flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5">
+            {CATEGORIES.map((category) => (
+              <span
+                key={category.id}
+                className="flex items-center gap-1.5 text-[10px] text-muted-foreground"
+              >
+                <span
+                  className="size-1.5 rounded-full"
+                  style={{ background: category.color }}
+                />
+                {category.label}
+              </span>
             ))}
           </div>
         </Panel>
       </div>
-
-      <Panel className="p-6">
-        <PanelHeader title="Months" hint="Last eight months" className="p-0 pb-4" />
-        <BarChart
-          data={stats?.months ?? []}
-          xDataKey="label"
-          aspectRatio="3 / 1"
-          barGap={0.35}
-          margin={{ top: 10, right: 10, bottom: 30, left: 80 }}
-        >
-          <Grid horizontal />
-          <YAxis formatValue={(value) => formatNumber(value)} />
-          <Bar dataKey="total" fill="var(--chart-1)" lineCap="round" />
-          <BarXAxis />
-          <ChartTooltip />
-        </BarChart>
-      </Panel>
-
-      <Panel className="p-6">
-        <PanelHeader
-          title="Daily flow"
-          hint="Every day this month, stacked by category"
-          className="p-0 pb-4"
-        />
-        <BarChart
-          data={(stats?.daily ?? []).map((point) => ({
-            ...point,
-            label: String(Number(point.date.slice(-2))),
-          }))}
-          xDataKey="label"
-          stacked
-          aspectRatio="3.4 / 1"
-          barGap={0.25}
-          stackGap={1}
-          margin={{ top: 10, right: 10, bottom: 30, left: 80 }}
-        >
-          <Grid horizontal />
-          <YAxis formatValue={(value) => formatNumber(value)} />
-          <Bar dataKey="food" fill={categoryOf("food").color} lineCap={2} />
-          <Bar dataKey="transport" fill={categoryOf("transport").color} lineCap={2} />
-          <Bar dataKey="bills" fill={categoryOf("bills").color} lineCap={2} />
-          <Bar dataKey="fun" fill={categoryOf("fun").color} lineCap={2} />
-          <Bar dataKey="shopping" fill={categoryOf("shopping").color} lineCap={2} />
-          <Bar dataKey="health" fill={categoryOf("health").color} lineCap={2} />
-          <Bar dataKey="other" fill={categoryOf("other").color} lineCap={2} />
-          <BarXAxis />
-          <ChartTooltip />
-        </BarChart>
-      </Panel>
     </div>
   );
 }
@@ -582,56 +720,72 @@ function greeting(hour: number) {
   return "Evening";
 }
 
-function StatCard({
-  label,
-  value,
-  spark,
-  foot,
-  money = true,
-  sparkKey = "expense",
+const WEEKDAYS = ["S", "M", "T", "W", "T", "F", "S"];
+
+function LiveClock() {
+  const [time, setTime] = useState<string | null>(null);
+
+  useEffect(() => {
+    const update = () => {
+      const date = new Date();
+      const pad = (value: number) => String(value).padStart(2, "0");
+      setTime(
+        `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`,
+      );
+    };
+    update();
+    const timer = window.setInterval(update, 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  return <span className="tnum">{time ?? "--:--:--"}</span>;
+}
+
+function MonthCalendar({
+  month,
+  day,
+  days,
 }: {
-  label: string;
-  value: number;
-  spark: PeriodStats["spark"];
-  foot: string;
-  money?: boolean;
-  sparkKey?: "expense" | "income" | "net" | "count";
+  month?: string;
+  day: number;
+  days: number;
 }) {
+  const firstWeekday = month ? parseYmd(`${month}-01`).getDay() : 0;
+  const current = Math.min(Math.max(day, 0), days);
+
   return (
-    <Panel className="p-5">
-      <p className="text-[13px] text-muted-foreground">{label}</p>
-      <div className="mt-2">
-        {money ? (
-          <span className="tnum inline-flex items-baseline gap-1.5">
-            <span className="text-[11px] font-medium text-muted-foreground">UGX</span>
-            <AnimatedNumber
-              value={value}
-              duration={0.6}
-              startOnView={false}
-              format={formatNumber}
-              className="text-2xl font-semibold leading-none tracking-[-0.02em]"
+    <div
+      className="w-[80px] shrink-0 select-none"
+      role="img"
+      aria-label={`Day ${current} of ${days} this month`}
+    >
+      <div className="grid grid-cols-7 gap-1 text-center text-[8px] font-medium text-muted-foreground">
+        {WEEKDAYS.map((label, index) => (
+          <span key={`${label}-${index}`}>{label}</span>
+        ))}
+      </div>
+      <div className="mt-1 grid grid-cols-7 gap-1">
+        {Array.from({ length: firstWeekday }).map((_, index) => (
+          <span key={`leading-${index}`} className="size-2" />
+        ))}
+        {Array.from({ length: days }).map((_, index) => {
+          const value = index + 1;
+          return (
+            <span
+              key={value}
+              className={cn(
+                "size-2 rounded-full",
+                value < current && "bg-foreground/30",
+                value === current && "bg-primary",
+                value > current && "bg-muted",
+              )}
             />
-          </span>
-        ) : (
-          <AnimatedNumber
-            value={value}
-            duration={0.6}
-            startOnView={false}
-            format={(n) => String(Math.round(n))}
-            className="text-2xl font-semibold leading-none tracking-[-0.02em]"
-          />
-        )}
+          );
+        })}
       </div>
-      <p className="mt-1.5 text-[11px] text-muted-foreground">{foot}</p>
-      <div className="mt-3">
-        <AreaSparkline
-          data={spark.length > 1 ? spark : [...spark, ...spark]}
-          dataKey={sparkKey}
-          height={40}
-          color="var(--chart-1)"
-          fill="gradient"
-        />
-      </div>
-    </Panel>
+      <p className="mt-1.5 text-[9px] text-muted-foreground">
+        Day {current} of {days}
+      </p>
+    </div>
   );
 }

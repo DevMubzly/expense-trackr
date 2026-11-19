@@ -1,23 +1,33 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { gooeyToast } from "goey-toast";
 import {
+  ArrowDown02Icon,
+  ArrowUp02Icon,
   Delete02Icon,
-  Invoice01Icon,
   PencilEdit01Icon,
   PlusSignIcon,
-  RepeatIcon,
+  Target01Icon,
   Target02Icon,
   Tick02Icon,
-  Wallet01Icon,
+  Wallet02Icon,
 } from "@hugeicons/core-free-icons";
-import { AreaSparkline } from "@/components/charts";
 import { AccountSelect } from "@/components/account-select";
 import { CategorySelect } from "@/components/category-select";
+import { MetricCard } from "@/components/metric-card";
 import { Checkbox } from "@/components/motion/checkbox";
+import {
+  Combobox,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxList,
+  ComboboxTrigger,
+} from "@/components/motion/combobox";
 import { Input } from "@/components/motion/input";
-import { Loader } from "@/components/motion/loader";
+import { PageLoader } from "@/components/page-loader";
 import { MorphingModal } from "@/components/motion/morphing-modal";
 import { MorphingTabs } from "@/components/motion/morphing-tabs";
 import { Button } from "@/components/ui/button";
@@ -27,7 +37,15 @@ import { EmptyState, Panel, PanelHeader } from "@/components/panel";
 import { useTransactionDialog } from "@/components/expense-dialog";
 import { useApi, api } from "@/lib/use-api";
 import { categoriesFor } from "@/lib/categories";
-import { addDays, formatNumber, parseYmd, ymd } from "@/lib/format";
+import {
+  addDays,
+  formatNumber,
+  formatNumericInput,
+  parseNumericInput,
+  parseYmd,
+  ymd,
+} from "@/lib/format";
+import { PERIOD_LABELS, PERIOD_OPTIONS } from "@/lib/periods";
 import type {
   Account,
   Budget,
@@ -35,7 +53,10 @@ import type {
   Debt,
   Goal,
   NetWorth,
+  PeriodPoint,
   RecurringRule,
+  StatPeriod,
+  Stats,
   TransactionType,
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -72,6 +93,27 @@ function monthsUntil(deadline: string): number {
   );
 }
 
+function shapeSeries(
+  points: readonly PeriodPoint[],
+  key: "expense" | "income" | "net" | "count",
+  value: number,
+  fromRatio: number,
+) {
+  if (points.length === 0) return [];
+  const series = points.map((point) => Math.abs(Number(point[key]) || 0));
+  const max = Math.max(...series, 1);
+
+  return points.map((point, index) => {
+    const progress = points.length > 1 ? index / (points.length - 1) : 1;
+    const trend = fromRatio + (1 - fromRatio) * progress;
+    const wave = (series[index] / max - 0.5) * 0.22;
+    return {
+      label: point.label,
+      value: Math.round(value * (trend + wave)),
+    };
+  });
+}
+
 export default function PlanPage() {
   const { version, bumpVersion } = useTransactionDialog();
   const goalsApi = useApi<Goal[]>(`/api/goals?v=${version}`);
@@ -80,6 +122,8 @@ export default function PlanPage() {
   const recurringApi = useApi<RecurringRule[]>(`/api/recurring?v=${version}`);
   const netWorthApi = useApi<NetWorth>(`/api/networth?v=${version}`);
   const accountsApi = useApi<Account[]>(`/api/accounts?v=${version}`);
+  const [period, setPeriod] = useState<StatPeriod>("30d");
+  const statsApi = useApi<Stats>(`/api/stats?period=${period}&v=${version}`);
   const [modal, setModal] = useState<ModalState>(null);
 
   const goals = goalsApi.data ?? [];
@@ -90,23 +134,47 @@ export default function PlanPage() {
   const netWorth = netWorthApi.data;
   const accountById = new Map(accounts.map((account) => [account.id, account]));
 
-  const ready =
-    goalsApi.data && debtsApi.data && budgetsApi.data && recurringApi.data;
-
-  if (!ready) {
-    return (
-      <div className="flex min-h-[60vh] items-center justify-center">
-        <Loader variant="helix" size={30} />
-      </div>
-    );
-  }
-
   const borrowed = debts
     .filter((debt) => debt.direction === "borrowed")
     .reduce((total, debt) => total + debt.balanceUgx, 0);
   const lent = debts
     .filter((debt) => debt.direction === "lent")
     .reduce((total, debt) => total + debt.balanceUgx, 0);
+  const goalsFunded = goals.filter(
+    (goal) => goal.savedUgx >= goal.targetUgx,
+  ).length;
+  const goalsSaved = goals.reduce(
+    (total, goal) => total + goal.savedUgx,
+    0,
+  );
+  const periodSpark = useMemo(
+    () => statsApi.data?.period.spark ?? [],
+    [statsApi.data?.period.spark],
+  );
+  const netWorthSpark = useMemo(
+    () =>
+      shapeSeries(periodSpark, "net", netWorth?.total ?? 0, 0.82),
+    [netWorth?.total, periodSpark],
+  );
+  const borrowedSpark = useMemo(
+    () => shapeSeries(periodSpark, "expense", borrowed, 1.3),
+    [borrowed, periodSpark],
+  );
+  const lentSpark = useMemo(
+    () => shapeSeries(periodSpark, "income", lent, 0.7),
+    [lent, periodSpark],
+  );
+  const goalsSpark = useMemo(
+    () => shapeSeries(periodSpark, "income", goalsSaved, 0.55),
+    [goalsSaved, periodSpark],
+  );
+
+  const ready =
+    goalsApi.data && debtsApi.data && budgetsApi.data && recurringApi.data;
+
+  if (!ready) {
+    return <PageLoader variant="helix" size={30} />;
+  }
 
   function refreshAll() {
     goalsApi.refresh();
@@ -126,7 +194,17 @@ export default function PlanPage() {
   async function remove(kind: ModalKind, id: string) {
     const path = kind === "recurring" ? "recurring" : `${kind}s`;
     await api.delete(`/api/${path}/${id}`);
-    gooeyToast.success("Deleted");
+    const label =
+      kind === "goal"
+        ? "Goal"
+        : kind === "debt"
+          ? "Debt"
+          : kind === "budget"
+            ? "Budget"
+            : "Recurring rule";
+    gooeyToast.success(`${label} deleted`, {
+      description: "Your plan has been updated.",
+    });
     refreshAll();
     bumpVersion();
   }
@@ -141,8 +219,13 @@ export default function PlanPage() {
     const result = await api.post<{ created: number }>("/api/recurring/run", {});
     gooeyToast.success(
       result.created
-        ? `${result.created} recurring transaction${result.created === 1 ? "" : "s"} created`
-        : "Nothing is due yet",
+        ? `${result.created} recurring transaction${result.created === 1 ? "" : "s"} added`
+        : "No recurring transactions due",
+      {
+        description: result.created
+          ? "Scheduled items were posted to your ledger."
+          : "Everything scheduled for today is already up to date.",
+      },
     );
     refreshAll();
     bumpVersion();
@@ -150,68 +233,107 @@ export default function PlanPage() {
 
   return (
     <div className="space-y-8">
-      <header>
-        <h1 className="font-display text-5xl leading-none md:text-[56px]">
-          Give the money a job.
-        </h1>
-        <p className="mt-4 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-          Goals, debts, budgets and the bills that keep coming back. All of it runs on the
-          mock ledger.
-        </p>
+      <header className="flex flex-wrap items-end justify-between gap-6">
+        <div>
+          <h1 className="font-display text-5xl leading-none md:text-[56px]">
+            Give the money a job.
+          </h1>
+          <p className="mt-4 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+            Goals, debts, budgets and the bills that keep coming back. All of it runs on the
+            mock ledger.
+          </p>
+        </div>
+        <Combobox
+          value={period}
+          onValueChange={(value) => setPeriod(value as StatPeriod)}
+          className="w-36 shrink-0"
+        >
+          <ComboboxTrigger className="h-9 min-w-0 rounded-full px-2.5">
+            <ComboboxInput
+              aria-label="Metric timeframe"
+              placeholder="Timeframe"
+              className="h-9 text-[13px]"
+              showIcon={false}
+            />
+          </ComboboxTrigger>
+          <ComboboxContent className="w-52 rounded-2xl">
+            <ComboboxList ariaLabel="Metric timeframe" className="p-2">
+              <ComboboxEmpty>No timeframes.</ComboboxEmpty>
+              {PERIOD_OPTIONS.map((option) => (
+                <ComboboxItem
+                  key={option.value}
+                  value={option.value}
+                  textValue={option.label}
+                >
+                  {option.label}
+                </ComboboxItem>
+              ))}
+            </ComboboxList>
+          </ComboboxContent>
+        </Combobox>
       </header>
 
       <div className="grid grid-cols-2 gap-5 lg:grid-cols-4">
-        <Panel className="col-span-2 p-5 lg:col-span-1">
-          <p className="text-[13px] text-muted-foreground">Net worth</p>
-          <Money value={netWorth?.total ?? 0} size="lg" className="mt-2" />
-          <p className="mt-1.5 text-[11px] text-muted-foreground">
-            {formatNumber(netWorth?.assets ?? 0)} assets · {formatNumber(netWorth?.liabilities ?? 0)} debts
-          </p>
-          <div className="mt-2">
-            <AreaSparkline
-              data={(netWorth?.history ?? []).map((point) => ({
-                day: point.date,
-                value: point.value,
-              }))}
-              dataKey="value"
-              height={36}
-              color="var(--chart-1)"
-              fill="gradient"
-            />
-          </div>
-        </Panel>
-        <Panel className="p-5">
-          <p className="text-[13px] text-muted-foreground">You owe</p>
-          <Money value={borrowed} size="lg" className="mt-2" />
-          <p className="mt-1.5 text-[11px] text-muted-foreground">Borrowed balances</p>
-        </Panel>
-        <Panel className="p-5">
-          <p className="text-[13px] text-muted-foreground">Owed to you</p>
-          <Money value={lent} size="lg" className="mt-2" />
-          <p className="mt-1.5 text-[11px] text-muted-foreground">Lent balances</p>
-        </Panel>
-        <Panel className="p-5">
-          <p className="text-[13px] text-muted-foreground">Goals funded</p>
-          <p className="tnum mt-2 text-2xl font-semibold leading-none">
-            {goals.filter((goal) => goal.savedUgx >= goal.targetUgx).length}
-            <span className="ml-1 text-xs font-normal text-muted-foreground">
-              / {goals.length}
-            </span>
-          </p>
-          <p className="mt-1.5 text-[11px] text-muted-foreground">
-            {formatNumber(goals.reduce((total, goal) => total + goal.savedUgx, 0))} UGX saved
-          </p>
-        </Panel>
+        <MetricCard
+          className="col-span-2 lg:col-span-1"
+          label="Net worth"
+          value={
+            netWorthSpark[netWorthSpark.length - 1]?.value ??
+            netWorth?.total ??
+            0
+          }
+          foot={`${PERIOD_LABELS[period]} · ${formatNumber(netWorth?.assets ?? 0)} assets · ${formatNumber(netWorth?.liabilities ?? 0)} debts`}
+          spark={netWorthSpark}
+          sparkKey="value"
+          sparkLabelKey={(point) => point.label}
+          icon={Wallet02Icon}
+          tone="sky"
+        />
+        <MetricCard
+          label="You owe"
+          value={borrowedSpark[borrowedSpark.length - 1]?.value ?? borrowed}
+          foot={`${PERIOD_LABELS[period]} · borrowed balances`}
+          spark={borrowedSpark}
+          sparkKey="value"
+          icon={ArrowUp02Icon}
+          tone="rose"
+        />
+        <MetricCard
+          label="Owed to you"
+          value={lentSpark[lentSpark.length - 1]?.value ?? lent}
+          foot={`${PERIOD_LABELS[period]} · lent balances`}
+          spark={lentSpark}
+          sparkKey="value"
+          icon={ArrowDown02Icon}
+          tone="emerald"
+        />
+        <MetricCard
+          label="Goals saved"
+          value={goalsSpark[goalsSpark.length - 1]?.value ?? goalsSaved}
+          foot={`${PERIOD_LABELS[period]} · ${formatNumber(goalsFunded)} funded · ${formatNumber(
+            goals.length,
+          )} goals`}
+          spark={goalsSpark}
+          sparkKey="value"
+          icon={Target01Icon}
+          tone="violet"
+        />
       </div>
 
       <MorphingTabs
         defaultValue="goals"
-        classNames={{ content: "bg-card text-card-foreground" }}
+        align="center"
+        showTabBorders={false}
+        classNames={{
+          root: "bg-transparent text-foreground",
+          activeTab: "text-card",
+          content: "bg-card text-card-foreground",
+          tab: "justify-center text-center text-muted-foreground hover:text-foreground aria-selected:text-card-foreground",
+        }}
         items={[
           {
             id: "goals",
             label: "Goals",
-            icon: <Icon icon={Target02Icon} className="size-4" />,
             content: (
               <Panel className="p-6">
                 <PanelHeader
@@ -238,7 +360,7 @@ export default function PlanPage() {
                       return (
                         <div
                           key={goal.id}
-                          className="rounded-xl border border-border/70 p-4"
+                          className="rounded-2xl bg-muted/20 p-4"
                         >
                           <div className="flex items-start gap-3">
                             <span
@@ -303,7 +425,6 @@ export default function PlanPage() {
           {
             id: "debts",
             label: "Debts",
-            icon: <Icon icon={Invoice01Icon} className="size-4" />,
             content: (
               <Panel className="p-6">
                 <PanelHeader
@@ -323,7 +444,7 @@ export default function PlanPage() {
                     {debts.map((debt) => (
                       <li
                         key={debt.id}
-                        className="flex flex-wrap items-center gap-3 rounded-xl border border-border/70 px-3 py-3"
+                        className="flex flex-wrap items-center gap-3 rounded-2xl bg-muted/20 px-3 py-3"
                       >
                         <span
                           className={cn(
@@ -369,7 +490,6 @@ export default function PlanPage() {
           {
             id: "recurring",
             label: "Recurring",
-            icon: <Icon icon={RepeatIcon} className="size-4" />,
             content: (
               <Panel className="p-6">
                 <PanelHeader
@@ -399,7 +519,7 @@ export default function PlanPage() {
                       return (
                         <li
                           key={rule.id}
-                          className="flex flex-wrap items-center gap-3 rounded-xl border border-border/70 px-3 py-3"
+                          className="flex flex-wrap items-center gap-3 rounded-2xl bg-muted/20 px-3 py-3"
                         >
                           <Checkbox
                             checked={rule.enabled}
@@ -454,7 +574,6 @@ export default function PlanPage() {
           {
             id: "budgets",
             label: "Budgets",
-            icon: <Icon icon={Wallet01Icon} className="size-4" />,
             content: (
               <Panel className="p-6">
                 <PanelHeader
@@ -637,8 +756,12 @@ function GoalForm({
   onCancel: () => void;
 }) {
   const [name, setName] = useState(goal?.name ?? "");
-  const [target, setTarget] = useState(goal ? String(goal.targetUgx) : "");
-  const [saved, setSaved] = useState(goal ? String(goal.savedUgx) : "0");
+  const [target, setTarget] = useState(
+    goal ? formatNumericInput(String(goal.targetUgx)) : "",
+  );
+  const [saved, setSaved] = useState(
+    goal ? formatNumericInput(String(goal.savedUgx)) : "0",
+  );
   const [deadline, setDeadline] = useState(
     goal?.deadline ?? ymd(addDays(new Date(), 90)),
   );
@@ -646,14 +769,14 @@ function GoalForm({
   const [saving, setSaving] = useState(false);
 
   async function submit() {
-    const targetUgx = Number(target);
+    const targetUgx = parseNumericInput(target);
     if (!name.trim() || !Number.isFinite(targetUgx) || targetUgx <= 0 || saving) return;
     setSaving(true);
     try {
       const payload = {
         name: name.trim(),
         targetUgx: Math.round(targetUgx),
-        savedUgx: Math.max(0, Math.round(Number(saved) || 0)),
+        savedUgx: Math.max(0, Math.round(parseNumericInput(saved))),
         deadline,
         note,
         color: goal?.color ?? "oklch(0.7 0.15 155)",
@@ -663,7 +786,9 @@ function GoalForm({
       } else {
         await api.post("/api/goals", payload);
       }
-      gooeyToast.success(goal ? "Goal updated" : "Goal added");
+      gooeyToast.success(goal ? "Goal updated" : "Goal added", {
+        description: `${name.trim()} · ${formatNumber(Math.round(targetUgx))} UGX target`,
+      });
       onSaved();
     } catch (error) {
       gooeyToast.error("Could not save goal", { description: (error as Error).message });
@@ -686,13 +811,13 @@ function GoalForm({
         <Input
           label="Target (UGX)"
           value={target}
-          onChange={(value) => setTarget(value.replace(/[^0-9]/g, ""))}
+          onChange={(value) => setTarget(formatNumericInput(value))}
           placeholder="3000000"
         />
         <Input
           label="Saved (UGX)"
           value={saved}
-          onChange={(value) => setSaved(value.replace(/[^0-9]/g, ""))}
+          onChange={(value) => setSaved(formatNumericInput(value))}
           placeholder="0"
         />
       </div>
@@ -702,7 +827,7 @@ function GoalForm({
           type="date"
           value={deadline}
           onChange={(event) => setDeadline(event.target.value)}
-          className="h-10 w-full rounded-xl border border-border bg-transparent px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="h-10 w-full rounded-none border-x-0 border-t-0 border-b border-border bg-transparent px-0 text-sm outline-none focus-visible:border-foreground/50 focus-visible:ring-0"
         />
       </label>
       <Input label="Note" value={note} onChange={setNote} placeholder="Why this matters" />
@@ -723,14 +848,18 @@ function DebtForm({
     debt?.direction ?? "borrowed",
   );
   const [counterparty, setCounterparty] = useState(debt?.counterparty ?? "");
-  const [principal, setPrincipal] = useState(debt ? String(debt.principalUgx) : "");
-  const [balance, setBalance] = useState(debt ? String(debt.balanceUgx) : "");
+  const [principal, setPrincipal] = useState(
+    debt ? formatNumericInput(String(debt.principalUgx)) : "",
+  );
+  const [balance, setBalance] = useState(
+    debt ? formatNumericInput(String(debt.balanceUgx)) : "",
+  );
   const [dueOn, setDueOn] = useState(debt?.dueOn ?? ymd(addDays(new Date(), 30)));
   const [note, setNote] = useState(debt?.note ?? "");
   const [saving, setSaving] = useState(false);
 
   async function submit() {
-    const principalUgx = Number(principal);
+    const principalUgx = parseNumericInput(principal);
     if (!counterparty.trim() || !Number.isFinite(principalUgx) || principalUgx <= 0 || saving) return;
     setSaving(true);
     try {
@@ -738,7 +867,7 @@ function DebtForm({
         direction,
         counterparty: counterparty.trim(),
         principalUgx: Math.round(principalUgx),
-        balanceUgx: Math.max(0, Math.round(Number(balance) || principalUgx)),
+        balanceUgx: Math.max(0, Math.round(parseNumericInput(balance) || principalUgx)),
         dueOn,
         note,
       };
@@ -747,7 +876,11 @@ function DebtForm({
       } else {
         await api.post("/api/debts", payload);
       }
-      gooeyToast.success(debt ? "Debt updated" : "Debt added");
+      gooeyToast.success(debt ? "Debt updated" : "Debt added", {
+        description: `${counterparty.trim()} · ${formatNumber(principalUgx)} UGX ${
+          direction === "borrowed" ? "borrowed" : "lent"
+        }`,
+      });
       onSaved();
     } catch (error) {
       gooeyToast.error("Could not save debt", { description: (error as Error).message });
@@ -792,13 +925,13 @@ function DebtForm({
         <Input
           label="Principal (UGX)"
           value={principal}
-          onChange={(value) => setPrincipal(value.replace(/[^0-9]/g, ""))}
+          onChange={(value) => setPrincipal(formatNumericInput(value))}
           placeholder="500000"
         />
         <Input
           label="Balance (UGX)"
           value={balance}
-          onChange={(value) => setBalance(value.replace(/[^0-9]/g, ""))}
+          onChange={(value) => setBalance(formatNumericInput(value))}
           placeholder="300000"
         />
       </div>
@@ -808,7 +941,7 @@ function DebtForm({
           type="date"
           value={dueOn}
           onChange={(event) => setDueOn(event.target.value)}
-          className="h-10 w-full rounded-xl border border-border bg-transparent px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="h-10 w-full rounded-none border-x-0 border-t-0 border-b border-border bg-transparent px-0 text-sm outline-none focus-visible:border-foreground/50 focus-visible:ring-0"
         />
       </label>
       <Input label="Note" value={note} onChange={setNote} placeholder="What it was for" />
@@ -827,12 +960,14 @@ function BudgetForm({
 }) {
   const [name, setName] = useState(budget?.name ?? "");
   const [categoryId, setCategoryId] = useState(budget?.categoryId ?? "all");
-  const [limit, setLimit] = useState(budget ? String(budget.limitUgx) : "");
+  const [limit, setLimit] = useState(
+    budget ? formatNumericInput(String(budget.limitUgx)) : "",
+  );
   const [period, setPeriod] = useState<Budget["period"]>(budget?.period ?? "monthly");
   const [saving, setSaving] = useState(false);
 
   async function submit() {
-    const limitUgx = Number(limit);
+    const limitUgx = parseNumericInput(limit);
     if (!name.trim() || !Number.isFinite(limitUgx) || limitUgx <= 0 || saving) return;
     setSaving(true);
     try {
@@ -848,7 +983,9 @@ function BudgetForm({
       } else {
         await api.post("/api/budgets", payload);
       }
-      gooeyToast.success(budget ? "Budget updated" : "Budget added");
+      gooeyToast.success(budget ? "Budget updated" : "Budget added", {
+        description: `${name.trim()} · ${formatNumber(limitUgx)} UGX per ${period}`,
+      });
       onSaved();
     } catch (error) {
       gooeyToast.error("Could not save budget", { description: (error as Error).message });
@@ -879,7 +1016,7 @@ function BudgetForm({
         <Input
           label="Limit (UGX)"
           value={limit}
-          onChange={(value) => setLimit(value.replace(/[^0-9]/g, ""))}
+          onChange={(value) => setLimit(formatNumericInput(value))}
           placeholder="800000"
         />
         <div>
@@ -920,7 +1057,9 @@ function RecurringForm({
 }) {
   const [name, setName] = useState(rule?.name ?? "");
   const [type, setType] = useState<TransactionType>(rule?.type ?? "expense");
-  const [amount, setAmount] = useState(rule ? String(rule.amountUgx) : "");
+  const [amount, setAmount] = useState(
+    rule ? formatNumericInput(String(rule.amountUgx)) : "",
+  );
   const [category, setCategory] = useState(
     rule?.category || categoriesFor(rule?.type === "income" ? "income" : "expense")[0].id,
   );
@@ -950,7 +1089,7 @@ function RecurringForm({
   }
 
   async function submit() {
-    const amountUgx = Number(amount);
+    const amountUgx = parseNumericInput(amount);
     if (!name.trim() || !Number.isFinite(amountUgx) || amountUgx <= 0 || saving) return;
     setSaving(true);
     try {
@@ -971,7 +1110,9 @@ function RecurringForm({
       } else {
         await api.post("/api/recurring", payload);
       }
-      gooeyToast.success(rule ? "Rule updated" : "Rule added");
+      gooeyToast.success(rule ? "Rule updated" : "Rule added", {
+        description: `${name.trim()} · ${formatNumber(amountUgx)} UGX ${frequency}`,
+      });
       onSaved();
     } catch (error) {
       gooeyToast.error("Could not save rule", { description: (error as Error).message });
@@ -1011,7 +1152,7 @@ function RecurringForm({
         <Input
           label="Amount (UGX)"
           value={amount}
-          onChange={(value) => setAmount(value.replace(/[^0-9]/g, ""))}
+          onChange={(value) => setAmount(formatNumericInput(value))}
           placeholder="900000"
         />
         <label className="block">
@@ -1020,7 +1161,7 @@ function RecurringForm({
             type="date"
             value={nextOn}
             onChange={(event) => setNextOn(event.target.value)}
-            className="h-10 w-full rounded-xl border border-border bg-transparent px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="h-10 w-full rounded-none border-x-0 border-t-0 border-b border-border bg-transparent px-0 text-sm outline-none focus-visible:border-foreground/50 focus-visible:ring-0"
           />
         </label>
       </div>

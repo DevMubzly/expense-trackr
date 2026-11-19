@@ -1,14 +1,11 @@
 "use client";
 // beui.dev/components/motion/dock
 
-import { motion, useReducedMotion } from "motion/react";
-import { createContext, useContext, useId, useMemo, type ReactNode } from "react";
-import { SPRING_LAYOUT } from "@/lib/ease";
+import { createContext, useContext, useMemo, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 type DockContextValue = {
   size: number;
-  pillLayoutId: string;
 };
 
 const DockContext = createContext<DockContextValue | null>(null);
@@ -21,17 +18,13 @@ export interface DockProps {
 }
 
 export function Dock({ children, size = 44, className }: DockProps) {
-  const pillLayoutId = useId();
-  const ctx = useMemo<DockContextValue>(
-    () => ({ size, pillLayoutId }),
-    [size, pillLayoutId],
-  );
+  const ctx = useMemo<DockContextValue>(() => ({ size }), [size]);
 
   return (
     <DockContext.Provider value={ctx}>
       <div
         className={cn(
-          "inline-flex h-auto items-end gap-1.5 rounded-md border border-border bg-card/80 px-2 py-1 shadow-2xl backdrop-blur-xl",
+          "app-dock inline-flex h-auto items-end gap-1.5 rounded-full border border-white/10 bg-zinc-950/95 px-2 py-0.5 text-white shadow-2xl backdrop-blur-xl",
           className,
         )}
       >
@@ -58,20 +51,10 @@ export function DockItem({
   ...rest
 }: DockItemProps) {
   const dock = useContext(DockContext);
-  const reduce = useReducedMotion();
   const size = dock?.size ?? 44;
-  const pillLayoutId = dock?.pillLayoutId ?? "dock-pill";
-
-  const pill = active ? (
-    <motion.span
-      layoutId={pillLayoutId}
-      transition={reduce ? { duration: 0 } : SPRING_LAYOUT}
-      className="absolute inset-0.5 -z-10 rounded-md bg-muted/60"
-    />
-  ) : null;
   const sharedStyle = { width: size, height: size };
   const sharedClass = cn(
-    "relative flex shrink-0 items-center justify-center rounded-md text-foreground",
+    "relative flex shrink-0 items-center justify-center rounded-full text-white",
     className,
   );
 
@@ -89,7 +72,6 @@ export function DockItem({
           "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
         )}
       >
-        {pill}
         {children}
       </button>
     );
@@ -97,8 +79,11 @@ export function DockItem({
 
   // Children carry their own link or button (and its accessible name).
   return (
-    <div style={sharedStyle} className={sharedClass}>
-      {pill}
+    <div
+      style={sharedStyle}
+      data-active={active || undefined}
+      className={sharedClass}
+    >
       {children}
     </div>
   );
@@ -108,7 +93,7 @@ export function DockSeparator({ className }: { className?: string }) {
   return (
     <span
       aria-hidden
-      className={cn("mx-1 h-6 w-px self-center bg-border", className)}
+      className={cn("mx-1 h-6 w-px self-center bg-white/15", className)}
     />
   );
 }

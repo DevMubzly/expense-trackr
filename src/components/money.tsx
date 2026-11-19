@@ -3,18 +3,18 @@ import { formatNumber } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 const SIZES = {
-  sm: { code: "text-[10px]", amount: "text-sm" },
-  md: { code: "text-[11px]", amount: "text-base" },
-  lg: { code: "text-xs", amount: "text-2xl" },
-  xl: { code: "text-sm", amount: "text-4xl" },
-  hero: { code: "text-base", amount: "text-6xl" },
+  sm: "text-sm",
+  md: "text-base",
+  lg: "text-2xl",
+  xl: "text-4xl",
+  hero: "text-6xl",
 } as const;
 
 export type MoneySize = keyof typeof SIZES;
 
 /**
- * Currency code always renders smaller and lighter than the figure, so the
- * number is what the eye lands on.
+ * Currency code and figure share the same size, weight and color so amounts
+ * read as one unit everywhere.
  */
 export function Money({
   value,
@@ -35,14 +35,21 @@ export function Money({
   const inverted = tone === "inverted";
   return (
     <span className={cn("tnum inline-flex items-baseline gap-1.5", className)}>
-      <span className={cn("font-medium", inverted ? "text-background/60" : "text-muted-foreground", scale.code)}>
+      <span
+        className={cn(
+          "font-semibold leading-none tracking-[-0.02em]",
+          inverted ? "text-background/60" : "text-muted-foreground",
+          scale,
+          amountClassName,
+        )}
+      >
         {currency === "UGX" ? "UGX" : "USD"}
       </span>
       <span
         className={cn(
           "font-semibold leading-none tracking-[-0.02em]",
           inverted ? "text-background" : "text-foreground",
-          scale.amount,
+          scale,
           amountClassName,
         )}
       >

@@ -10,7 +10,7 @@ export function Panel({
   return (
     <div
       className={cn(
-        "rounded-md border border-border/70 bg-card/60 shadow-[0_1px_0_0_color-mix(in_oklab,var(--foreground)_4%,transparent)_inset] backdrop-blur-sm",
+        "rounded-2xl bg-card/80 backdrop-blur-sm",
         className,
       )}
     >
@@ -32,9 +32,9 @@ export function PanelHeader({
 }) {
   return (
     <div className={cn("flex items-start justify-between gap-3 px-5 pt-4", className)}>
-      <div>
- <p className="text-[11px] text-muted-foreground">{title}</p>
-        {hint ? <p className="mt-0.5 text-xs text-muted-foreground/80">{hint}</p> : null}
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-normal text-foreground">{title}</p>
+        {hint ? <p className="mt-0.5 text-[11px] text-muted-foreground/80">{hint}</p> : null}
       </div>
       {action}
     </div>
@@ -52,7 +52,7 @@ export function EmptyState({
 }) {
   return (
     <div className="flex flex-col items-center justify-center gap-2 px-6 py-16 text-center">
-      <p className="font-display text-2xl">{title}</p>
+      <p className="text-2xl font-semibold">{title}</p>
       {hint ? <p className="max-w-sm text-sm text-muted-foreground">{hint}</p> : null}
       {action}
     </div>
