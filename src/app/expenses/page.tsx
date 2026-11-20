@@ -644,10 +644,7 @@ export default function ExpensesPage() {
                             className="flex items-center gap-2.5 text-left"
                           >
                             <span
-                              className="grid size-8 shrink-0 place-items-center rounded-lg"
-                              style={{
-                                background: `color-mix(in oklab, ${cat.color} 14%, transparent)`,
-                              }}
+                              className="grid size-8 shrink-0 place-items-center"
                             >
                               <Icon
                                 icon={row.type === "transfer" ? ArrowLeftRightIcon : cat.icon}

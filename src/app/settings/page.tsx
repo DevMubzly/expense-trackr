@@ -779,10 +779,7 @@ function SettingsForm({
                 className="flex items-center gap-3 px-2 py-3"
               >
                 <span
-                  className="grid size-8 place-items-center rounded-lg"
-                  style={{
-                    background: `color-mix(in oklab, ${account.color} 14%, transparent)`,
-                  }}
+                  className="grid size-8 place-items-center"
                 >
                   <Icon
                     icon={accountIcon(account.type)}
@@ -1303,10 +1300,7 @@ function CategoryColumn({
             className="flex items-center gap-2 px-2 py-2"
           >
             <span
-              className="grid size-7 shrink-0 place-items-center rounded-lg"
-              style={{
-                background: `color-mix(in oklab, ${category.color} 14%, transparent)`,
-              }}
+              className="grid size-7 shrink-0 place-items-center"
             >
               <Icon icon={category.icon} className="size-3.5" />
             </span>

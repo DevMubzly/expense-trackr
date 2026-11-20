@@ -802,10 +802,7 @@ export default function PlanPage() {
                 >
                   <div className="flex items-start gap-3">
                     <span
-                      className="grid size-9 shrink-0 place-items-center rounded-lg"
-                      style={{
-                        background: `color-mix(in oklab, ${goal.color} 16%, transparent)`,
-                      }}
+                      className="grid size-9 shrink-0 place-items-center"
                     >
                       <Icon icon={Target02Icon} className="size-4" />
                     </span>
