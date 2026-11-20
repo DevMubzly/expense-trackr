@@ -20,8 +20,8 @@ export default function LandingPage() {
   }, []);
 
   return (
-    <div className="theme-light min-h-dvh bg-black text-foreground">
-      <div className="relative isolate min-h-dvh overflow-hidden">
+    <div className="theme-light h-dvh bg-black text-foreground">
+      <div className="relative isolate h-dvh overflow-hidden">
         <Image
           src="/bg-hero.jpg"
           alt=""
@@ -32,7 +32,7 @@ export default function LandingPage() {
         />
         <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-32 bg-gradient-to-b from-black/35 to-transparent" />
 
-        <div className="relative flex min-h-dvh flex-col">
+        <div className="relative flex h-dvh flex-col">
           <header className="flex items-center justify-between px-6 py-6 lg:px-10">
             <Link
               href="/"
@@ -62,7 +62,7 @@ export default function LandingPage() {
             </nav>
           </header>
 
-          <main className="flex flex-1 items-center justify-center px-6 pb-24 pt-10 lg:px-10">
+          <main className="flex flex-1 flex-col items-center px-6 pt-8 lg:px-10 lg:pt-12">
             <div className="max-w-3xl text-center">
               <h1 className="font-display text-5xl leading-[0.95] tracking-[-0.05em] text-white [text-shadow:0_2px_30px_rgba(0,0,0,0.45)] sm:text-7xl lg:text-8xl">
                 Every shilling
@@ -94,6 +94,17 @@ export default function LandingPage() {
                   View pricing
                 </Link>
               </div>
+            </div>
+
+            <div className="mt-10 min-h-0 w-full max-w-6xl flex-1 overflow-hidden">
+                <Image
+                  src="/dash.png"
+                  alt="Expense Trackr dashboard"
+                  width={1920}
+                  height={956}
+                  priority
+                  className="w-full rounded-2xl border-[5px] border-white/45 shadow-2xl shadow-black/40"
+                />
             </div>
           </main>
         </div>

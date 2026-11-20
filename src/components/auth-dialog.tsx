@@ -37,29 +37,26 @@ export function AuthDialog({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[90] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[90] overflow-y-auto bg-background">
       <button
         type="button"
         aria-label="Close sign in"
         onClick={onClose}
-        className="absolute inset-0 cursor-default bg-black/45 backdrop-blur-sm"
-      />
-      <div
-        ref={panelRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        className="relative z-10 w-full max-w-md rounded-2xl border border-foreground/10 bg-card p-6 shadow-2xl"
+        className="fixed right-5 top-5 z-10 grid size-9 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
       >
-        <button
-          type="button"
-          aria-label="Close sign in"
-          onClick={onClose}
-          className="absolute right-3 top-3 grid size-8 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+        <Icon icon={Cancel01Icon} className="size-4" />
+      </button>
+
+      <div className="flex min-h-dvh items-center justify-center px-6 py-14">
+        <div
+          ref={panelRef}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby={titleId}
+          className="w-full max-w-md"
         >
-          <Icon icon={Cancel01Icon} className="size-4" />
-        </button>
-        <AuthForm titleId={titleId} onDone={onClose} />
+          <AuthForm titleId={titleId} onDone={onClose} />
+        </div>
       </div>
     </div>
   );

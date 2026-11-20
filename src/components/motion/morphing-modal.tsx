@@ -35,6 +35,8 @@ export interface MorphingModalProps {
   children: ReactNode;
   /** "bottom" anchors to the viewport bottom (mobile-like). "center" centers vertically. */
   placement?: "bottom" | "center";
+  /** Cover the viewport edge to edge instead of a floating card. */
+  fullScreen?: boolean;
   /**
    * Accessible name for the dialog. Without it, the dialog is named by the
    * first heading in the current view.
@@ -50,6 +52,7 @@ export function MorphingModal({
   onClose,
   children,
   placement = "bottom",
+  fullScreen = false,
   ariaLabel,
   className,
   labels,
@@ -139,7 +142,7 @@ export function MorphingModal({
               transition={{ duration: 0.2, ease: EASE_OUT }}
               {...gate}
               onClick={onClose}
-              className="pointer-events-auto fixed inset-0 z-[80] rounded-none bg-background/10 [backdrop-filter:blur(6px)_saturate(120%)] [-webkit-backdrop-filter:blur(6px)_saturate(120%)]"
+              className="pointer-events-auto fixed inset-0 z-[80] rounded-none bg-foreground/25"
             />
           )}
         </PresenceGate>
@@ -153,8 +156,9 @@ export function MorphingModal({
             <div
               inert={!isPresent}
               className={cn(
-                "pointer-events-none fixed inset-0 z-[80] flex justify-center p-4",
-                placement === "bottom" ? "items-end pb-4" : "items-center",
+                "pointer-events-none fixed inset-0 z-[80] flex justify-center",
+                fullScreen ? "p-0" : "p-4",
+                placement === "bottom" && !fullScreen ? "items-end pb-4" : "items-center",
               )}
             >
               <motion.div
@@ -177,6 +181,7 @@ export function MorphingModal({
                 {...gate}
                 className={cn(
                   "pointer-events-auto relative w-full max-w-sm overflow-hidden rounded-2xl border border-border bg-background shadow-2xl outline-none will-change-transform",
+                  fullScreen && "h-full max-w-none rounded-none border-0 shadow-none",
                   className,
                 )}
               >
@@ -192,7 +197,7 @@ export function MorphingModal({
                       initial={
                         reduce
                           ? { opacity: 0 }
-                          : { opacity: 0, y: 8, filter: "blur(4px)" }
+                          : { opacity: 0, y: 8 }
                       }
                       animate={
                         reduce
@@ -206,7 +211,7 @@ export function MorphingModal({
                           : {
                               opacity: 1,
                               y: 0,
-                              filter: "blur(0px)",
+                              filter: "none",
                               transition: {
                                 duration: 0.24,
                                 ease: EASE_OUT,
@@ -225,7 +230,6 @@ export function MorphingModal({
                           : {
                               opacity: 0,
                               y: -8,
-                              filter: "blur(4px)",
                               transition: {
                                 duration: 0.16,
                                 ease: EASE_OUT,

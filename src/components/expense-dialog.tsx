@@ -143,11 +143,7 @@ export function TransactionDialogProvider({ children }: { children: React.ReactN
         viewId={mode}
         onClose={close}
         placement="center"
-        className={
-          mode === "quick-add"
-            ? "max-w-2xl"
-            : "h-[620px] max-h-[calc(100dvh-2rem)] max-w-xl"
-        }
+        fullScreen
         ariaLabel={
           mode === "quick-add"
             ? "Quick add transactions"
@@ -156,6 +152,7 @@ export function TransactionDialogProvider({ children }: { children: React.ReactN
               : "Add transaction"
         }
       >
+        <div className="mx-auto w-full max-w-xl">
         {mode === "transaction" ? (
           <TransactionForm
             key={editing?.id ?? `new-${initialType}`}
@@ -176,6 +173,7 @@ export function TransactionDialogProvider({ children }: { children: React.ReactN
             onCancel={close}
           />
         ) : null}
+        </div>
       </MorphingModal>
     </DialogContext.Provider>
   );
