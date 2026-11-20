@@ -19,7 +19,11 @@ import {
 import { accountIcon } from "@/components/account-select";
 import { Checkbox } from "@/components/motion/checkbox";
 import { Input } from "@/components/motion/input";
-import { PageLoader } from "@/components/page-loader";
+import {
+  ExpensesTableSkeleton,
+  PageReveal,
+  Skeleton,
+} from "@/components/skeletons";
 import { MorphingModal } from "@/components/motion/morphing-modal";
 import {
   Combobox,
@@ -321,11 +325,15 @@ export default function ExpensesPage() {
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="font-display text-2xl leading-none tracking-[-0.03em] md:text-3xl">Every shilling.</h1>
-          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-            {formatNumber(transactions.length)}{" "}
-            {transactions.length === 1 ? "entry" : "entries"},{" "}
-            {display.formatMoney(net)} net
-          </p>
+          {loading && !data ? (
+            <Skeleton className="mt-3 h-3.5 w-52" />
+          ) : (
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+              {formatNumber(transactions.length)}{" "}
+              {transactions.length === 1 ? "entry" : "entries"},{" "}
+              {display.formatMoney(net)} net
+            </p>
+          )}
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {selected.length > 0 ? (
@@ -516,11 +524,13 @@ export default function ExpensesPage() {
         </div>
       </div>
 
-      {loading && !data ? <PageLoader variant="helix" size={26} /> : null}
-
-      <Panel className={cn("overflow-hidden", sectionCardClass)}>
-        <PanelBody className="overflow-hidden p-0">
-        {loading && !data ? null : sortedRows.length === 0 ? (
+      {loading && !data ? (
+        <ExpensesTableSkeleton />
+      ) : (
+        <PageReveal>
+          <Panel className={cn("overflow-hidden", sectionCardClass)}>
+            <PanelBody className="overflow-hidden p-0">
+              {sortedRows.length === 0 ? (
           <EmptyState
             title="Nothing here"
             hint="No transactions match those filters. Loosen them, or add something new."
@@ -817,7 +827,9 @@ export default function ExpensesPage() {
           </>
         )}
         </PanelBody>
-      </Panel>
+          </Panel>
+        </PageReveal>
+      )}
 
       <MorphingModal
         viewId={confirmDelete ? "confirm-delete" : null}

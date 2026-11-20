@@ -40,8 +40,8 @@ import {
 import { useTransactionDialog } from "@/components/expense-dialog";
 import { Icon } from "@/components/huge-icon";
 import { MetricCard } from "@/components/metric-card";
+import { PageReveal, SkeletonChartShape, StatsBentoSkeleton } from "@/components/skeletons";
 import { AnimatedNumber } from "@/components/motion/animated-number";
-import { PageLoader } from "@/components/page-loader";
 import { SectionPanel } from "@/components/panel";
 import { Button } from "@/components/ui/button";
 import { useApi } from "@/lib/use-api";
@@ -119,17 +119,17 @@ export function InsightsBento({ period }: { period: StatPeriod }) {
   const { data: stats, loading } = useApi<Stats>(
     `/api/stats?period=${period}&dayOffset=${dayOffset}&v=${version}`,
   );
-  const { data: weekdayStats } = useApi<Stats>(
+  const { data: weekdayStats, loading: weekdayLoading } = useApi<Stats>(
     currentMonth
       ? `/api/stats?month=${weekdayMonthKey}&v=${version}`
       : null,
   );
-  const { data: categoriesStats } = useApi<Stats>(
+  const { data: categoriesStats, loading: categoriesLoading } = useApi<Stats>(
     currentMonth
       ? `/api/stats?month=${categoriesMonthKey}&v=${version}`
       : null,
   );
-  const { data: cumulativeStats } = useApi<Stats>(
+  const { data: cumulativeStats, loading: cumulativeLoading } = useApi<Stats>(
     currentMonth
       ? `/api/stats?month=${cumulativeMonthKey}&v=${version}`
       : null,
@@ -176,7 +176,7 @@ export function InsightsBento({ period }: { period: StatPeriod }) {
   );
 
   if (loading && !stats) {
-    return <PageLoader variant="newton" size={30} />;
+    return <StatsBentoSkeleton />;
   }
 
   const periodStats = stats?.period;
@@ -311,7 +311,7 @@ export function InsightsBento({ period }: { period: StatPeriod }) {
   );
 
   return (
-    <div className="space-y-4">
+    <PageReveal className="space-y-4">
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <MetricCard
           compact
@@ -450,38 +450,42 @@ export function InsightsBento({ period }: { period: StatPeriod }) {
             setWeekdayMonth,
           )}
         >
-          <RadialChart
-            angleType="band"
-            data={weekday}
-            xDataKey="day"
-            series={[{ dataKey: "value", label: "Spend" }]}
-            maxValue="auto"
-            maxWidth={250}
-          >
-            <RadialBar />
-            <RadialAxis showCircle={false} />
-            <RadialCenter>
-              {({ totals, values, index, label }) => {
-                const value =
-                  index === null
-                    ? totals.value ?? 0
-                    : values.value ?? 0;
-                return (
-                  <div className="text-center">
-                    <p className="text-[9px] text-muted-foreground">
-                      {display.unit}
-                    </p>
-                    <p className="tnum mt-0.5 text-[11px] font-semibold leading-none">
-                      {display.formatValue(value)}
-                    </p>
-                    <p className="mt-0.5 text-[9px] text-muted-foreground">
-                      {index === null ? "Total" : label}
-                    </p>
-                  </div>
-                );
-              }}
-            </RadialCenter>
-          </RadialChart>
+          {weekdayLoading && !weekdayStats ? (
+            <SkeletonChartShape variant="radial" />
+          ) : (
+            <RadialChart
+              angleType="band"
+              data={weekday}
+              xDataKey="day"
+              series={[{ dataKey: "value", label: "Spend" }]}
+              maxValue="auto"
+              maxWidth={250}
+            >
+              <RadialBar />
+              <RadialAxis showCircle={false} />
+              <RadialCenter>
+                {({ totals, values, index, label }) => {
+                  const value =
+                    index === null
+                      ? totals.value ?? 0
+                      : values.value ?? 0;
+                  return (
+                    <div className="text-center">
+                      <p className="text-[9px] text-muted-foreground">
+                        {display.unit}
+                      </p>
+                      <p className="tnum mt-0.5 text-[11px] font-semibold leading-none">
+                        {display.formatValue(value)}
+                      </p>
+                      <p className="mt-0.5 text-[9px] text-muted-foreground">
+                        {index === null ? "Total" : label}
+                      </p>
+                    </div>
+                  );
+                }}
+              </RadialCenter>
+            </RadialChart>
+          )}
         </SectionPanel>
 
         <SectionPanel
@@ -551,7 +555,9 @@ export function InsightsBento({ period }: { period: StatPeriod }) {
             setCategoriesMonth,
           )}
         >
-          {rankedCategories.length > 0 ? (
+          {categoriesLoading && !categoriesStats ? (
+            <SkeletonChartShape variant="pie" />
+          ) : rankedCategories.length > 0 ? (
             <div className="grid gap-5 sm:grid-cols-[220px_minmax(0,1fr)] sm:items-center">
               <div className="flex justify-center">
                 <PieChart
@@ -691,11 +697,14 @@ export function InsightsBento({ period }: { period: StatPeriod }) {
             setCumulativeMonth,
           )}
         >
-          <AreaChart
-            data={cumulativeData}
-            aspectRatio="2.2 / 1"
-            margin={{ top: 8, right: 8, bottom: 40, left: 96 }}
-          >
+          {cumulativeLoading && !cumulativeStats ? (
+            <SkeletonChartShape variant="area" />
+          ) : (
+            <AreaChart
+              data={cumulativeData}
+              aspectRatio="2.2 / 1"
+              margin={{ top: 8, right: 8, bottom: 40, left: 96 }}
+            >
             <Grid horizontal />
             <Area
               dataKey="pace"
@@ -737,10 +746,11 @@ export function InsightsBento({ period }: { period: StatPeriod }) {
               dotStrokeWidth={0}
             />
           </AreaChart>
+          )}
         </SectionPanel>
 
 
       </div>
-    </div>
+    </PageReveal>
   );
 }

@@ -35,7 +35,7 @@ import {
   ComboboxTrigger,
 } from "@/components/motion/combobox";
 import { Input } from "@/components/motion/input";
-import { PageLoader } from "@/components/page-loader";
+import { PageReveal, PlanPageSkeleton } from "@/components/skeletons";
 import { MorphingModal } from "@/components/motion/morphing-modal";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/huge-icon";
@@ -391,7 +391,7 @@ export default function PlanPage() {
     goalsApi.data && debtsApi.data && budgetsApi.data && recurringApi.data;
 
   if (!ready) {
-    return <PageLoader variant="helix" size={30} />;
+    return <PlanPageSkeleton />;
   }
 
   function refreshAll() {
@@ -617,7 +617,7 @@ export default function PlanPage() {
   }
 
   return (
-    <div className="space-y-8">
+    <PageReveal className="space-y-8">
       <header className="flex flex-wrap items-end justify-between gap-6">
         <div>
           <h1 className="font-display text-2xl leading-none tracking-[-0.03em] md:text-3xl">
@@ -1722,7 +1722,7 @@ export default function PlanPage() {
           </div>
         ) : null}
       </MorphingModal>
-    </div>
+    </PageReveal>
   );
 }
 

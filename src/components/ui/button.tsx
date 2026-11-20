@@ -59,10 +59,15 @@ function Button({
       {...props}
     >
       {loading ? (
-        <span
-          aria-hidden
-          className="size-3.5 shrink-0 animate-spin rounded-full border-2 border-current border-t-transparent"
-        />
+        <span aria-hidden className="flex shrink-0 items-center gap-0.5">
+          {[0, 1, 2].map((index) => (
+            <span
+              key={index}
+              className="size-1 animate-pulse rounded-full bg-current"
+              style={{ animationDelay: `${index * 120}ms` }}
+            />
+          ))}
+        </span>
       ) : null}
       {children}
     </ButtonPrimitive>

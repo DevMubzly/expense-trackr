@@ -25,7 +25,7 @@ import { Icon } from "@/components/huge-icon";
 import { MetricCard } from "@/components/metric-card";
 import { Money } from "@/components/money";
 import { SectionPanel } from "@/components/panel";
-import { PageLoader } from "@/components/page-loader";
+import { PageReveal, SettingsPageSkeleton } from "@/components/skeletons";
 import { useApi, api } from "@/lib/use-api";
 import { useTransactionDialog } from "@/components/expense-dialog";
 import {
@@ -79,7 +79,7 @@ export default function SettingsPage() {
     !overview ||
     !incomeSourcesData
   ) {
-    return <PageLoader variant="helix" size={30} />;
+    return <SettingsPageSkeleton />;
   }
   if (!data) return null;
 
@@ -450,7 +450,7 @@ function SettingsForm({
   }
 
   return (
-    <div className="space-y-6">
+    <PageReveal className="space-y-6">
       <header className="flex flex-wrap items-end justify-between gap-6">
         <div>
           <h1 className="font-display text-2xl leading-none tracking-[-0.03em] md:text-3xl">
@@ -1091,7 +1091,7 @@ function SettingsForm({
           </div>
         ) : null}
       </MorphingModal>
-    </div>
+    </PageReveal>
   );
 }
 

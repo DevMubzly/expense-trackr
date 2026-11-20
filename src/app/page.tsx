@@ -32,7 +32,7 @@ import {
 import { AnimatedBadge } from "@/components/motion/animated-badge";
 import { AnimatedNumber } from "@/components/motion/animated-number";
 import { MetricCard } from "@/components/metric-card";
-import { PageLoader } from "@/components/page-loader";
+import { HomePageSkeleton, PageReveal } from "@/components/skeletons";
 import {
   Combobox,
   ComboboxContent,
@@ -118,11 +118,11 @@ export default function DashboardPage() {
   const daily30 = stats?.daily30 ?? [];
 
   if (loading && !stats) {
-    return <PageLoader variant="dot-matrix" size={26} label="Crunching the numbers" />;
+    return <HomePageSkeleton />;
   }
 
   return (
-    <div className="space-y-8">
+    <PageReveal className="space-y-8">
       <header className="flex flex-wrap items-end justify-between gap-6">
         <div>
           <p className="text-[13px] text-muted-foreground">
@@ -796,7 +796,7 @@ export default function DashboardPage() {
           </div>
         </Panel>
       </div>
-    </div>
+    </PageReveal>
   );
 }
 
