@@ -5,11 +5,13 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import { AuthDialog } from "@/components/auth-dialog";
+import { PricingDialog } from "@/components/pricing-dialog";
 import { Icon } from "@/components/huge-icon";
 import { buttonVariants } from "@/components/ui/button";
 
 export default function LandingPage() {
   const [authOpen, setAuthOpen] = useState(false);
+  const [pricingOpen, setPricingOpen] = useState(false);
 
   useEffect(() => {
     // Post-hydration only: the query string is not available during prerender.
@@ -42,12 +44,13 @@ export default function LandingPage() {
             </Link>
 
             <nav className="flex items-center gap-6">
-              <Link
-                href="/pricing"
+              <button
+                type="button"
+                onClick={() => setPricingOpen(true)}
                 className="text-[13px] text-white/75 transition-colors hover:text-white"
               >
                 Pricing
-              </Link>
+              </button>
               <button
                 type="button"
                 onClick={() => setAuthOpen(true)}
@@ -64,7 +67,7 @@ export default function LandingPage() {
 
           <main className="flex flex-1 flex-col items-center px-6 pt-8 lg:px-10 lg:pt-12">
             <div className="max-w-3xl text-center">
-              <h1 className="font-display text-5xl leading-[0.95] tracking-[-0.05em] text-white [text-shadow:0_2px_30px_rgba(0,0,0,0.45)] sm:text-7xl lg:text-8xl">
+              <h1 className="font-display text-4xl leading-[1.02] tracking-[-0.045em] text-white [text-shadow:0_2px_30px_rgba(0,0,0,0.45)] sm:text-5xl lg:text-6xl">
                 Every shilling
                 <span className="block text-white/70">has a job.</span>
               </h1>
@@ -87,16 +90,17 @@ export default function LandingPage() {
                   Open App
                   <Icon icon={ArrowRight01Icon} className="size-4" />
                 </button>
-                <Link
-                  href="/pricing"
+                <button
+                  type="button"
+                  onClick={() => setPricingOpen(true)}
                   className="inline-flex h-11 items-center gap-2 rounded-full px-4 text-[13px] font-medium text-white/85 transition-colors hover:bg-white/10 hover:text-white"
                 >
                   View pricing
-                </Link>
+                </button>
               </div>
             </div>
 
-            <div className="mt-10 min-h-0 w-full max-w-6xl flex-1 overflow-hidden">
+            <div className="mt-8 min-h-0 w-full max-w-[1500px] flex-1 overflow-hidden">
                 <Image
                   src="/dash.png"
                   alt="Expense Trackr dashboard"
@@ -111,6 +115,7 @@ export default function LandingPage() {
       </div>
 
       <AuthDialog open={authOpen} onClose={() => setAuthOpen(false)} />
+      <PricingDialog open={pricingOpen} onClose={() => setPricingOpen(false)} />
     </div>
   );
 }
