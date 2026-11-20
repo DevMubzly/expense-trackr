@@ -46,7 +46,7 @@ export function AuthDialog({
       <div
         aria-hidden="true"
         onClick={onClose}
-        className="absolute inset-0 bg-foreground/50"
+        className="absolute inset-0 bg-black/50"
       />
       <div
         ref={panelRef}

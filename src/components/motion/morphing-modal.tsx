@@ -133,19 +133,17 @@ export function MorphingModal({
       {open ? (
         <PresenceGate key="backdrop">
           {({ gate }) => (
-            <motion.button
-              type="button"
-              aria-label={t("close")}
-              // Outside the panel, so the focus trap never lands on it; it is
-              // a pointer target, and Escape closes from the keyboard.
-              tabIndex={-1}
+            // A div, not a button: the global pill rule would round a button
+            // and leave the page corners undimmed.
+            <motion.div
+              aria-hidden="true"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2, ease: EASE_OUT }}
               {...gate}
               onClick={onClose}
-              className="pointer-events-auto fixed inset-0 z-[80] rounded-none bg-foreground/25"
+              className="pointer-events-auto fixed inset-0 z-[80] bg-black/50"
             />
           )}
         </PresenceGate>
