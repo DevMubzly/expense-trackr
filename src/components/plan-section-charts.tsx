@@ -45,9 +45,11 @@ function ChartCard({
   return (
     <div className="flex h-full flex-col">
       {showHeading ? (
-        <div className="mb-2 flex items-start justify-between gap-3 px-1">
+        <div className="mb-3 px-1">
           <p className="text-[13px] font-medium">{title}</p>
-          <p className="text-right text-[10px] text-muted-foreground">{hint}</p>
+          <p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">
+            {hint}
+          </p>
         </div>
       ) : null}
       <div className="min-h-0 flex-1">{children}</div>
@@ -129,8 +131,14 @@ export function PlanSectionCharts({
     return [...points, { date: parseYmd(today), net: current }];
   }, [allActivity, debts, today]);
 
-  const activityDays = useMemo(() => {
-    const start = addDays(parseYmd(today), -13);
+  const goalsTotal = goals.reduce((total, goal) => total + goal.savedUgx, 0);
+  const netDebt = debts.reduce(
+    (total, debt) =>
+      total + (debt.direction === "borrowed" ? debt.balanceUgx : -debt.balanceUgx),
+    0,
+  );
+
+  const activityDays = useMemo(() => {    const start = addDays(parseYmd(today), -13);
     const days = Array.from({ length: 14 }, (_, index) => {
       const date = addDays(start, index);
       return {
@@ -154,7 +162,10 @@ export function PlanSectionCharts({
 
   if (section === "goals") {
     return (
-      <ChartCard title="Savings growth" hint="All contributions, cumulative">
+      <ChartCard
+        title="Savings growth"
+        hint={`All contributions, cumulative · ${display.formatMoney(goalsTotal)} saved`}
+      >
         <AreaChart
           data={goalTrend}
           style={{ height: 280 }}
@@ -187,7 +198,10 @@ export function PlanSectionCharts({
 
   if (section === "debts") {
     return (
-      <ChartCard title="Net debt" hint="Borrowed minus lent over time">
+      <ChartCard
+        title="Net debt"
+        hint={`Borrowed minus lent over time · ${display.formatMoney(netDebt)} net`}
+      >
         <AreaChart
           data={debtTrend}
           style={{ height: 280 }}

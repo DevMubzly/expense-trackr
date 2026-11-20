@@ -790,7 +790,7 @@ export default function PlanPage() {
       activeSection === "debts" ||
       activeSection === "activity" ? (
         <Panel className={sectionCardClass}>
-          <div className={cn(sectionBodyClass, "p-4 sm:p-5")}>
+          <div className={cn(sectionBodyClass, "p-6 sm:p-8")}>
             <PlanSectionCharts
               section={activeSection}
               goals={goals}
