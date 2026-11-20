@@ -616,7 +616,7 @@ function SettingsForm({
                 onValueChange={(value) => setPayday(Number(value))}
                 visibleCount={3}
                 itemHeight={34}
-                className="w-full border-x-0"
+                className="w-full border-0 bg-transparent"
                 aria-label="Payday of the month"
               />
             </div>

@@ -37,12 +37,25 @@ const NAV = [
   { href: "/settings", label: "Settings", icon: Settings01Icon },
 ];
 
-export function AppShell({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
+function IslandSkeleton({ className }: { className?: string }) {
+  return (
+    <span
+      aria-hidden="true"
+      className={cn(
+        "relative inline-block overflow-hidden rounded-full bg-white/15",
+        className,
+      )}
+    >
+      <span className="skeleton-shimmer absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+    </span>
+  );
+}
+
+export function AppShell({ children }: { children: React.ReactNode }) {  const pathname = usePathname();
   const router = useRouter();
   const { version, openTransaction } = useTransactionDialog();
   const display = useCurrency();
-  const { data: stats } = useApi<Stats>(`/api/stats?v=${version}`);
+  const { data: stats, loading: statsLoading } = useApi<Stats>(`/api/stats?v=${version}`);
   const [commandOpen, setCommandOpen] = useState(false);
   const [islandView, setIslandView] = useState<string | null>(null);
   const [navTip, setNavTip] = useState<{ label: string; x: number } | null>(
@@ -148,6 +161,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           onPointerLeave={() => setIslandView(null)}
           className="pointer-events-auto cursor-pointer border-0 bg-transparent p-0"
           aria-label="Today's summary"
+          aria-busy={statsLoading}
           aria-expanded={islandView === "today"}
         >
           <DynamicIsland
@@ -156,8 +170,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <span className="flex items-center gap-2 whitespace-nowrap px-3 text-[11px] font-medium">
                 Today net
                 <span className="text-white/50">·</span>
-                <span className="text-white/60">{display.unit}</span>
-                {display.formatValue(today)}
+                {statsLoading ? (
+                  <IslandSkeleton className="h-3 w-24" />
+                ) : (
+                  <>
+                    <span className="text-white/60">{display.unit}</span>
+                    {display.formatValue(today)}
+                  </>
+                )}
               </span>
             }
           >
@@ -167,21 +187,37 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   <div>
                     <p className="text-[10px] text-white/60">Today net</p>
                     <p className="tnum text-sm font-semibold">
-                      <span className="mr-1 text-white/60">{display.unit}</span>
-                      {display.formatValue(today)}
+                      {statsLoading ? (
+                        <IslandSkeleton className="mt-1 h-4 w-24" />
+                      ) : (
+                        <>
+                          <span className="mr-1 text-white/60">{display.unit}</span>
+                          {display.formatValue(today)}
+                        </>
+                      )}
                     </p>
                   </div>
                   <div className="h-6 w-px bg-white/20" />
                   <div>
                     <p className="text-[10px] text-white/60">Left in budget</p>
                     <p className="tnum text-sm font-semibold">
-                      <span className="mr-1 text-white/60">{display.unit}</span>
-                      {display.formatValue(remaining)}
+                      {statsLoading ? (
+                        <IslandSkeleton className="mt-1 h-4 w-24" />
+                      ) : (
+                        <>
+                          <span className="mr-1 text-white/60">{display.unit}</span>
+                          {display.formatValue(remaining)}
+                        </>
+                      )}
                     </p>
                   </div>
                 </div>
                 <p className="mt-2 w-full border-t border-white/10 pt-1.5 text-center text-[9px] text-white/45">
-                  {stats?.monthLabel ?? "This month"}
+                  {statsLoading ? (
+                    <IslandSkeleton className="mx-auto h-2 w-20" />
+                  ) : (
+                    (stats?.monthLabel ?? "This month")
+                  )}
                 </p>
               </div>
             </DynamicIslandView>

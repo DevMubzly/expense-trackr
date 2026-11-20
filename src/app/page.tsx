@@ -382,6 +382,9 @@ export default function DashboardPage() {
                   />
                   <span className="text-sm font-normal text-muted-foreground">/ day</span>
                 </span>
+                <p className="mt-1 text-[10px] text-muted-foreground">
+                  Available per day until payday
+                </p>
               </div>
             </div>
             <div className="flex flex-col rounded-xl border border-foreground/10 bg-background/40 p-1">
@@ -403,6 +406,9 @@ export default function DashboardPage() {
                     className="text-sm font-semibold leading-none tracking-[-0.02em]"
                   />
                 </span>
+                <p className="mt-1 text-[10px] text-muted-foreground">
+                  Expected balance on payday
+                </p>
               </div>
             </div>
             <div className="flex flex-col rounded-xl border border-foreground/10 bg-background/40 p-1">
@@ -424,6 +430,9 @@ export default function DashboardPage() {
                     className="text-sm font-semibold leading-none tracking-[-0.02em]"
                   />
                 </span>
+                <p className="mt-1 text-[10px] text-muted-foreground">
+                  Mobile money charges this month
+                </p>
               </div>
             </div>
           </div>
