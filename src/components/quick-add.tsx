@@ -9,7 +9,7 @@ import { Checkbox } from "@/components/motion/checkbox";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/huge-icon";
 import { api } from "@/lib/use-api";
-import { categoryOf } from "@/lib/categories";
+import { useCategories } from "@/components/categories-provider";
 import { formatNumber, parseNumericInput, parseYmd } from "@/lib/format";
 import { parseQuickAdd, type QuickDraft } from "@/lib/quick-add";
 import type { Account, Settings } from "@/lib/types";
@@ -170,7 +170,7 @@ export function QuickAddForm({
         <Button variant="ghost" onClick={onCancel} disabled={saving}>
           <Icon icon={Cancel01Icon} className="size-4" /> Cancel
         </Button>
-        <Button onClick={commit} disabled={!selectedDrafts.length || saving}>
+        <Button onClick={commit} loading={saving} disabled={!selectedDrafts.length}>
           <Icon icon={Tick02Icon} className="size-4" />
           {saving
             ? "Adding"
@@ -196,6 +196,7 @@ function DraftRow({
   onChange: (patch: Partial<QuickDraft>) => void;
   onRemove: () => void;
 }) {
+  const { categoryOf } = useCategories();
   const kind = draft.type === "income" ? "income" : "expense";
   const typeLabel =
     draft.type === "expense" ? "Expense" : draft.type === "income" ? "Income" : "Transfer";

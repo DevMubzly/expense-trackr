@@ -14,6 +14,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { createPortal } from "react-dom";
 import { EASE_OUT, SPRING_PANEL } from "@/lib/ease";
 import { focusablesIn, useFocusTrap } from "@/lib/hooks/use-focus-trap";
 import { useMessages } from "@/lib/i18n";
@@ -59,6 +60,12 @@ export function MorphingModal({
   const panelRef = useRef<HTMLDivElement>(null);
   const uid = useId();
   const [headingId, setHeadingId] = useState<string>();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => setMounted(true));
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
 
   // Focus moves into the panel on open, Tab stays inside it, Escape closes,
   // and focus returns to the opener on close.
@@ -113,7 +120,9 @@ export function MorphingModal({
   // off `PresenceGate`, so interaction releases in the same commit that starts
   // the exit rather than when it ends — `open` is already false for those
   // frames.
-  return (
+  if (!mounted) return null;
+
+  return createPortal(
     <AnimatePresence initial={false}>
       {open ? (
         <PresenceGate key="backdrop">
@@ -130,7 +139,7 @@ export function MorphingModal({
               transition={{ duration: 0.2, ease: EASE_OUT }}
               {...gate}
               onClick={onClose}
-              className="pointer-events-auto fixed inset-0 z-[80] bg-background/5 [backdrop-filter:blur(14px)_saturate(140%)] [-webkit-backdrop-filter:blur(14px)_saturate(140%)]"
+              className="pointer-events-auto fixed inset-0 z-[80] bg-background/10 [backdrop-filter:blur(6px)_saturate(120%)] [-webkit-backdrop-filter:blur(6px)_saturate(120%)]"
             />
           )}
         </PresenceGate>
@@ -239,6 +248,7 @@ export function MorphingModal({
           )}
         </PresenceGate>
       ) : null}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 }

@@ -47,15 +47,12 @@ import type { DateRange } from "@/components/motion/date-range-picker";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/huge-icon";
 import { Money } from "@/components/money";
-import { Panel, EmptyState } from "@/components/panel";
+import { EmptyState, Panel, PanelBody, sectionCardClass } from "@/components/panel";
 import { useTransactionDialog } from "@/components/expense-dialog";
 import { useApi, api } from "@/lib/use-api";
 import { useNow } from "@/lib/use-now";
-import {
-  EXPENSE_CATEGORIES,
-  INCOME_CATEGORIES,
-  categoryOf,
-} from "@/lib/categories";
+import { useCategories } from "@/components/categories-provider";
+import { useCurrency } from "@/components/currency-provider";
 import { addDays, formatNumber, parseYmd, relativeDay, ymd } from "@/lib/format";
 import { PERIOD_OPTIONS } from "@/lib/periods";
 import type {
@@ -136,6 +133,9 @@ function typeClass(type: TransactionType) {
 
 export default function ExpensesPage() {
   const { version, bumpVersion, openTransaction } = useTransactionDialog();
+  const { expense: expenseCategories, income: incomeCategories, categoryOf } =
+    useCategories();
+  const display = useCurrency();
   const now = useNow();
   const today = now ? ymd(now) : "";
 
@@ -229,7 +229,7 @@ export default function ExpensesPage() {
       }
       return result * direction;
     });
-  }, [sort, transactions]);
+  }, [categoryOf, sort, transactions]);
 
   const pageCount = Math.max(1, Math.ceil(sortedRows.length / PAGE_SIZE));
   const safePage = Math.min(page, pageCount);
@@ -320,11 +320,11 @@ export default function ExpensesPage() {
     <div className="space-y-6">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="font-display text-5xl leading-none">Every shilling.</h1>
+          <h1 className="font-display text-4xl leading-none md:text-5xl">Every shilling.</h1>
           <p className="mt-2 text-[11px] text-muted-foreground">
             {formatNumber(transactions.length)}{" "}
-            {transactions.length === 1 ? "entry" : "entries"}, UGX{" "}
-            {formatNumber(net)} net
+            {transactions.length === 1 ? "entry" : "entries"},{" "}
+            {display.formatMoney(net)} net
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -395,7 +395,7 @@ export default function ExpensesPage() {
                 setCategory(value);
                 resetPage();
               }}
-              className="w-32 shrink-0"
+              className="w-36 shrink-0"
             >
               <ComboboxTrigger className="h-11 min-w-0 rounded-full px-3">
                 <ComboboxInput
@@ -404,7 +404,7 @@ export default function ExpensesPage() {
                   showIcon={false}
                 />
               </ComboboxTrigger>
-              <ComboboxContent className="w-56 rounded-2xl">
+              <ComboboxContent className="w-72 rounded-2xl">
                 <ComboboxList ariaLabel="Categories" className="p-2">
                   <ComboboxEmpty>No categories.</ComboboxEmpty>
                   <ComboboxItem value="all" textValue="All categories">
@@ -413,7 +413,7 @@ export default function ExpensesPage() {
                   {typeFilter !== "income" ? (
                     <ComboboxGroup className="mt-1">
                       <ComboboxLabel>Expenses</ComboboxLabel>
-                      {EXPENSE_CATEGORIES.map((option) => (
+                      {expenseCategories.map((option) => (
                         <ComboboxItem key={option.id} value={option.id} textValue={option.label}>
                           <span className="flex items-center gap-2">
                             <Icon icon={option.icon} className="size-4" /> {option.label}
@@ -425,7 +425,7 @@ export default function ExpensesPage() {
                   {typeFilter !== "expense" ? (
                     <ComboboxGroup className="mt-1">
                       <ComboboxLabel>Income</ComboboxLabel>
-                      {INCOME_CATEGORIES.map((option) => (
+                      {incomeCategories.map((option) => (
                         <ComboboxItem key={option.id} value={option.id} textValue={option.label}>
                           <span className="flex items-center gap-2">
                             <Icon icon={option.icon} className="size-4" /> {option.label}
@@ -518,7 +518,8 @@ export default function ExpensesPage() {
 
       {loading && !data ? <PageLoader variant="helix" size={26} /> : null}
 
-      <Panel className="overflow-hidden">
+      <Panel className={cn("overflow-hidden", sectionCardClass)}>
+        <PanelBody className="overflow-hidden p-0">
         {loading && !data ? null : sortedRows.length === 0 ? (
           <EmptyState
             title="Nothing here"
@@ -728,7 +729,8 @@ export default function ExpensesPage() {
                             </span>
                             {row.feeUgx ? (
                               <span className="text-[10px] text-muted-foreground">
-                                + {formatNumber(row.feeUgx)} fee
+                                + {display.formatValue(row.feeUgx)}{" "}
+                                {display.unit} fee
                               </span>
                             ) : null}
                           </div>
@@ -814,6 +816,7 @@ export default function ExpensesPage() {
             </div>
           </>
         )}
+        </PanelBody>
       </Panel>
 
       <MorphingModal
@@ -850,10 +853,10 @@ export default function ExpensesPage() {
               <Button
                 variant="destructive"
                 onClick={deleteConfirmed}
-                disabled={deleting}
+                loading={deleting}
               >
                 <Icon icon={Delete02Icon} className="size-4" />
-                {deleting ? "Deleting" : "Delete"}
+                Delete
               </Button>
             </div>
           </div>

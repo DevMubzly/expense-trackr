@@ -3,14 +3,15 @@
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
 import { gooeyToast } from "goey-toast";
 import { AnimatePresence, motion } from "motion/react";
-import { EASE_OUT, SPRING_LAYOUT } from "@/lib/ease";
+import { EASE_OUT } from "@/lib/ease";
 import {
   Camera01Icon,
   Cancel01Icon,
   Delete02Icon,
   Tick02Icon,
 } from "@hugeicons/core-free-icons";
-import { categoriesFor, categoryOf } from "@/lib/categories";
+import { useCategories } from "@/components/categories-provider";
+import { DropdownSelect } from "@/components/dropdown-select";
 import { MorphingModal } from "@/components/motion/morphing-modal";
 import { WheelPicker } from "@/components/motion/wheel-picker";
 import { Input } from "@/components/motion/input";
@@ -36,7 +37,6 @@ import type {
   Transaction,
   TransactionType,
 } from "@/lib/types";
-import { cn } from "@/lib/utils";
 import { QuickAddForm } from "@/components/quick-add";
 
 type DialogContextValue = {
@@ -196,6 +196,7 @@ function TransactionForm({
   onSaved: () => void;
   onCancel: () => void;
 }) {
+  const { categoriesFor, categoryOf } = useCategories();
   const initial = transaction ? parseYmd(transaction.spentOn) : new Date();
   const years = [initial.getFullYear() - 2, initial.getFullYear() - 1, initial.getFullYear()];
   const defaultAccountId = settings?.defaultAccountId ?? accounts[0]?.id ?? "";
@@ -372,30 +373,16 @@ function TransactionForm({
         </div>
       </div>
 
-      <div className="flex rounded-full border border-border bg-muted p-0.5">
-        {TYPES.map((option) => {
-          const active = type === option.value;
-          return (
-            <button
-              key={option.value}
-              type="button"
-              onClick={() => changeType(option.value)}
-              className={cn(
-                "relative flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
-                active ? "text-foreground" : "text-muted-foreground hover:text-foreground",
-              )}
-            >
-              {active ? (
-                <motion.span
-                  layoutId="transaction-type-pill"
-                  className="absolute inset-0 rounded-full bg-card shadow-sm"
-                  transition={SPRING_LAYOUT}
-                />
-              ) : null}
-              <span className="relative z-10">{option.label}</span>
-            </button>
-          );
-        })}
+      <div className="grid grid-cols-[80px_176px] items-center gap-2">
+        <p className="text-[13px] text-muted-foreground">Type</p>
+        <DropdownSelect
+          value={type}
+          onValueChange={(value) =>
+            changeType(value as TransactionType)
+          }
+          ariaLabel="Transaction type"
+          options={TYPES}
+        />
       </div>
 
       <div className="flex w-56 items-end gap-2 pb-2">
@@ -567,7 +554,7 @@ function TransactionForm({
 
       <div className="mt-3 flex shrink-0 items-center justify-between gap-2 pt-4">
         {transaction ? (
-          <Button variant="ghost" onClick={remove} disabled={saving} className="text-destructive">
+          <Button variant="ghost" onClick={remove} loading={saving} className="text-destructive">
             <Icon icon={Delete02Icon} className="size-4" /> Delete
           </Button>
         ) : (
@@ -575,7 +562,7 @@ function TransactionForm({
             <Icon icon={Cancel01Icon} className="size-4" /> Cancel
           </Button>
         )}
-        <Button onClick={submit} disabled={!valid || saving} className="min-w-32">
+        <Button onClick={submit} loading={saving} disabled={!valid} className="min-w-32">
           <Icon icon={Tick02Icon} className="size-4" />
           {transaction
             ? "Save changes"

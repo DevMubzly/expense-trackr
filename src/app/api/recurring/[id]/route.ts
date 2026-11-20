@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server";
-import { CATEGORY_BY_ID, isCategoryOfKind } from "@/lib/categories";
+import { categoryExists, isCategoryKind } from "@/lib/db";
 import {
   deleteRecurring,
   getAccount,
@@ -48,7 +48,7 @@ export async function PATCH(
   }
   if (body.category !== undefined) {
     const category = String(body.category);
-    if (category && !CATEGORY_BY_ID.has(category)) {
+    if (category && !categoryExists(category)) {
       return Response.json({ error: "Invalid category" }, { status: 400 });
     }
     patch.category = category;
@@ -81,7 +81,7 @@ export async function PATCH(
   if (body.note !== undefined) patch.note = String(body.note).slice(0, 240);
 
   if (patch.type && patch.type !== "transfer" && patch.category) {
-    if (!isCategoryOfKind(String(patch.category), patch.type as "expense" | "income")) {
+    if (!isCategoryKind(String(patch.category), patch.type as "expense" | "income")) {
       return Response.json({ error: "Invalid category" }, { status: 400 });
     }
   }

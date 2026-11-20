@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { SectionInfo } from "@/components/section-info";
 
 export function Panel({
   className,
@@ -38,6 +39,68 @@ export function PanelHeader({
       </div>
       {action}
     </div>
+  );
+}
+
+export const sectionCardClass = "flex flex-col border border-foreground/10 p-1";
+export const sectionHeaderClass = "px-3 pb-2 pt-2";
+export const sectionBodyClass =
+  "flex-1 rounded-xl border border-foreground/5 bg-muted/25";
+
+export function PanelBody({
+  className,
+  children,
+}: {
+  className?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className={cn(sectionBodyClass, "p-4", className)}>{children}</div>
+  );
+}
+
+export function SectionPanel({
+  title,
+  hint,
+  action,
+  info,
+  className,
+  headerClassName,
+  bodyClassName,
+  children,
+}: {
+  title: React.ReactNode;
+  hint?: React.ReactNode;
+  action?: React.ReactNode;
+  info?: string;
+  className?: string;
+  headerClassName?: string;
+  bodyClassName?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <Panel className={cn(sectionCardClass, className)}>
+      <PanelHeader
+        title={
+          info ? (
+            <span className="flex items-center gap-1.5">
+              {title}
+              <SectionInfo
+                label={typeof title === "string" ? title : "Section"}
+              >
+                {info}
+              </SectionInfo>
+            </span>
+          ) : (
+            title
+          )
+        }
+        hint={hint}
+        action={action}
+        className={cn(sectionHeaderClass, headerClassName)}
+      />
+      <PanelBody className={bodyClassName}>{children}</PanelBody>
+    </Panel>
   );
 }
 

@@ -45,18 +45,38 @@ import {
 import { accountIcon } from "@/components/account-select";
 import { Icon } from "@/components/huge-icon";
 import { Money } from "@/components/money";
+import { SectionInfo } from "@/components/section-info";
 import { Panel, PanelHeader } from "@/components/panel";
 import { useTransactionDialog } from "@/components/expense-dialog";
 import { useApi } from "@/lib/use-api";
 import { useNow } from "@/lib/use-now";
-import { CATEGORIES, categoryOf } from "@/lib/categories";
+import { useCategories } from "@/components/categories-provider";
+import { useCurrency } from "@/components/currency-provider";
 import { daysInMonth, formatNumber, parseYmd, relativeDay, ymd } from "@/lib/format";
 import { PERIOD_LABELS, PERIOD_OPTIONS } from "@/lib/periods";
 import type { StatPeriod, Stats } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
+const SECTION_CARD = "flex flex-col border border-foreground/10 p-1";
+const SECTION_HEADER = "px-3 pb-2 pt-2";
+const SECTION_BODY =
+  "flex-1 rounded-xl border border-foreground/5 bg-muted/25";
+
 export default function DashboardPage() {
   const { version, openTransaction } = useTransactionDialog();
+  const { expense: expenseCategories, categoryOf } = useCategories();
+  const display = useCurrency();
+  const formatDisplay = (value: number) =>
+    display.currency === "USD"
+      ? display.convert(value).toLocaleString("en-US", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        })
+      : formatNumber(value);
+  const axisValue = (value: number) =>
+    display.currency === "USD"
+      ? `$${display.formatValue(value)}`
+      : formatNumber(value);
   const [period, setPeriod] = useState<StatPeriod>("30d");
   const { data: stats, loading } = useApi<Stats>(
     `/api/stats?period=${period}&v=${version}`,
@@ -91,8 +111,6 @@ export default function DashboardPage() {
       : stats.vsLastMonth > 0
         ? "danger"
         : "success";
-  const dayOfMonth = stats?.daily.length ?? 0;
-  const daysInMonthCount = stats ? daysInMonth(stats.month) : 0;
   const categoryTotals = (stats?.byCategory ?? []).filter(
     (entry) => entry.value > 0,
   );
@@ -124,7 +142,7 @@ export default function DashboardPage() {
               "\u00a0"
             )}
           </p>
-          <h1 className="mt-2 flex items-center gap-3 font-display text-5xl leading-none md:text-[56px]">
+          <h1 className="mt-2 flex items-center gap-3 font-display text-4xl leading-none md:text-5xl">
             {now ? (
               <>
                 {greeting(now.getHours())}
@@ -147,7 +165,7 @@ export default function DashboardPage() {
                           ? Sun03Icon
                           : Moon02Icon
                     }
-                    className="size-8 md:size-9"
+                    className="size-7 md:size-8"
                   />
                 </span>
               </>
@@ -188,18 +206,19 @@ export default function DashboardPage() {
           <button
             type="button"
             onClick={() => openTransaction(undefined, "expense")}
-            className="inline-flex h-9 items-center gap-2 rounded-full bg-foreground px-2 text-[13px] font-medium text-background transition-transform hover:bg-foreground/90 active:scale-[0.98]"
+            className="inline-flex h-9 items-center gap-2 rounded-full bg-foreground px-3 text-[13px] font-medium text-background transition-transform hover:bg-foreground/90 active:scale-[0.98]"
           >
-            <Icon icon={PlusSignIcon} className="size-4" /> Log expense
+            <Icon icon={PlusSignIcon} className="size-3.5 bg-transparent" /> Log expense
           </button>
         </div>
       </header>
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
-        <aside className="order-1 grid h-full auto-rows-fr grid-cols-1 gap-4 sm:grid-cols-2 xl:order-2 xl:col-span-5">
+        <aside className="order-1 grid h-full auto-rows-fr grid-cols-1 gap-4 sm:grid-cols-2 xl:order-1 xl:col-span-5">
           <MetricCard
             compact
             label="Spent"
+            info="Total spending in the selected period."
             value={periodStats?.expense ?? 0}
             spark={periodStats?.spark ?? []}
             sparkKey="expense"
@@ -210,6 +229,7 @@ export default function DashboardPage() {
           <MetricCard
             compact
             label="Income"
+            info="Total income recorded in the selected period."
             value={periodStats?.income ?? 0}
             spark={periodStats?.spark ?? []}
             sparkKey="income"
@@ -220,6 +240,7 @@ export default function DashboardPage() {
           <MetricCard
             compact
             label="Net"
+            info="Income minus spending for the selected period."
             value={periodStats?.net ?? 0}
             spark={periodStats?.spark ?? []}
             sparkKey="net"
@@ -230,6 +251,7 @@ export default function DashboardPage() {
           <MetricCard
             compact
             label="Entries"
+            info="Number of transactions in the selected period."
             value={periodStats?.count ?? 0}
             spark={periodStats?.spark ?? []}
             sparkKey="count"
@@ -240,28 +262,34 @@ export default function DashboardPage() {
           />
         </aside>
 
-        <Panel className="order-2 overflow-hidden p-5 xl:order-1 xl:col-span-7">
+        <Panel
+          className={cn(
+            "order-2 overflow-hidden xl:order-2 xl:col-span-7",
+            SECTION_CARD,
+          )}
+        >
           <PanelHeader
-            title="Month pace"
-            hint={
-              <span>
-                Total balance{" "}
-                <span className="tnum font-medium text-foreground">
-                  UGX {formatNumber(forecast?.liquidBalanceUgx ?? 0)}
-                </span>
+            title={
+              <span className="flex items-center gap-1.5">
+                Month pace
+                <SectionInfo label="Month pace">
+                  How this month&apos;s spending is tracking against your
+                  budget.
+                </SectionInfo>
               </span>
             }
+            className={SECTION_HEADER}
             action={
-              <MonthCalendar
-                month={stats?.month}
-                day={dayOfMonth}
-                days={daysInMonthCount}
-              />
+              stats?.month ? (
+                <span className="text-[11px] text-muted-foreground">
+                  {monthRangeLabel(stats.month)}
+                </span>
+              ) : null
             }
-            className="p-0"
           />
 
-          <div className="mt-0 grid grid-cols-2 items-center gap-3 md:grid-cols-[minmax(0,1fr)_240px_minmax(0,1fr)]">
+          <div className={cn(SECTION_BODY, "p-4")}>
+            <div className="mt-0 grid grid-cols-2 items-center gap-0 md:grid-cols-[minmax(0,1fr)_340px_minmax(0,1fr)]">
             <div className="order-1 col-span-2 flex justify-center md:order-2 md:col-span-1">
               <Gauge
                 value={pct}
@@ -269,8 +297,8 @@ export default function DashboardPage() {
                 suffix="%"
                 defaultLabel="used"
                 totalNotches={36}
-                height={170}
-                width={240}
+                height={250}
+                width={340}
                 activeFill="var(--primary)"
                 inactiveFill="var(--muted)"
                 needle="line"
@@ -296,6 +324,7 @@ export default function DashboardPage() {
               status={trendStatus}
               size="sm"
               contentKey={stats?.vsLastMonth ?? 0}
+              className="bg-transparent"
             >
               {Math.abs(stats?.vsLastMonth ?? 0)}%{" "}
               {stats && stats.vsLastMonth > 0
@@ -306,81 +335,96 @@ export default function DashboardPage() {
               vs last month
             </AnimatedBadge>
           </div>
+          </div>
 
         </Panel>
 
-        <Panel className="order-3 overflow-hidden p-5 xl:col-span-12">
+        <Panel className={cn("order-3 overflow-hidden xl:col-span-12", SECTION_CARD)}>
           <PanelHeader
-            title="Cash runway"
-            hint="Previous payday to next payday · history filled, projection dashed at your recent burn rate"
+            title={
+              <span className="flex items-center gap-1.5">
+                Cash runway
+                <SectionInfo label="Cash runway">
+                  Your balance from the last payday through the next, with
+                  history filled and the rest projected.
+                </SectionInfo>
+              </span>
+            }
             action={
               <span className="rounded-full bg-muted px-2.5 py-1 text-[10px] text-muted-foreground">
                 {formatNumber(forecast?.daysToPayday ?? 0)} days to payday
               </span>
             }
-            className="p-0"
+            className={SECTION_HEADER}
           />
-          <div className="mt-8 grid grid-cols-1 divide-y divide-border/60 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
-            <div className="py-3 first:pt-0 last:pb-0 sm:min-h-[76px] sm:px-4 sm:py-1 sm:first:pl-0 sm:last:pr-0">
-              <div className="flex items-center gap-2">
+          <div className={cn(SECTION_BODY, "p-4")}>
+          <div className="mt-0 grid gap-3 sm:grid-cols-3">
+            <div className="flex flex-col rounded-xl border border-foreground/10 bg-card/30 p-1">
+              <div className="flex items-center gap-2 px-2 pb-1 pt-1.5">
                 <Icon
                   icon={Money03Icon}
-                  className="size-4 text-emerald-600 dark:text-emerald-400"
+                  className="size-3.5 text-emerald-600 dark:text-emerald-400"
                 />
                 <p className="text-sm text-foreground">Safe to spend</p>
               </div>
-              <span className="tnum mt-1 inline-flex items-baseline gap-1.5 text-foreground">
-                <span className="text-sm font-semibold leading-none tracking-[-0.02em] text-muted-foreground">UGX</span>
-                <AnimatedNumber
-                  value={forecast?.safePerDayUgx ?? 0}
-                  duration={0.6}
-                  startOnView={false}
-                  format={formatNumber}
-                  className="text-sm font-semibold leading-none tracking-[-0.02em]"
-                />
-                <span className="text-sm font-normal text-muted-foreground">/ day</span>
-              </span>
+              <div className="flex flex-1 flex-col justify-center rounded-lg border border-foreground/10 bg-muted/50 p-2.5">
+                <span className="tnum inline-flex items-baseline gap-1.5 text-foreground">
+                  <span className="text-sm font-semibold leading-none tracking-[-0.02em] text-muted-foreground">{display.unit}</span>
+                  <AnimatedNumber
+                    value={display.convert(forecast?.safePerDayUgx ?? 0)}
+                    duration={0.6}
+                    startOnView={false}
+                    format={formatDisplay}
+                    className="text-sm font-semibold leading-none tracking-[-0.02em]"
+                  />
+                  <span className="text-sm font-normal text-muted-foreground">/ day</span>
+                </span>
+              </div>
             </div>
-            <div className="py-3 first:pt-0 last:pb-0 sm:min-h-[76px] sm:px-4 sm:py-1 sm:first:pl-0 sm:last:pr-0">
-              <div className="flex items-center gap-2">
+            <div className="flex flex-col rounded-xl border border-foreground/10 bg-card/30 p-1">
+              <div className="flex items-center gap-2 px-2 pb-1 pt-1.5">
                 <Icon
                   icon={ChartIncreaseIcon}
-                  className="size-4 text-sky-600 dark:text-sky-400"
+                  className="size-3.5 text-sky-600 dark:text-sky-400"
                 />
                 <p className="text-sm text-foreground">Projected at payday</p>
               </div>
-              <span className="tnum mt-1 inline-flex items-baseline gap-1.5 text-foreground">
-                <span className="text-sm font-semibold leading-none tracking-[-0.02em] text-muted-foreground">UGX</span>
-                <AnimatedNumber
-                  value={forecast?.projectedBalanceUgx ?? 0}
-                  duration={0.6}
-                  startOnView={false}
-                  format={formatNumber}
-                  className="text-sm font-semibold leading-none tracking-[-0.02em]"
-                />
-              </span>
+              <div className="flex flex-1 flex-col justify-center rounded-lg border border-foreground/10 bg-muted/50 p-2.5">
+                <span className="tnum inline-flex items-baseline gap-1.5 text-foreground">
+                  <span className="text-sm font-semibold leading-none tracking-[-0.02em] text-muted-foreground">{display.unit}</span>
+                  <AnimatedNumber
+                    value={display.convert(forecast?.projectedBalanceUgx ?? 0)}
+                    duration={0.6}
+                    startOnView={false}
+                    format={formatDisplay}
+                    className="text-sm font-semibold leading-none tracking-[-0.02em]"
+                  />
+                </span>
+              </div>
             </div>
-            <div className="py-3 first:pt-0 last:pb-0 sm:min-h-[76px] sm:px-4 sm:py-1 sm:first:pl-0 sm:last:pr-0">
-              <div className="flex items-center gap-2">
+            <div className="flex flex-col rounded-xl border border-foreground/10 bg-card/30 p-1">
+              <div className="flex items-center gap-2 px-2 pb-1 pt-1.5">
                 <Icon
                   icon={Invoice02Icon}
-                  className="size-4 text-amber-600 dark:text-amber-400"
+                  className="size-3.5 text-amber-600 dark:text-amber-400"
                 />
                 <p className="text-sm text-foreground">MoMo fees this month</p>
               </div>
-              <span className="tnum mt-1 inline-flex items-baseline gap-1.5 text-foreground">
-                <span className="text-sm font-semibold leading-none tracking-[-0.02em] text-muted-foreground">UGX</span>
-                <AnimatedNumber
-                  value={stats?.momoFees.month ?? 0}
-                  duration={0.6}
-                  startOnView={false}
-                  format={formatNumber}
-                  className="text-sm font-semibold leading-none tracking-[-0.02em]"
-                />
-              </span>
+              <div className="flex flex-1 flex-col justify-center rounded-lg border border-foreground/10 bg-muted/50 p-2.5">
+                <span className="tnum inline-flex items-baseline gap-1.5 text-foreground">
+                  <span className="text-sm font-semibold leading-none tracking-[-0.02em] text-muted-foreground">{display.unit}</span>
+                  <AnimatedNumber
+                    value={display.convert(stats?.momoFees.month ?? 0)}
+                    duration={0.6}
+                    startOnView={false}
+                    format={formatDisplay}
+                    className="text-sm font-semibold leading-none tracking-[-0.02em]"
+                  />
+                </span>
+              </div>
             </div>
           </div>
-          <div className="mt-1">
+          <div className="mt-4">
             <AreaChart
               data={forecastData}
               aspectRatio="2.6 / 1"
@@ -401,7 +445,7 @@ export default function DashboardPage() {
               <YAxis
                 numTicks={5}
                 formatLargeNumbers={false}
-                formatValue={(value) => `UGX ${formatNumber(value)}`}
+                formatValue={display.formatMoney}
               />
               <XAxis />
               <ChartTooltip
@@ -409,7 +453,7 @@ export default function DashboardPage() {
                   {
                     color: "var(--chart-1)",
                     label: point.projected ? "Projected balance" : "Balance",
-                    value: `UGX ${formatNumber(Number(point.balance) || 0)}`,
+                    value: display.formatMoney(Number(point.balance) || 0),
                   },
                 ]}
                 dotHaloScale={0}
@@ -428,33 +472,40 @@ export default function DashboardPage() {
               </span>
             </div>
           </div>
+          </div>
         </Panel>
 
-        <Panel className="order-4 p-5 xl:col-span-5">
+        <Panel className={cn("order-4 xl:col-span-5", SECTION_CARD)}>
           <PanelHeader
-            title="Accounts"
-            hint="Cash, bank and mobile money"
+            title={
+              <span className="flex items-center gap-1.5">
+                Accounts
+                <SectionInfo label="Accounts">
+                  Balances across your cash, bank and mobile money accounts.
+                </SectionInfo>
+              </span>
+            }
             action={
               <Link
                 href="/settings"
                 className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
               >
-                Manage <Icon icon={ArrowUpRight01Icon} className="size-3.5" />
+                Manage <Icon icon={ArrowUpRight01Icon} className="size-3" />
               </Link>
             }
-            className="p-0 pb-4"
+            className={SECTION_HEADER}
           />
-          <div className="space-y-1.5">
+          <div className={cn(SECTION_BODY, "divide-y divide-foreground/5 p-1")}>
             {(stats?.accounts ?? []).map((entry) => (
               <div
                 key={entry.id}
-                className="flex items-center gap-3 rounded-2xl bg-muted/20 px-3 py-2"
+                className="flex items-center gap-3 px-2 py-2"
               >
                 <span
-                  className="grid size-8 place-items-center rounded-lg"
+                  className="grid size-7 place-items-center rounded-lg"
                   style={{ background: `color-mix(in oklab, ${entry.color} 14%, transparent)` }}
                 >
-                  <Icon icon={accountIcon(entry.type)} className="size-4" />
+                  <Icon icon={accountIcon(entry.type)} className="size-3.5" />
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[13px]">{entry.name}</p>
@@ -468,21 +519,27 @@ export default function DashboardPage() {
           </div>
         </Panel>
 
-        <Panel className="order-7 p-5 xl:col-span-5">
+        <Panel className={cn("order-7 xl:col-span-5", SECTION_CARD)}>
           <PanelHeader
-            title="Recent activity"
-            hint="Latest entries, newest first"
+            title={
+              <span className="flex items-center gap-1.5">
+                Recent activity
+                <SectionInfo label="Recent activity">
+                  Your latest transactions, newest first.
+                </SectionInfo>
+              </span>
+            }
             action={
               <Link
                 href="/expenses"
                 className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
               >
-                All expenses <Icon icon={ArrowUpRight01Icon} className="size-3.5" />
+                All expenses <Icon icon={ArrowUpRight01Icon} className="size-3" />
               </Link>
             }
-            className="p-0 pb-4"
+            className={SECTION_HEADER}
           />
-          <ul className="divide-y divide-border/70">
+          <ul className={cn(SECTION_BODY, "divide-y divide-foreground/5 p-1")}>
             {(stats?.recent ?? []).map((transaction) => {
               const category = categoryOf(transaction.category || "other");
               const transfer = transaction.type === "transfer";
@@ -494,15 +551,15 @@ export default function DashboardPage() {
                   <button
                     type="button"
                     onClick={() => openTransaction(transaction)}
-                    className="flex w-full items-center gap-3 px-1 py-2.5 text-left transition-colors hover:bg-muted/50"
+                    className="flex w-full items-center gap-3 px-2 py-2.5 text-left transition-colors hover:bg-muted/40"
                   >
                     <span
-                      className="grid size-9 shrink-0 place-items-center rounded-lg"
+                      className="grid size-8 shrink-0 place-items-center rounded-lg"
                       style={{ background: `color-mix(in oklab, ${category.color} 14%, transparent)` }}
                     >
                       <Icon
                         icon={transfer ? ArrowLeftRightIcon : category.icon}
-                        className="size-4"
+                        className="size-3.5"
                       />
                     </span>
                     <span className="min-w-0 flex-1">
@@ -534,12 +591,24 @@ export default function DashboardPage() {
           </ul>
         </Panel>
 
-        <Panel className="order-5 p-5 xl:col-span-7">
+        <Panel className={cn("order-5 xl:col-span-7", SECTION_CARD)}>
           <PanelHeader
-            title="Categories"
-            hint={`${stats?.monthLabel ?? "This month"}, share of spend`}
-            className="p-0 pb-4"
+            title={
+              <span className="flex items-center gap-1.5">
+                Categories
+                <SectionInfo label="Categories">
+                  How this month&apos;s spending splits across categories.
+                </SectionInfo>
+              </span>
+            }
+            className={SECTION_HEADER}
+            action={
+              <span className="text-[11px] text-muted-foreground">
+                {stats?.monthLabel ?? "This month"}, share of spend
+              </span>
+            }
           />
+          <div className={cn(SECTION_BODY, "p-4")}>
           {categoryTotals.length > 0 ? (
             <div className="grid gap-5 sm:grid-cols-[220px_minmax(0,1fr)] sm:items-center">
               <div className="flex justify-center">
@@ -563,12 +632,12 @@ export default function DashboardPage() {
                   <PieCenter defaultLabel="Total">
                     {({ value, label }) => (
                       <div className="text-center">
-                        <p className="text-[10px] text-muted-foreground">UGX</p>
+                        <p className="text-[10px] text-muted-foreground">{display.unit}</p>
                         <AnimatedNumber
-                          value={value}
+                          value={display.convert(value)}
                           duration={0.4}
                           startOnView={false}
-                          format={formatNumber}
+                          format={formatDisplay}
                           className="mt-0.5 text-sm font-semibold leading-none text-foreground"
                         />
                         <p className="mt-0.5 text-[10px] text-muted-foreground">
@@ -598,8 +667,10 @@ export default function DashboardPage() {
                         <span className="truncate">{entry.label}</span>
                       </span>
                       <span className="tnum shrink-0 text-sm text-foreground">
-                        {formatNumber(entry.value)}{" "}
-                        <span className="text-muted-foreground">UGX</span>
+                        {display.formatValue(entry.value)}{" "}
+                        <span className="text-muted-foreground">
+                          {display.unit}
+                        </span>
                         <span className="ml-2 text-muted-foreground">
                           {Math.round((entry.value / Math.max(1, spent)) * 100)}%
                         </span>
@@ -614,14 +685,22 @@ export default function DashboardPage() {
               No spending recorded for this month yet.
             </p>
           )}
+          </div>
         </Panel>
 
-        <Panel className="order-6 flex flex-col p-5 xl:col-span-7">
+        <Panel className={cn("order-6 flex flex-col xl:col-span-7", SECTION_CARD)}>
           <PanelHeader
-            title="Daily flow"
-            hint="Last 30 days, by category"
-            className="p-0 pb-4"
+            title={
+              <span className="flex items-center gap-1.5">
+                Daily flow
+                <SectionInfo label="Daily flow">
+                  Spending for each of the last 30 days, stacked by category.
+                </SectionInfo>
+              </span>
+            }
+            className={SECTION_HEADER}
           />
+          <div className={cn(SECTION_BODY, "flex flex-1 flex-col p-3")}>
           <div className="relative min-h-[280px] flex-1">
             <BarChart
               data={daily30.map((point) => ({
@@ -640,8 +719,8 @@ export default function DashboardPage() {
               margin={{ top: 8, right: 8, bottom: 44, left: 56 }}
             >
               <Grid horizontal />
-              <YAxis formatValue={(value) => formatNumber(value)} />
-              {CATEGORIES.map((category) => (
+              <YAxis formatValue={axisValue} />
+              {expenseCategories.map((category) => (
                 <Bar
                   key={category.id}
                   dataKey={category.id}
@@ -652,7 +731,7 @@ export default function DashboardPage() {
               <BarXAxis maxLabels={6} />
               <ChartTooltip
                 content={({ point }) => {
-                  const rows = CATEGORIES.map((category) => ({
+                  const rows = expenseCategories.map((category) => ({
                     ...category,
                     value: Number(point[category.id]) || 0,
                   })).filter((entry) => entry.value > 0);
@@ -677,8 +756,7 @@ export default function DashboardPage() {
                                 {entry.label}
                               </span>
                               <span className="tnum text-right text-sm font-medium text-chart-tooltip-foreground">
-                                <span className="text-chart-tooltip-muted">UGX</span>{" "}
-                                {formatNumber(entry.value)}
+                                {display.formatMoney(entry.value)}
                               </span>
                             </div>
                           ))}
@@ -695,7 +773,7 @@ export default function DashboardPage() {
             </BarChart>
           </div>
           <div className="mt-3 flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5">
-            {CATEGORIES.map((category) => (
+            {expenseCategories.map((category) => (
               <span
                 key={category.id}
                 className="flex items-center gap-1.5 text-[10px] text-muted-foreground"
@@ -707,6 +785,7 @@ export default function DashboardPage() {
                 {category.label}
               </span>
             ))}
+          </div>
           </div>
         </Panel>
       </div>
@@ -720,7 +799,18 @@ function greeting(hour: number) {
   return "Evening";
 }
 
-const WEEKDAYS = ["S", "M", "T", "W", "T", "F", "S"];
+function monthRangeLabel(month: string) {
+  const days = daysInMonth(month);
+  const start = parseYmd(`${month}-01`);
+  const end = parseYmd(`${month}-${String(days).padStart(2, "0")}`);
+  const format = (date: Date) =>
+    date.toLocaleDateString("en-GB", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
+  return `${format(start)} – ${format(end)}`;
+}
 
 function LiveClock() {
   const [time, setTime] = useState<string | null>(null);
@@ -739,53 +829,4 @@ function LiveClock() {
   }, []);
 
   return <span className="tnum">{time ?? "--:--:--"}</span>;
-}
-
-function MonthCalendar({
-  month,
-  day,
-  days,
-}: {
-  month?: string;
-  day: number;
-  days: number;
-}) {
-  const firstWeekday = month ? parseYmd(`${month}-01`).getDay() : 0;
-  const current = Math.min(Math.max(day, 0), days);
-
-  return (
-    <div
-      className="w-[80px] shrink-0 select-none"
-      role="img"
-      aria-label={`Day ${current} of ${days} this month`}
-    >
-      <div className="grid grid-cols-7 gap-1 text-center text-[8px] font-medium text-muted-foreground">
-        {WEEKDAYS.map((label, index) => (
-          <span key={`${label}-${index}`}>{label}</span>
-        ))}
-      </div>
-      <div className="mt-1 grid grid-cols-7 gap-1">
-        {Array.from({ length: firstWeekday }).map((_, index) => (
-          <span key={`leading-${index}`} className="size-2" />
-        ))}
-        {Array.from({ length: days }).map((_, index) => {
-          const value = index + 1;
-          return (
-            <span
-              key={value}
-              className={cn(
-                "size-2 rounded-full",
-                value < current && "bg-foreground/30",
-                value === current && "bg-primary",
-                value > current && "bg-muted",
-              )}
-            />
-          );
-        })}
-      </div>
-      <p className="mt-1.5 text-[9px] text-muted-foreground">
-        Day {current} of {days}
-      </p>
-    </div>
-  );
 }

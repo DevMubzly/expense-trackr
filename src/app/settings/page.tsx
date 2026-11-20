@@ -1,24 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { gooeyToast } from "goey-toast";
 import {
   Delete02Icon,
-  Download01Icon,
-  PaintBoardIcon,
   PencilEdit01Icon,
   PlusSignIcon,
-  RepeatIcon,
   Tick02Icon,
   Upload01Icon,
-  UserAdd01Icon,
-  UserGroupIcon,
-  Wallet01Icon,
 } from "@hugeicons/core-free-icons";
 import { AccountSelect, accountIcon } from "@/components/account-select";
+import { useCategories } from "@/components/categories-provider";
+import { useCurrency } from "@/components/currency-provider";
+import { DropdownSelect } from "@/components/dropdown-select";
 import { InlineSlider } from "@/components/motion/range-slider-inline";
-import { AvailabilityScheduler } from "@/components/motion/availability-scheduler";
-import type { WeekAvailability } from "@/components/motion/availability-scheduler/types";
 import { Input } from "@/components/motion/input";
 import { ThemeToggle } from "@/components/motion/theme-toggle";
 import { WheelPicker } from "@/components/motion/wheel-picker";
@@ -26,21 +22,28 @@ import { MorphingModal } from "@/components/motion/morphing-modal";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/huge-icon";
 import { Money } from "@/components/money";
-import { Panel, PanelHeader } from "@/components/panel";
+import { SectionPanel } from "@/components/panel";
 import { PageLoader } from "@/components/page-loader";
 import { useApi, api } from "@/lib/use-api";
-import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from "@/lib/categories";
+import { useTransactionDialog } from "@/components/expense-dialog";
+import {
+  CATEGORY_COLORS,
+  CATEGORY_ICONS,
+  CATEGORY_ICON_OPTIONS,
+  type CategoryIconKey,
+  type CategoryKind,
+  type CategoryRecord,
+} from "@/lib/categories";
 import {
   formatNumber,
   formatNumericInput,
   parseNumericInput,
 } from "@/lib/format";
-import { useTransactionDialog } from "@/components/expense-dialog";
 import type {
   Account,
   AccountBalance,
   AccountType,
-  HouseholdMember,
+  Currency,
   Settings,
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -48,12 +51,9 @@ import { cn } from "@/lib/utils";
 export default function SettingsPage() {
   const { version, bumpVersion } = useTransactionDialog();
   const { data, loading, refresh } = useApi<Settings>("/api/settings");
-  const { data: accountsData, refresh: refreshAccounts } = useApi<AccountBalance[]>(
-    `/api/accounts?v=${version}`,
-  );
-  const { data: membersData, refresh: refreshMembers } = useApi<HouseholdMember[]>(
-    `/api/household?v=${version}`,
-  );
+  const { data: accountsData, refresh: refreshAccounts } = useApi<
+    AccountBalance[]
+  >(`/api/accounts?v=${version}`);
 
   if (loading && !data) {
     return <PageLoader variant="helix" size={30} />;
@@ -64,10 +64,8 @@ export default function SettingsPage() {
     <SettingsForm
       settings={data}
       accounts={accountsData ?? []}
-      members={membersData ?? []}
       onSaved={refresh}
       refreshAccounts={refreshAccounts}
-      refreshMembers={refreshMembers}
       bumpVersion={bumpVersion}
     />
   );
@@ -76,60 +74,182 @@ export default function SettingsPage() {
 function SettingsForm({
   settings,
   accounts,
-  members,
   onSaved,
   refreshAccounts,
-  refreshMembers,
   bumpVersion,
 }: {
   settings: Settings;
   accounts: AccountBalance[];
-  members: HouseholdMember[];
   onSaved: () => void;
   refreshAccounts: () => void;
-  refreshMembers: () => void;
   bumpVersion: () => void;
 }) {
+  const { expense, income, refresh: refreshCategories } = useCategories();
+  const display = useCurrency();
+  const router = useRouter();
   const [budget, setBudget] = useState(settings.monthlyBudget);
   const [rate, setRate] = useState(
     formatNumericInput(String(settings.usdRate), true),
   );
+  const [defaultCurrency, setDefaultCurrency] = useState<Currency>(
+    settings.defaultCurrency,
+  );
   const [payday, setPayday] = useState(settings.payday);
   const [buffer, setBuffer] = useState(settings.forecastBufferUgx);
-  const [defaultAccountId, setDefaultAccountId] = useState(settings.defaultAccountId);
-  const [weekPlan, setWeekPlan] = useState<WeekAvailability>(
-    settings.weekPlan as unknown as WeekAvailability,
+  const [defaultAccountId, setDefaultAccountId] = useState(
+    settings.defaultAccountId,
+  );
+  const [profileName, setProfileName] = useState(settings.profileName ?? "");
+  const [profileEmail, setProfileEmail] = useState(
+    settings.profileEmail ?? "",
+  );
+  const [avatarDataUrl, setAvatarDataUrl] = useState(
+    settings.avatarDataUrl ?? "",
   );
   const [saving, setSaving] = useState(false);
   const [accountModalOpen, setAccountModalOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
-  const [inviteName, setInviteName] = useState("");
-  const [inviteEmail, setInviteEmail] = useState("");
+  const [categoryModalOpen, setCategoryModalOpen] = useState(false);
+  const [editingCategory, setEditingCategory] =
+    useState<CategoryRecord | null>(null);
+  const [deletingCategory, setDeletingCategory] =
+    useState<CategoryRecord | null>(null);
+  const [categoryDeleting, setCategoryDeleting] = useState(false);
+  const [pendingHref, setPendingHref] = useState<string | null>(null);
+  const [deletingAccount, setDeletingAccount] = useState<Account | null>(
+    null,
+  );
+  const [accountDeleting, setAccountDeleting] = useState(false);
 
-  async function save() {
+  const dirty = useMemo(
+    () =>
+      budget !== settings.monthlyBudget ||
+      (parseNumericInput(rate) || 0) !== settings.usdRate ||
+      defaultCurrency !== settings.defaultCurrency ||
+      payday !== settings.payday ||
+      buffer !== settings.forecastBufferUgx ||
+      defaultAccountId !== settings.defaultAccountId ||
+      profileName !== (settings.profileName ?? "") ||
+      profileEmail !== (settings.profileEmail ?? "") ||
+      avatarDataUrl !== (settings.avatarDataUrl ?? ""),
+    [
+      avatarDataUrl,
+      budget,
+      buffer,
+      defaultAccountId,
+      defaultCurrency,
+      payday,
+      profileEmail,
+      profileName,
+      rate,
+      settings,
+    ],
+  );
+
+  function discard() {
+    setBudget(settings.monthlyBudget);
+    setRate(formatNumericInput(String(settings.usdRate), true));
+    setDefaultCurrency(settings.defaultCurrency);
+    setPayday(settings.payday);
+    setBuffer(settings.forecastBufferUgx);
+    setDefaultAccountId(settings.defaultAccountId);
+    setProfileName(settings.profileName ?? "");
+    setProfileEmail(settings.profileEmail ?? "");
+    setAvatarDataUrl(settings.avatarDataUrl ?? "");
+  }
+
+  useEffect(() => {
+    if (!dirty) return;
+    const onBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, [dirty]);
+
+  useEffect(() => {
+    if (!dirty) return;
+    const onClick = (event: MouseEvent) => {
+      if (
+        event.defaultPrevented ||
+        event.button !== 0 ||
+        event.metaKey ||
+        event.ctrlKey ||
+        event.shiftKey ||
+        event.altKey
+      ) {
+        return;
+      }
+      const anchor = (event.target as HTMLElement).closest<HTMLAnchorElement>(
+        "a[href]",
+      );
+      if (!anchor || anchor.target === "_blank") return;
+      const url = new URL(anchor.href, window.location.href);
+      if (url.origin !== window.location.origin) return;
+      if (
+        url.pathname === window.location.pathname &&
+        url.search === window.location.search
+      ) {
+        return;
+      }
+      event.preventDefault();
+      setPendingHref(`${url.pathname}${url.search}${url.hash}`);
+    };
+    document.addEventListener("click", onClick, true);
+    return () => document.removeEventListener("click", onClick, true);
+  }, [dirty]);
+
+  async function save(): Promise<boolean> {
+    if (!profileName.trim() || !profileEmail.includes("@")) {
+      gooeyToast.error("Check your profile", {
+        description: "A display name and valid email are required.",
+      });
+      return false;
+    }
     setSaving(true);
     try {
       await api.patch("/api/settings", {
         monthlyBudget: budget,
         usdRate: parseNumericInput(rate) || settings.usdRate,
+        defaultCurrency,
         payday,
         forecastBufferUgx: buffer,
         defaultAccountId,
-        weekPlan,
+        profileName: profileName.trim(),
+        profileEmail: profileEmail.trim(),
+        avatarDataUrl,
       });
       gooeyToast.success("Settings updated", {
-        description:
-          "Budget, USD rate, payday and forecast settings are up to date.",
+        description: "Your preferences and money defaults are up to date.",
       });
       onSaved();
       bumpVersion();
+      display.refresh();
+      return true;
     } catch (error) {
       gooeyToast.error("Could not save settings", {
         description: (error as Error).message,
       });
+      return false;
     } finally {
       setSaving(false);
     }
+  }
+
+  async function saveAndLeave() {
+    const savedOk = await save();
+    if (!savedOk || !pendingHref) return;
+    const href = pendingHref;
+    setPendingHref(null);
+    router.push(href);
+  }
+
+  function leaveWithoutSaving() {
+    if (!pendingHref) return;
+    const href = pendingHref;
+    setPendingHref(null);
+    router.push(href);
   }
 
   function openAccount(account: Account | null) {
@@ -142,231 +262,317 @@ function SettingsForm({
     setEditingAccount(null);
   }
 
-  async function archiveAccount(account: Account) {
-    if (account.id === settings.defaultAccountId) {
+  function openCategory(category: CategoryRecord | null) {
+    setEditingCategory(category);
+    setCategoryModalOpen(true);
+  }
+
+  function closeCategory() {
+    setCategoryModalOpen(false);
+    setEditingCategory(null);
+  }
+
+  async function confirmRemoveAccount() {
+    if (!deletingAccount) return;
+    if (deletingAccount.id === settings.defaultAccountId) {
       gooeyToast.error("Default account required", {
-        description:
-          "Choose another default account before archiving this one.",
+        description: "Choose another default account before removing this one.",
       });
       return;
     }
-    await api.delete(`/api/accounts/${account.id}`);
-    gooeyToast.success(`${account.name} archived`, {
-      description:
-        "The account is no longer included in balances, but its transactions remain.",
-    });
-    refreshAccounts();
-    bumpVersion();
-  }
-
-  async function addMember() {
-    if (!inviteName.trim() || !inviteEmail.trim()) return;
+    setAccountDeleting(true);
     try {
-      await api.post("/api/household", {
-        name: inviteName.trim(),
-        email: inviteEmail.trim(),
-        role: "member",
+      await api.delete(`/api/accounts/${deletingAccount.id}`);
+      gooeyToast.success(`${deletingAccount.name} removed`, {
+        description: "Its transactions remain in the ledger.",
       });
-      gooeyToast.success("Household member invited", {
-        description: `${inviteName.trim()} can now share this ledger.`,
-      });
-      setInviteName("");
-      setInviteEmail("");
-      refreshMembers();
-      bumpVersion();
-    } catch (error) {
-      gooeyToast.error("Could not add member", {
-        description: (error as Error).message,
-      });
-    }
-  }
-
-  async function removeMember(member: HouseholdMember) {
-    try {
-      await api.delete(`/api/household/${member.id}`);
-      gooeyToast.success(`${member.name} removed`, {
-        description: "They no longer have access to this household ledger.",
-      });
-      refreshMembers();
-      bumpVersion();
-    } catch (error) {
-      gooeyToast.error("Could not remove member", {
-        description: (error as Error).message,
-      });
-    }
-  }
-
-  async function downloadBackup(format: "json" | "csv") {
-    const response = await fetch(`/api/export?format=${format}`);
-    const blob = await response.blob();
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download =
-      format === "csv"
-        ? "expense-trackr-transactions.csv"
-        : "expense-trackr-backup.json";
-    link.click();
-    URL.revokeObjectURL(url);
-    gooeyToast.success("Backup downloaded", {
-      description:
-        format === "csv"
-          ? "Your transactions were exported as a CSV file."
-          : "A full JSON backup was saved to your downloads.",
-    });
-  }
-
-  async function importBackup(file: File | undefined) {
-    if (!file) return;
-    try {
-      const data = JSON.parse(await file.text());
-      await api.post("/api/import", data);
-      gooeyToast.success("Backup imported", {
-        description: `${file.name} restored transactions, accounts and planning data.`,
-      });
-      onSaved();
       refreshAccounts();
-      refreshMembers();
       bumpVersion();
+      setDeletingAccount(null);
     } catch (error) {
-      gooeyToast.error("Could not import backup", {
+      gooeyToast.error("Could not remove account", {
         description: (error as Error).message,
       });
+    } finally {
+      setAccountDeleting(false);
     }
+  }
+
+  async function removeCategory() {
+    if (!deletingCategory || categoryDeleting) return;
+    setCategoryDeleting(true);
+    try {
+      await api.delete(`/api/categories/${deletingCategory.id}`);
+      gooeyToast.success("Category removed", {
+        description: `${deletingCategory.label} is no longer available.`,
+      });
+      refreshCategories();
+      bumpVersion();
+      setDeletingCategory(null);
+    } catch (error) {
+      gooeyToast.error("Could not remove category", {
+        description: (error as Error).message,
+      });
+    } finally {
+      setCategoryDeleting(false);
+    }
+  }
+
+  function readAvatar(file: File | undefined) {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      gooeyToast.error("Choose an image file");
+      return;
+    }
+    if (file.size > 1_500_000) {
+      gooeyToast.error("Avatar is too large", {
+        description: "Choose an image under 1.5 MB.",
+      });
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => setAvatarDataUrl(String(reader.result ?? ""));
+    reader.readAsDataURL(file);
   }
 
   return (
-    <div className="space-y-8">
-      <header>
-        <h1 className="font-display text-5xl leading-none md:text-[56px]">Make it yours.</h1>
-        <p className="mt-4 max-w-xl text-sm leading-relaxed text-muted-foreground">
-          The budget, the accounts, the forecast. Everything here is stored through the mock API.
-        </p>
+    <div className="space-y-6">
+      <header className="flex flex-wrap items-end justify-between gap-6">
+        <div>
+          <h1 className="font-display text-4xl leading-none md:text-5xl">
+            Make it yours.
+          </h1>
+          <p className="mt-4 max-w-xl text-sm leading-relaxed text-muted-foreground">
+            Profile, money defaults, accounts and the categories behind every
+            chart.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          {dirty ? (
+            <span className="text-[11px] text-muted-foreground">
+              Unsaved changes
+            </span>
+          ) : null}
+          <Button
+            variant="ghost"
+            onClick={discard}
+            disabled={!dirty || saving}
+          >
+            Discard
+          </Button>
+          <Button
+            onClick={save}
+            loading={saving}
+            disabled={!dirty}
+          >
+            <Icon icon={Tick02Icon} className="size-4" />
+            Save changes
+          </Button>
+        </div>
       </header>
 
       <div className="grid grid-cols-12 gap-6">
-        <Panel className="col-span-12 p-6 lg:col-span-7">
-          <PanelHeader
-            title="Monthly budget"
-            hint="Drag to set what a month should cost"
-            action={<Icon icon={Wallet01Icon} className="size-4 text-muted-foreground" />}
-            className="p-0 pb-6"
-          />
-
-          <div className="mb-6">
-            <Money value={budget} size="xl" />
+        <SectionPanel
+          title="Profile"
+          info="Your display name, email and avatar for this mock account."
+          hint="The identity attached to this ledger"
+          className="col-span-12 lg:col-span-7"
+          bodyClassName="p-5"
+        >
+          <div className="flex flex-col gap-5 sm:flex-row">
+            <div className="flex shrink-0 flex-col items-center gap-2">
+              <div className="grid size-20 place-items-center overflow-hidden rounded-full bg-muted text-xl font-semibold text-muted-foreground">
+                {avatarDataUrl ? (
+                  <div
+                    className="size-full bg-cover bg-center"
+                    style={{ backgroundImage: `url(${avatarDataUrl})` }}
+                  />
+                ) : (
+                  initials(profileName)
+                )}
+              </div>
+              <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-full px-2 py-1 text-[11px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+                <Icon icon={Upload01Icon} className="size-3.5" />
+                Change avatar
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="sr-only"
+                  onChange={(event) => {
+                    readAvatar(event.target.files?.[0]);
+                    event.target.value = "";
+                  }}
+                />
+              </label>
+              {avatarDataUrl ? (
+                <button
+                  type="button"
+                  onClick={() => setAvatarDataUrl("")}
+                  className="text-[11px] text-muted-foreground hover:text-destructive"
+                >
+                  Remove
+                </button>
+              ) : null}
+            </div>
+            <div className="grid min-w-0 flex-1 gap-4">
+              <Input
+                label="Display name"
+                value={profileName}
+                onChange={setProfileName}
+                placeholder="Your name"
+              />
+              <Input
+                label="Email"
+                value={profileEmail}
+                onChange={setProfileEmail}
+                placeholder="you@example.com"
+              />
+            </div>
           </div>
+        </SectionPanel>
 
-          <InlineSlider
-            label="UGX"
-            value={budget}
-            onValueChange={setBudget}
-            min={0}
-            max={8_000_000}
-            step={50_000}
-            format={(value) => formatNumber(value)}
-            aria-label="Monthly budget"
-          />
-
-          <div className="mt-8 grid gap-5 sm:grid-cols-2">
+        <SectionPanel
+          title="Preferences"
+          info="Appearance, default currency and the USD rate used for display."
+          hint="Appearance and currency defaults"
+          className="col-span-12 lg:col-span-5"
+          bodyClassName="p-5"
+        >
+          <div className="space-y-5">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="text-[13px]">Theme</p>
+                <p className="text-[11px] text-muted-foreground">
+                  Light or dark, no system surprises
+                </p>
+              </div>
+              <ThemeToggle
+                variant="circle-blur"
+                className="size-10 rounded-xl border border-border"
+                iconClassName="size-4"
+              />
+            </div>
+            <div className="grid grid-cols-[88px_176px] items-center gap-2">
+              <p className="text-[13px] text-muted-foreground">Currency</p>
+              <div className="flex rounded-full border border-border bg-muted p-0.5">
+                {(["UGX", "USD"] as Currency[]).map((currency) => (
+                  <button
+                    key={currency}
+                    type="button"
+                    onClick={() => setDefaultCurrency(currency)}
+                    className={cn(
+                      "flex-1 rounded-full px-2 py-1.5 text-[11px] font-medium transition-colors",
+                      defaultCurrency === currency
+                        ? "bg-card text-foreground shadow-sm"
+                        : "text-muted-foreground",
+                    )}
+                  >
+                    {currency}
+                  </button>
+                ))}
+              </div>
+            </div>
             <Input
               label="USD rate (UGX per 1 USD)"
               value={rate}
               onChange={(value) => setRate(formatNumericInput(value, true))}
               placeholder="3720"
             />
-            <div className="flex flex-col justify-end gap-2">
-              <p className="text-[13px] text-muted-foreground">Theme</p>
-              <div className="flex items-center gap-3">
-                <ThemeToggle
-                  variant="circle-blur"
-                  className="size-10 rounded-xl border border-border bg-card"
-                  iconClassName="size-4"
-                />
-                <span className="text-xs text-muted-foreground">
-                  Light, or dark if you must
-                </span>
-              </div>
+          </div>
+        </SectionPanel>
+
+        <SectionPanel
+          title="Money defaults"
+          info="The monthly budget, payday and forecast buffer that drive Home and Plan."
+          hint="Budget, payday and forecast behavior"
+          className="col-span-12"
+          bodyClassName="p-5"
+        >
+          <div className="mb-5">
+            <Money value={budget} size="xl" />
+          </div>
+          <InlineSlider
+            label="Monthly budget"
+            value={budget}
+            onValueChange={setBudget}
+            min={0}
+            max={8_000_000}
+            step={50_000}
+            format={(value) => display.formatMoney(value)}
+            aria-label="Monthly budget"
+          />
+          <div className="mt-6 grid gap-5 md:grid-cols-3">
+            <div>
+              <p className="mb-2 text-[13px] text-muted-foreground">
+                Payday of the month
+              </p>
+              <WheelPicker
+                options={Array.from({ length: 31 }, (_, index) =>
+                  String(index + 1),
+                )}
+                value={String(payday)}
+                onValueChange={(value) => setPayday(Number(value))}
+                visibleCount={3}
+                itemHeight={34}
+                className="w-28 border-x-0"
+                aria-label="Payday of the month"
+              />
             </div>
+            <div>
+              <InlineSlider
+                label="Forecast buffer"
+                value={buffer}
+                onValueChange={setBuffer}
+                min={0}
+                max={1_000_000}
+                step={25_000}
+                format={(value) => display.formatMoney(value)}
+                aria-label="Forecast buffer"
+              />
+            </div>
+            <AccountSelect
+              label="Default account"
+              value={defaultAccountId}
+              accounts={accounts}
+              onValueChange={setDefaultAccountId}
+            />
           </div>
+        </SectionPanel>
 
-          <div className="mt-8 flex items-center justify-between border-t border-border/70 pt-5">
-            <p className="text-[11px] text-muted-foreground">
-              Saved entries keep the rate they were logged with.
-            </p>
-            <Button onClick={save} disabled={saving}>
-              <Icon icon={Tick02Icon} className="size-4" /> {saving ? "Saving" : "Save changes"}
+        <SectionPanel
+          title="Accounts"
+          info="Cash, bank and mobile money wallets included in balances."
+          hint={`${formatNumber(accounts.length)} wallets · ${display.formatMoney(
+            accounts.reduce((total, account) => total + account.balanceUgx, 0),
+          )}`}
+          action={
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => openAccount(null)}
+            >
+              <Icon icon={PlusSignIcon} className="size-4" /> Add account
             </Button>
-          </div>
-        </Panel>
-
-        <Panel className="col-span-12 p-6 lg:col-span-5">
-          <PanelHeader
-            title="Categories"
-            hint="The palette behind every chart"
-            action={<Icon icon={PaintBoardIcon} className="size-4 text-muted-foreground" />}
-            className="p-0 pb-4"
-          />
-          <p className="mb-2 text-[11px] font-medium text-muted-foreground">Expenses</p>
-          <ul className="space-y-2">
-            {EXPENSE_CATEGORIES.map((category) => (
-              <li
-                key={category.id}
-                className="flex items-center gap-3 rounded-2xl bg-muted/20 px-3 py-2"
-              >
-                <span
-                  className="grid size-8 place-items-center rounded-lg"
-                  style={{ background: `color-mix(in oklab, ${category.color} 14%, transparent)` }}
-                >
-                  <Icon icon={category.icon} className="size-4" />
-                </span>
-                <span className="flex-1 text-[13px]">{category.label}</span>
-                <span className="size-2.5 rounded-full" style={{ background: category.color }} />
-              </li>
-            ))}
-          </ul>
-          <p className="mt-5 mb-2 text-[11px] font-medium text-muted-foreground">Income</p>
-          <ul className="space-y-2">
-            {INCOME_CATEGORIES.map((category) => (
-              <li
-                key={category.id}
-                className="flex items-center gap-3 rounded-2xl bg-muted/20 px-3 py-2"
-              >
-                <span
-                  className="grid size-8 place-items-center rounded-lg"
-                  style={{ background: `color-mix(in oklab, ${category.color} 14%, transparent)` }}
-                >
-                  <Icon icon={category.icon} className="size-4" />
-                </span>
-                <span className="flex-1 text-[13px]">{category.label}</span>
-                <span className="size-2.5 rounded-full" style={{ background: category.color }} />
-              </li>
-            ))}
-          </ul>
-        </Panel>
-
-        <Panel className="col-span-12 p-6">
-          <PanelHeader
-            title="Accounts"
-            hint="Cash, bank and mobile money wallets"
-            action={
-              <Button variant="outline" size="sm" onClick={() => openAccount(null)}>
-                <Icon icon={PlusSignIcon} className="size-4" /> Add account
-              </Button>
-            }
-            className="p-0 pb-4"
-          />
+          }
+          className="col-span-12"
+          bodyClassName="p-4"
+        >
           <ul className="grid gap-2 md:grid-cols-2">
             {accounts.map((account) => (
               <li
                 key={account.id}
-                className="flex items-center gap-3 rounded-2xl bg-muted/20 px-3 py-2.5"
+                className="flex items-center gap-3 rounded-xl border border-foreground/5 px-2 py-2.5"
               >
                 <span
-                  className="grid size-9 place-items-center rounded-lg"
-                  style={{ background: `color-mix(in oklab, ${account.color} 14%, transparent)` }}
+                  className="grid size-8 place-items-center rounded-lg"
+                  style={{
+                    background: `color-mix(in oklab, ${account.color} 14%, transparent)`,
+                  }}
                 >
-                  <Icon icon={accountIcon(account.type)} className="size-4" />
+                  <Icon
+                    icon={accountIcon(account.type)}
+                    className="size-3.5"
+                  />
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[13px]">{account.name}</p>
@@ -375,181 +581,102 @@ function SettingsForm({
                   </p>
                 </div>
                 <Money value={account.balanceUgx} size="sm" />
-                <button
-                  type="button"
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
                   onClick={() => openAccount(account)}
                   aria-label={`Edit ${account.name}`}
-                  className="grid size-8 place-items-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"
                 >
                   <Icon icon={PencilEdit01Icon} className="size-3.5" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => archiveAccount(account)}
-                  aria-label={`Archive ${account.name}`}
-                  className="grid size-8 place-items-center rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  onClick={() => setDeletingAccount(account)}
+                  aria-label={`Remove ${account.name}`}
+                  className="text-muted-foreground hover:text-destructive"
                 >
                   <Icon icon={Delete02Icon} className="size-3.5" />
-                </button>
+                </Button>
               </li>
             ))}
           </ul>
-        </Panel>
+        </SectionPanel>
 
-        <Panel className="col-span-12 p-6">
-          <PanelHeader
-            title="Payday & forecast"
-            hint="Safe-to-spend runs to the next payday"
-            className="p-0 pb-5"
-          />
-          <div className="grid gap-6 md:grid-cols-3">
-            <div>
-              <p className="mb-2 text-[13px] text-muted-foreground">Payday day</p>
-              <WheelPicker
-                options={Array.from({ length: 31 }, (_, index) => String(index + 1))}
-                value={String(payday)}
-                onValueChange={(value) => setPayday(Number(value))}
-                visibleCount={3}
-                itemHeight={34}
-                className="w-28"
-                aria-label="Payday"
-              />
-            </div>
-            <div className="md:col-span-2">
-              <InlineSlider
-                label="Buffer"
-                value={buffer}
-                onValueChange={setBuffer}
-                min={0}
-                max={1_000_000}
-                step={25_000}
-                format={(value) => `${formatNumber(value)} UGX`}
-                aria-label="Forecast buffer"
-              />
-              <div className="mt-5">
-                <AccountSelect
-                  label="Default account"
-                  value={defaultAccountId}
-                  accounts={accounts}
-                  onValueChange={setDefaultAccountId}
-                />
-              </div>
-            </div>
-          </div>
-          <div className="mt-6 flex justify-end border-t border-border/70 pt-5">
-            <Button onClick={save} disabled={saving}>
-              <Icon icon={Tick02Icon} className="size-4" /> {saving ? "Saving" : "Save forecast"}
+        <SectionPanel
+          title="Categories"
+          info="Labels, colors and icons used by entries, selectors and charts."
+          hint="Editable labels, colors and icons"
+          action={
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => openCategory(null)}
+            >
+              <Icon icon={PlusSignIcon} className="size-4" /> Add category
             </Button>
+          }
+          className="col-span-12"
+          bodyClassName="p-4"
+        >
+          <div className="grid gap-5 md:grid-cols-2">
+            <CategoryColumn
+              title="Expenses"
+              categories={expense}
+              onEdit={openCategory}
+              onDelete={setDeletingCategory}
+            />
+            <CategoryColumn
+              title="Income"
+              categories={income}
+              onEdit={openCategory}
+              onDelete={setDeletingCategory}
+            />
           </div>
-        </Panel>
+        </SectionPanel>
+      </div>
 
-        <Panel className="col-span-12 p-6">
-          <PanelHeader
-            title="Household"
-            hint="Shared budgets and visibility — mock membership"
-            action={<Icon icon={UserGroupIcon} className="size-4 text-muted-foreground" />}
-            className="p-0 pb-4"
-          />
-          <ul className="grid gap-2 md:grid-cols-2">
-            {members.map((member) => (
-              <li
-                key={member.id}
-                className="flex items-center gap-3 rounded-2xl bg-muted/20 px-3 py-2.5"
+      <MorphingModal
+        viewId={pendingHref ? "unsaved-changes" : null}
+        onClose={() => setPendingHref(null)}
+        placement="center"
+        className="max-w-sm"
+        ariaLabel="Unsaved changes"
+      >
+        {pendingHref ? (
+          <div className="space-y-4">
+            <div>
+              <h2 className="text-lg font-semibold tracking-[-0.02em]">
+                Save your changes first?
+              </h2>
+              <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">
+                You have unsaved settings. Save them before leaving, or leave
+                without saving.
+              </p>
+            </div>
+            <div className="flex flex-wrap justify-end gap-2 pt-1">
+              <Button
+                variant="ghost"
+                onClick={() => setPendingHref(null)}
+                disabled={saving}
               >
-                <span className="grid size-9 place-items-center rounded-full bg-muted text-[12px] font-semibold text-muted-foreground">
-                  {member.name.charAt(0).toUpperCase()}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-[13px]">{member.name}</p>
-                  <p className="truncate text-[10px] text-muted-foreground">{member.email}</p>
-                </div>
-                <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
-                  {member.role} · {member.status}
-                </span>
-                {member.role !== "owner" ? (
-                  <button
-                    type="button"
-                    onClick={() => removeMember(member)}
-                    aria-label={`Remove ${member.name}`}
-                    className="grid size-8 place-items-center rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                  >
-                    <Icon icon={Delete02Icon} className="size-3.5" />
-                  </button>
-                ) : null}
-              </li>
-            ))}
-          </ul>
-          <div className="mt-5 grid gap-2 border-t border-border/70 pt-5 sm:grid-cols-[1fr_1fr_auto]">
-            <Input
-              label="Name"
-              value={inviteName}
-              onChange={setInviteName}
-              placeholder="Aisha"
-            />
-            <Input
-              label="Email"
-              value={inviteEmail}
-              onChange={setInviteEmail}
-              placeholder="aisha@example.com"
-            />
-            <div className="flex items-end">
+                Stay
+              </Button>
               <Button
                 variant="outline"
-                onClick={addMember}
-                disabled={!inviteName.trim() || !inviteEmail.trim()}
+                onClick={leaveWithoutSaving}
+                disabled={saving}
               >
-                <Icon icon={UserAdd01Icon} className="size-4" /> Invite
+                Leave without saving
+              </Button>
+              <Button onClick={saveAndLeave} loading={saving}>
+                <Icon icon={Tick02Icon} className="size-4" />
+                Save and leave
               </Button>
             </div>
           </div>
-        </Panel>
-
-        <Panel className="col-span-12 p-6">
-          <PanelHeader
-            title="Data & backup"
-            hint="Export a copy or restore a backup file"
-            className="p-0 pb-4"
-          />
-          <div className="flex flex-wrap items-center gap-2">
-            <Button variant="outline" onClick={() => downloadBackup("json")}>
-              <Icon icon={Download01Icon} className="size-4" /> Export JSON
-            </Button>
-            <Button variant="outline" onClick={() => downloadBackup("csv")}>
-              <Icon icon={Download01Icon} className="size-4" /> Export CSV
-            </Button>
-            <label className="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-lg border border-border px-2.5 text-sm font-medium transition-colors hover:bg-muted">
-              <Icon icon={Upload01Icon} className="size-4" /> Import backup
-              <input
-                type="file"
-                accept="application/json"
-                className="sr-only"
-                onChange={(event) => {
-                  importBackup(event.target.files?.[0]);
-                  event.target.value = "";
-                }}
-              />
-            </label>
-          </div>
-          <p className="mt-3 text-[11px] text-muted-foreground">
-            The mock store is in memory. Export a backup before restarting the dev server.
-          </p>
-        </Panel>
-
-        <Panel className="col-span-12 p-6">
-          <PanelHeader
-            title="Spending windows"
-            hint="When money usually leaves your account"
-            action={<Icon icon={RepeatIcon} className="size-4 text-muted-foreground" />}
-            className="p-0 pb-4"
-          />
-          <AvailabilityScheduler value={weekPlan} onChange={setWeekPlan} step={30} />
-          <div className="mt-5 flex justify-end border-t border-border/70 pt-5">
-            <Button onClick={save} disabled={saving}>
-              <Icon icon={Tick02Icon} className="size-4" /> {saving ? "Saving" : "Save week plan"}
-            </Button>
-          </div>
-        </Panel>
-      </div>
+        ) : null}
+      </MorphingModal>
 
       <MorphingModal
         viewId={accountModalOpen ? "account" : null}
@@ -571,6 +698,318 @@ function SettingsForm({
           />
         ) : null}
       </MorphingModal>
+
+      <MorphingModal
+        viewId={categoryModalOpen ? "category" : null}
+        onClose={closeCategory}
+        placement="center"
+        className="max-w-md"
+        ariaLabel={editingCategory ? "Edit category" : "Add category"}
+      >
+        {categoryModalOpen ? (
+          <CategoryForm
+            key={editingCategory?.id ?? "new-category"}
+            category={editingCategory}
+            onSaved={() => {
+              refreshCategories();
+              bumpVersion();
+              closeCategory();
+            }}
+            onCancel={closeCategory}
+          />
+        ) : null}
+      </MorphingModal>
+
+      <MorphingModal
+        viewId={deletingCategory ? "delete-category" : null}
+        onClose={() => {
+          if (!categoryDeleting) setDeletingCategory(null);
+        }}
+        placement="center"
+        className="max-w-sm"
+        ariaLabel="Delete category"
+      >
+        {deletingCategory ? (
+          <div className="space-y-4">
+            <div>
+              <h2 className="text-lg font-semibold tracking-[-0.02em]">
+                Delete {deletingCategory.label}?
+              </h2>
+              <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">
+                Categories used by transactions or budgets cannot be removed.
+              </p>
+            </div>
+            <div className="flex justify-end gap-2 pt-1">
+              <Button
+                variant="ghost"
+                onClick={() => setDeletingCategory(null)}
+                disabled={categoryDeleting}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={removeCategory}
+                loading={categoryDeleting}
+              >
+                <Icon icon={Delete02Icon} className="size-4" /> Delete
+              </Button>
+            </div>
+          </div>
+        ) : null}
+      </MorphingModal>
+
+      <MorphingModal
+        viewId={deletingAccount ? "delete-account" : null}
+        onClose={() => {
+          if (!accountDeleting) setDeletingAccount(null);
+        }}
+        placement="center"
+        className="max-w-sm"
+        ariaLabel="Remove account"
+      >
+        {deletingAccount ? (
+          <div className="space-y-4">
+            <div>
+              <h2 className="text-lg font-semibold tracking-[-0.02em]">
+                Remove {deletingAccount.name}?
+              </h2>
+              <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">
+                The account disappears from balances. Its transactions remain
+                in the ledger.
+              </p>
+            </div>
+            <div className="flex justify-end gap-2 pt-1">
+              <Button
+                variant="ghost"
+                onClick={() => setDeletingAccount(null)}
+                disabled={accountDeleting}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={confirmRemoveAccount}
+                loading={accountDeleting}
+              >
+                <Icon icon={Delete02Icon} className="size-4" /> Remove
+              </Button>
+            </div>
+          </div>
+        ) : null}
+      </MorphingModal>
+    </div>
+  );
+}
+
+function initials(name: string | undefined) {
+  return (name ?? "")
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join("");
+}
+
+function CategoryColumn({
+  title,
+  categories,
+  onEdit,
+  onDelete,
+}: {
+  title: string;
+  categories: ReturnType<typeof useCategories>["expense"];
+  onEdit: (category: CategoryRecord) => void;
+  onDelete: (category: CategoryRecord) => void;
+}) {
+  return (
+    <div>
+      <p className="mb-2 text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+        {title}
+      </p>
+      <ul className="divide-y divide-foreground/5">
+        {categories.map((category) => (
+          <li
+            key={category.id}
+            className="flex items-center gap-2 px-2 py-2"
+          >
+            <span
+              className="grid size-7 shrink-0 place-items-center rounded-lg"
+              style={{
+                background: `color-mix(in oklab, ${category.color} 14%, transparent)`,
+              }}
+            >
+              <Icon icon={category.icon} className="size-3.5" />
+            </span>
+            <span className="min-w-0 flex-1 truncate text-[12px]">
+              {category.label}
+            </span>
+            <span
+              className="size-2.5 shrink-0 rounded-full"
+              style={{ background: category.color }}
+            />
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={() => onEdit(category)}
+              aria-label={`Edit ${category.label}`}
+            >
+              <Icon icon={PencilEdit01Icon} className="size-3.5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={() => onDelete(category)}
+              aria-label={`Delete ${category.label}`}
+              className="text-muted-foreground hover:text-destructive"
+            >
+              <Icon icon={Delete02Icon} className="size-3.5" />
+            </Button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function CategoryForm({
+  category,
+  onSaved,
+  onCancel,
+}: {
+  category: CategoryRecord | null;
+  onSaved: () => void;
+  onCancel: () => void;
+}) {
+  const [label, setLabel] = useState(category?.label ?? "");
+  const [kind, setKind] = useState<CategoryKind>(category?.kind ?? "expense");
+  const [color, setColor] = useState(
+    category?.color ?? CATEGORY_COLORS[0],
+  );
+  const [iconKey, setIconKey] = useState<CategoryIconKey>(
+    category?.iconKey ?? "package",
+  );
+  const [saving, setSaving] = useState(false);
+
+  async function submit() {
+    if (!label.trim() || saving) return;
+    setSaving(true);
+    try {
+      if (category) {
+        await api.patch(`/api/categories/${category.id}`, {
+          label: label.trim(),
+          color,
+          iconKey,
+        });
+        gooeyToast.success("Category updated", {
+          description: `${label.trim()} is updated across the app.`,
+        });
+      } else {
+        await api.post("/api/categories", {
+          label: label.trim(),
+          kind,
+          color,
+          iconKey,
+        });
+        gooeyToast.success("Category added", {
+          description: `${label.trim()} is ready for new entries.`,
+        });
+      }
+      onSaved();
+    } catch (error) {
+      gooeyToast.error("Could not save category", {
+        description: (error as Error).message,
+      });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <h2 className="text-lg font-semibold tracking-[-0.02em]">
+          {category ? "Edit category" : "Add category"}
+        </h2>
+        <p className="mt-0.5 text-[13px] text-muted-foreground">
+          Name, type, color and icon used across charts.
+        </p>
+      </div>
+
+      <Input
+        label="Name"
+        value={label}
+        onChange={setLabel}
+        placeholder="Groceries"
+      />
+
+      {!category ? (
+        <div className="grid grid-cols-[88px_176px] items-center gap-2">
+          <p className="text-[13px] text-muted-foreground">Type</p>
+          <DropdownSelect
+            value={kind}
+            onValueChange={(value) => setKind(value as CategoryKind)}
+            ariaLabel="Category type"
+            options={[
+              { value: "expense", label: "Expense" },
+              { value: "income", label: "Income" },
+            ]}
+          />
+        </div>
+      ) : null}
+
+      <div>
+        <p className="mb-2 text-[13px] text-muted-foreground">Color</p>
+        <div className="flex flex-wrap gap-2">
+          {CATEGORY_COLORS.map((option) => (
+            <button
+              key={option}
+              type="button"
+              onClick={() => setColor(option)}
+              aria-label={`Use color ${option}`}
+              className={cn(
+                "size-7 rounded-full border-2 transition-transform",
+                color === option
+                  ? "scale-110 border-foreground"
+                  : "border-transparent",
+              )}
+              style={{ background: option }}
+            />
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <p className="mb-2 text-[13px] text-muted-foreground">Icon</p>
+        <div className="grid grid-cols-6 gap-1.5">
+          {CATEGORY_ICON_OPTIONS.map((option) => (
+            <button
+              key={option.key}
+              type="button"
+              onClick={() => setIconKey(option.key)}
+              aria-label={`Use ${option.label} icon`}
+              className={cn(
+                "grid aspect-square place-items-center rounded-lg border transition-colors",
+                iconKey === option.key
+                  ? "border-foreground/30 bg-muted text-foreground"
+                  : "border-border/60 text-muted-foreground hover:bg-muted hover:text-foreground",
+              )}
+            >
+              <Icon icon={CATEGORY_ICONS[option.key]} className="size-4" />
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex justify-end gap-2 pt-1">
+        <Button variant="ghost" onClick={onCancel} disabled={saving}>
+          Cancel
+        </Button>
+        <Button onClick={submit} loading={saving} disabled={!label.trim()}>
+          <Icon icon={Tick02Icon} className="size-4" />
+          {category ? "Save category" : "Add category"}
+        </Button>
+      </div>
     </div>
   );
 }
@@ -590,6 +1029,7 @@ function AccountForm({
   onSaved: () => void;
   onCancel: () => void;
 }) {
+  const display = useCurrency();
   const [name, setName] = useState(account?.name ?? "");
   const [type, setType] = useState<AccountType>(account?.type ?? "cash");
   const [provider, setProvider] = useState(account?.provider ?? "");
@@ -616,7 +1056,7 @@ function AccountForm({
       } else {
         await api.post("/api/accounts", payload);
         gooeyToast.success("Account added", {
-          description: `${name.trim()} is ready with a UGX ${formatNumber(
+          description: `${name.trim()} is ready with a ${display.formatMoney(
             parseNumericInput(openingBalance),
           )} opening balance.`,
         });
@@ -642,27 +1082,21 @@ function AccountForm({
         </p>
       </div>
 
-      <Input label="Name" value={name} onChange={setName} placeholder="MTN MoMo" />
+      <Input
+        label="Name"
+        value={name}
+        onChange={setName}
+        placeholder="MTN MoMo"
+      />
 
-      <div>
-        <p className="mb-2 text-[13px] text-muted-foreground">Type</p>
-        <div className="flex rounded-full border border-border bg-muted p-0.5">
-          {ACCOUNT_TYPES.map((option) => (
-            <button
-              key={option.value}
-              type="button"
-              onClick={() => setType(option.value)}
-              className={cn(
-                "flex-1 rounded-full px-2 py-1.5 text-[11px] font-medium transition-colors",
-                type === option.value
-                  ? "bg-card text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
+      <div className="grid grid-cols-[88px_176px] items-center gap-2">
+        <p className="text-[13px] text-muted-foreground">Type</p>
+        <DropdownSelect
+          value={type}
+          onValueChange={(value) => setType(value as AccountType)}
+          ariaLabel="Account type"
+          options={ACCOUNT_TYPES}
+        />
       </div>
 
       {type === "momo" ? (
@@ -685,7 +1119,7 @@ function AccountForm({
         <Button variant="ghost" onClick={onCancel} disabled={saving}>
           Cancel
         </Button>
-        <Button onClick={submit} disabled={!name.trim() || saving}>
+        <Button onClick={submit} loading={saving} disabled={!name.trim()}>
           <Icon icon={Tick02Icon} className="size-4" />
           {account ? "Save account" : "Add account"}
         </Button>

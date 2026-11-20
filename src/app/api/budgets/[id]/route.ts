@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server";
-import { CATEGORY_BY_ID, isCategoryOfKind } from "@/lib/categories";
+import { categoryExists, isCategoryKind } from "@/lib/db";
 import { deleteBudget, listBudgets, updateBudget } from "@/lib/db";
 
 export async function PATCH(
@@ -28,7 +28,7 @@ export async function PATCH(
     const categoryId = String(body.categoryId);
     if (
       categoryId !== "all" &&
-      (!CATEGORY_BY_ID.has(categoryId) || !isCategoryOfKind(categoryId, "expense"))
+      (!categoryExists(categoryId) || !isCategoryKind(categoryId, "expense"))
     ) {
       return Response.json({ error: "Invalid category" }, { status: 400 });
     }

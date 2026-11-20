@@ -75,7 +75,7 @@ export function NotFoundActions({
         whileTap={whileTap}
         whileHover={whileHover}
         transition={SPRING_PRESS}
-        className="inline-flex h-11 select-none items-center justify-center rounded-full bg-foreground px-6 text-sm font-medium text-background transition-colors hover:bg-foreground/90"
+        className="inline-flex h-9 select-none items-center justify-center rounded-full bg-foreground px-3 text-sm font-medium text-background transition-colors hover:bg-foreground/90"
       >
         {homeLabel ?? t("homeLabel")}
       </motion.a>
@@ -84,7 +84,7 @@ export function NotFoundActions({
         whileTap={whileTap}
         whileHover={whileHover}
         transition={SPRING_PRESS}
-        className="inline-flex h-11 select-none items-center justify-center rounded-full border border-border bg-card px-6 text-sm font-medium text-foreground transition-colors hover:bg-muted/60"
+        className="inline-flex h-9 select-none items-center justify-center rounded-full border border-border bg-card px-3 text-sm font-medium text-foreground transition-colors hover:bg-muted/60"
       >
         {browseLabel ?? t("browseLabel")}
       </motion.a>

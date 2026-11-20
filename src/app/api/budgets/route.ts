@@ -1,10 +1,15 @@
 import { connection, type NextRequest } from "next/server";
-import { CATEGORY_BY_ID, isCategoryOfKind } from "@/lib/categories";
+import { categoryExists, isCategoryKind } from "@/lib/db";
 import { addBudget, listBudgets } from "@/lib/db";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   await connection();
-  return Response.json(listBudgets());
+  const month = request.nextUrl.searchParams.get("month") ?? undefined;
+  return Response.json(
+    listBudgets(
+      month && /^\d{4}-\d{2}$/.test(month) ? month : undefined,
+    ),
+  );
 }
 
 export async function POST(request: NextRequest) {
@@ -22,7 +27,7 @@ export async function POST(request: NextRequest) {
   const period = body.period === "weekly" ? "weekly" : "monthly";
 
   if (!name) return Response.json({ error: "Name is required" }, { status: 400 });
-  if (categoryId !== "all" && (!CATEGORY_BY_ID.has(categoryId) || !isCategoryOfKind(categoryId, "expense"))) {
+  if (categoryId !== "all" && (!categoryExists(categoryId) || !isCategoryKind(categoryId, "expense"))) {
     return Response.json({ error: "Invalid category" }, { status: 400 });
   }
   if (!Number.isFinite(limitUgx) || limitUgx <= 0) {

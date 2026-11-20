@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server";
-import { CATEGORY_BY_ID, isCategoryOfKind } from "@/lib/categories";
+import { categoryExists, isCategoryKind } from "@/lib/db";
 import { deleteTransaction, getAccount, getTransaction, updateTransaction } from "@/lib/db";
 import type { Currency, TransactionSource, TransactionType } from "@/lib/types";
 
@@ -75,7 +75,7 @@ export async function PATCH(
   } else {
     category =
       typeof body.category === "string" ? body.category : current.category;
-    if (!CATEGORY_BY_ID.has(category) || !isCategoryOfKind(category, type)) {
+    if (!categoryExists(category) || !isCategoryKind(category, type)) {
       return Response.json({ error: "Unknown category" }, { status: 400 });
     }
   }

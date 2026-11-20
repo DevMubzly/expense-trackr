@@ -64,6 +64,27 @@ export async function PATCH(request: NextRequest) {
     }
     patch.weekPlan = body.weekPlan as Settings["weekPlan"];
   }
+  if (body.profileName !== undefined) {
+    const name = String(body.profileName).trim();
+    if (!name) {
+      return Response.json({ error: "Invalid profile name" }, { status: 400 });
+    }
+    patch.profileName = name.slice(0, 80);
+  }
+  if (body.profileEmail !== undefined) {
+    const email = String(body.profileEmail).trim();
+    if (!email || !email.includes("@")) {
+      return Response.json({ error: "Invalid profile email" }, { status: 400 });
+    }
+    patch.profileEmail = email.slice(0, 160);
+  }
+  if (body.avatarDataUrl !== undefined) {
+    const avatar = String(body.avatarDataUrl);
+    if (avatar && !avatar.startsWith("data:image/")) {
+      return Response.json({ error: "Invalid avatar" }, { status: 400 });
+    }
+    patch.avatarDataUrl = avatar;
+  }
 
   return Response.json(updateSettings(patch));
 }

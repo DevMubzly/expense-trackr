@@ -288,6 +288,9 @@ export function createSettings(defaultAccountId = "acc_mtn"): Settings {
     defaultAccountId,
     payday: 28,
     forecastBufferUgx: 200_000,
+    profileName: "Mubarak Balinda",
+    profileEmail: "mubarak@example.com",
+    avatarDataUrl: "",
     weekPlan: {
       mon: { enabled: true, ranges: [{ id: "mon-1", start: "09:00", end: "17:00" }] },
       tue: { enabled: true, ranges: [{ id: "tue-1", start: "09:00", end: "17:00" }] },

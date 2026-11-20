@@ -98,6 +98,9 @@ export type Settings = {
   payday: number;
   forecastBufferUgx: number;
   weekPlan: WeekPlan;
+  profileName: string;
+  profileEmail: string;
+  avatarDataUrl: string;
 };
 
 export type CategoryTotal = {
@@ -181,6 +184,16 @@ export type Goal = {
   createdAt: string;
 };
 
+export type GoalContribution = {
+  id: string;
+  goalId: string;
+  amountUgx: number;
+  date: string;
+  accountId?: string;
+  note: string;
+  createdAt: string;
+};
+
 export type Debt = {
   id: string;
   direction: "borrowed" | "lent";
@@ -190,6 +203,39 @@ export type Debt = {
   dueOn: string;
   note: string;
   createdAt: string;
+};
+
+export type DebtPayment = {
+  id: string;
+  debtId: string;
+  amountUgx: number;
+  date: string;
+  accountId?: string;
+  note: string;
+  createdAt: string;
+};
+
+export type RecurringRun = {
+  id: string;
+  ruleId: string;
+  amountUgx: number;
+  date: string;
+  createdAt: string;
+};
+
+export type PlanActivityKind =
+  | "goal-contribution"
+  | "debt-payment"
+  | "recurring-run";
+
+export type PlanActivity = {
+  id: string;
+  kind: PlanActivityKind;
+  date: string;
+  amountUgx: number;
+  title: string;
+  detail: string;
+  refId: string;
 };
 
 export type Budget = {

@@ -1,9 +1,12 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
 import { gooeyToast } from "goey-toast";
 import {
   ArrowDown02Icon,
+  ArrowLeft01Icon,
+  ArrowRight01Icon,
   ArrowUp02Icon,
   Delete02Icon,
   PencilEdit01Icon,
@@ -15,6 +18,9 @@ import {
 } from "@hugeicons/core-free-icons";
 import { AccountSelect } from "@/components/account-select";
 import { CategorySelect } from "@/components/category-select";
+import { useCategories } from "@/components/categories-provider";
+import { useCurrency } from "@/components/currency-provider";
+import { DropdownSelect } from "@/components/dropdown-select";
 import { MetricCard } from "@/components/metric-card";
 import { Checkbox } from "@/components/motion/checkbox";
 import {
@@ -29,23 +35,23 @@ import {
 import { Input } from "@/components/motion/input";
 import { PageLoader } from "@/components/page-loader";
 import { MorphingModal } from "@/components/motion/morphing-modal";
-import { MorphingTabs } from "@/components/motion/morphing-tabs";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/huge-icon";
 import { Money } from "@/components/money";
-import { EmptyState, Panel, PanelHeader } from "@/components/panel";
+import { EmptyState, SectionPanel } from "@/components/panel";
 import { useTransactionDialog } from "@/components/expense-dialog";
 import { useApi, api } from "@/lib/use-api";
-import { categoriesFor } from "@/lib/categories";
 import {
   addDays,
   formatNumber,
   formatNumericInput,
+  monthLabel,
   parseNumericInput,
   parseYmd,
   ymd,
 } from "@/lib/format";
 import { PERIOD_LABELS, PERIOD_OPTIONS } from "@/lib/periods";
+import { useNow } from "@/lib/use-now";
 import type {
   Account,
   Budget,
@@ -53,10 +59,9 @@ import type {
   Debt,
   Goal,
   NetWorth,
-  PeriodPoint,
+  PlanActivity,
   RecurringRule,
   StatPeriod,
-  Stats,
   TransactionType,
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -67,6 +72,34 @@ type ModalState =
   | { kind: "debt"; item: Debt | null }
   | { kind: "budget"; item: BudgetProgress | null }
   | { kind: "recurring"; item: RecurringRule | null }
+  | null;
+
+type PlanSection =
+  | "attention"
+  | "goals"
+  | "debts"
+  | "recurring"
+  | "budgets"
+  | "activity";
+
+function isPlanSection(value: string | null): value is PlanSection {
+  return (
+    value === "attention" ||
+    value === "goals" ||
+    value === "debts" ||
+    value === "recurring" ||
+    value === "budgets" ||
+    value === "activity"
+  );
+}
+
+type ActionState =
+  | {
+      kind: "contribution";
+      goal: Goal;
+      mode: "contribute" | "withdraw";
+    }
+  | { kind: "payment"; debt: Debt }
   | null;
 
 const FREQUENCIES: RecurringRule["frequency"][] = ["daily", "weekly", "monthly"];
@@ -93,44 +126,139 @@ function monthsUntil(deadline: string): number {
   );
 }
 
-function shapeSeries(
-  points: readonly PeriodPoint[],
-  key: "expense" | "income" | "net" | "count",
-  value: number,
-  fromRatio: number,
-) {
-  if (points.length === 0) return [];
-  const series = points.map((point) => Math.abs(Number(point[key]) || 0));
-  const max = Math.max(...series, 1);
-
-  return points.map((point, index) => {
-    const progress = points.length > 1 ? index / (points.length - 1) : 1;
-    const trend = fromRatio + (1 - fromRatio) * progress;
-    const wave = (series[index] / max - 0.5) * 0.22;
-    return {
-      label: point.label,
-      value: Math.round(value * (trend + wave)),
-    };
+function shortDateLabel(value: string) {
+  return parseYmd(value).toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
   });
+}
+
+function shiftMonthKey(key: string, delta: number) {
+  const [year, month] = key.split("-").map(Number);
+  if (!year || !month) return "";
+  const total = year * 12 + (month - 1) + delta;
+  const nextYear = Math.floor(total / 12);
+  const nextMonth = ((total % 12) + 12) % 12 + 1;
+  return `${nextYear}-${String(nextMonth).padStart(2, "0")}`;
+}
+
+function contributionSpark(
+  goals: Goal[],
+  activity: PlanActivity[],
+) {
+  const entries = activity
+    .filter((entry) => entry.kind === "goal-contribution")
+    .sort((a, b) => a.date.localeCompare(b.date));
+  if (entries.length === 0) return [];
+
+  const current = goals.reduce((total, goal) => total + goal.savedUgx, 0);
+  const contributed = entries.reduce(
+    (total, entry) => total + entry.amountUgx,
+    0,
+  );
+  let running = Math.max(0, current - contributed);
+  const points = entries.map((entry) => {
+    running += entry.amountUgx;
+    return { label: shortDateLabel(entry.date), value: running };
+  });
+  return [...points, { label: "Now", value: current }];
+}
+
+function balanceSpark(
+  direction: Debt["direction"],
+  debts: Debt[],
+  activity: PlanActivity[],
+) {
+  const debtIds = new Set(
+    debts
+      .filter((debt) => debt.direction === direction)
+      .map((debt) => debt.id),
+  );
+  const entries = activity
+    .filter(
+      (entry) =>
+        entry.kind === "debt-payment" && debtIds.has(entry.refId),
+    )
+    .sort((a, b) => a.date.localeCompare(b.date));
+  if (entries.length === 0) return [];
+
+  const current = debts
+    .filter((debt) => debtIds.has(debt.id))
+    .reduce((total, debt) => total + debt.balanceUgx, 0);
+  let running =
+    current + entries.reduce((total, entry) => total + entry.amountUgx, 0);
+  const points = entries.map((entry) => {
+    running = Math.max(0, running - entry.amountUgx);
+    return { label: shortDateLabel(entry.date), value: running };
+  });
+  return [...points, { label: "Now", value: current }];
 }
 
 export default function PlanPage() {
   const { version, bumpVersion } = useTransactionDialog();
+  const display = useCurrency();
+  const now = useNow();
+  const currentMonth = now ? ymd(now).slice(0, 7) : "";
+  const [budgetMonth, setBudgetMonth] = useState<string | null>(null);
+  const activeBudgetMonth = budgetMonth ?? currentMonth;
   const goalsApi = useApi<Goal[]>(`/api/goals?v=${version}`);
   const debtsApi = useApi<Debt[]>(`/api/debts?v=${version}`);
-  const budgetsApi = useApi<BudgetProgress[]>(`/api/budgets?v=${version}`);
+  const budgetsApi = useApi<BudgetProgress[]>(
+    activeBudgetMonth
+      ? `/api/budgets?month=${activeBudgetMonth}&v=${version}`
+      : null,
+  );
   const recurringApi = useApi<RecurringRule[]>(`/api/recurring?v=${version}`);
   const netWorthApi = useApi<NetWorth>(`/api/networth?v=${version}`);
   const accountsApi = useApi<Account[]>(`/api/accounts?v=${version}`);
   const [period, setPeriod] = useState<StatPeriod>("30d");
-  const statsApi = useApi<Stats>(`/api/stats?period=${period}&v=${version}`);
+  const activityApi = useApi<PlanActivity[]>(
+    `/api/plan/activity?period=${period}&v=${version}`,
+  );
+  const activityAllApi = useApi<PlanActivity[]>(
+    `/api/plan/activity?period=all&v=${version}`,
+  );
   const [modal, setModal] = useState<ModalState>(null);
+  const [actionModal, setActionModal] = useState<ActionState>(null);
+  const [runningDue, setRunningDue] = useState(false);
+  const [skippingId, setSkippingId] = useState<string | null>(null);
+  const [removingKey, setRemovingKey] = useState<string | null>(null);
+  const [activeSection, setActiveSection] =
+    useState<PlanSection>("goals");
+  const [debtFilter, setDebtFilter] = useState<
+    "all" | Debt["direction"]
+  >("all");
+  const [deleteTarget, setDeleteTarget] = useState<{
+    kind: ModalKind;
+    id: string;
+    label: string;
+  } | null>(null);
 
-  const goals = goalsApi.data ?? [];
-  const debts = debtsApi.data ?? [];
+  useEffect(() => {
+    const section = new URLSearchParams(window.location.search).get(
+      "section",
+    );
+    if (!isPlanSection(section)) return;
+    const frame = window.requestAnimationFrame(() =>
+      setActiveSection(section),
+    );
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
+
+  const goals = useMemo(() => goalsApi.data ?? [], [goalsApi.data]);
+  const debts = useMemo(() => debtsApi.data ?? [], [debtsApi.data]);
   const budgets = budgetsApi.data ?? [];
   const recurring = recurringApi.data ?? [];
   const accounts = accountsApi.data ?? [];
+  const activity = useMemo(
+    () => activityApi.data ?? [],
+    [activityApi.data],
+  );
+  const activityAll = useMemo(
+    () => activityAllApi.data ?? [],
+    [activityAllApi.data],
+  );
+  const sparkActivity = activity.length > 1 ? activity : activityAll;
   const netWorth = netWorthApi.data;
   const accountById = new Map(accounts.map((account) => [account.id, account]));
 
@@ -140,33 +268,29 @@ export default function PlanPage() {
   const lent = debts
     .filter((debt) => debt.direction === "lent")
     .reduce((total, debt) => total + debt.balanceUgx, 0);
-  const goalsFunded = goals.filter(
-    (goal) => goal.savedUgx >= goal.targetUgx,
-  ).length;
   const goalsSaved = goals.reduce(
     (total, goal) => total + goal.savedUgx,
     0,
   );
-  const periodSpark = useMemo(
-    () => statsApi.data?.period.spark ?? [],
-    [statsApi.data?.period.spark],
-  );
   const netWorthSpark = useMemo(
     () =>
-      shapeSeries(periodSpark, "net", netWorth?.total ?? 0, 0.82),
-    [netWorth?.total, periodSpark],
+      (netWorth?.history ?? []).map((point) => ({
+        label: shortDateLabel(point.date),
+        value: point.value,
+      })),
+    [netWorth],
   );
   const borrowedSpark = useMemo(
-    () => shapeSeries(periodSpark, "expense", borrowed, 1.3),
-    [borrowed, periodSpark],
+    () => balanceSpark("borrowed", debts, sparkActivity),
+    [debts, sparkActivity],
   );
   const lentSpark = useMemo(
-    () => shapeSeries(periodSpark, "income", lent, 0.7),
-    [lent, periodSpark],
+    () => balanceSpark("lent", debts, sparkActivity),
+    [debts, sparkActivity],
   );
   const goalsSpark = useMemo(
-    () => shapeSeries(periodSpark, "income", goalsSaved, 0.55),
-    [goalsSaved, periodSpark],
+    () => contributionSpark(goals, sparkActivity),
+    [goals, sparkActivity],
   );
 
   const ready =
@@ -183,6 +307,8 @@ export default function PlanPage() {
     recurringApi.refresh();
     netWorthApi.refresh();
     accountsApi.refresh();
+    activityApi.refresh();
+    activityAllApi.refresh();
   }
 
   function saved() {
@@ -191,22 +317,46 @@ export default function PlanPage() {
     bumpVersion();
   }
 
-  async function remove(kind: ModalKind, id: string) {
-    const path = kind === "recurring" ? "recurring" : `${kind}s`;
-    await api.delete(`/api/${path}/${id}`);
-    const label =
-      kind === "goal"
-        ? "Goal"
-        : kind === "debt"
-          ? "Debt"
-          : kind === "budget"
-            ? "Budget"
-            : "Recurring rule";
-    gooeyToast.success(`${label} deleted`, {
-      description: "Your plan has been updated.",
-    });
+  function actionSaved() {
+    setActionModal(null);
     refreshAll();
     bumpVersion();
+  }
+
+  function selectSection(section: PlanSection) {
+    setActiveSection(section);
+    const url = new URL(window.location.href);
+    url.searchParams.set("section", section);
+    window.history.replaceState(null, "", url);
+  }
+
+  async function remove(kind: ModalKind, id: string) {
+    const key = `${kind}:${id}`;
+    if (removingKey) return;
+    setRemovingKey(key);
+    try {
+      const path = kind === "recurring" ? "recurring" : `${kind}s`;
+      await api.delete(`/api/${path}/${id}`);
+      const label =
+        kind === "goal"
+          ? "Goal"
+          : kind === "debt"
+            ? "Debt"
+            : kind === "budget"
+              ? "Budget"
+              : "Recurring rule";
+      gooeyToast.success(`${label} deleted`, {
+        description: "Your plan has been updated.",
+      });
+      refreshAll();
+      bumpVersion();
+    } catch (error) {
+      gooeyToast.error("Could not delete item", {
+        description: (error as Error).message,
+      });
+    } finally {
+      setRemovingKey(null);
+    }
   }
 
   async function toggleRule(rule: RecurringRule, enabled: boolean) {
@@ -216,31 +366,160 @@ export default function PlanPage() {
   }
 
   async function runDue() {
-    const result = await api.post<{ created: number }>("/api/recurring/run", {});
-    gooeyToast.success(
-      result.created
-        ? `${result.created} recurring transaction${result.created === 1 ? "" : "s"} added`
-        : "No recurring transactions due",
-      {
-        description: result.created
-          ? "Scheduled items were posted to your ledger."
-          : "Everything scheduled for today is already up to date.",
-      },
-    );
-    refreshAll();
-    bumpVersion();
+    if (runningDue) return;
+    setRunningDue(true);
+    try {
+      const result = await api.post<{ created: number }>(
+        "/api/recurring/run",
+        {},
+      );
+      gooeyToast.success(
+        result.created
+          ? `${result.created} recurring transaction${result.created === 1 ? "" : "s"} added`
+          : "No recurring transactions due",
+        {
+          description: result.created
+            ? "Scheduled items were posted to your ledger."
+            : "Everything scheduled for today is already up to date.",
+        },
+      );
+      refreshAll();
+      bumpVersion();
+    } catch (error) {
+      gooeyToast.error("Could not run recurring items", {
+        description: (error as Error).message,
+      });
+    } finally {
+      setRunningDue(false);
+    }
+  }
+
+  async function skipNext(rule: RecurringRule) {
+    if (skippingId) return;
+    setSkippingId(rule.id);
+    try {
+      await api.post(`/api/recurring/${rule.id}/skip`, {});
+      gooeyToast.success("Next occurrence skipped", {
+        description: `${rule.name} moved forward one ${rule.frequency} cycle.`,
+      });
+      refreshAll();
+      bumpVersion();
+    } catch (error) {
+      gooeyToast.error("Could not skip occurrence", {
+        description: (error as Error).message,
+      });
+    } finally {
+      setSkippingId(null);
+    }
+  }
+
+  const today = ymd(new Date());
+  const soon = ymd(addDays(new Date(), 14));
+  const attention = [
+    ...recurring
+      .filter((rule) => rule.enabled && rule.nextOn <= today)
+      .map((rule) => ({
+        id: `rule-${rule.id}`,
+        title: rule.name,
+        detail: `Recurring due ${shortDateLabel(rule.nextOn)}`,
+        amountUgx: rule.amountUgx,
+        tone: "danger" as const,
+      })),
+    ...debts
+      .filter((debt) => debt.balanceUgx > 0 && debt.dueOn <= soon)
+      .map((debt) => ({
+        id: `debt-${debt.id}`,
+        title: debt.counterparty,
+        detail:
+          debt.dueOn < today
+            ? `${debt.direction === "borrowed" ? "Owed by you" : "Owed to you"} · overdue`
+            : `${debt.direction === "borrowed" ? "Owed by you" : "Owed to you"} · due ${shortDateLabel(debt.dueOn)}`,
+        amountUgx: debt.balanceUgx,
+        tone: debt.dueOn < today ? ("danger" as const) : ("warning" as const),
+      })),
+    ...goals
+      .filter(
+        (goal) => goal.savedUgx < goal.targetUgx && goal.deadline <= today,
+      )
+      .map((goal) => ({
+        id: `goal-${goal.id}`,
+        title: goal.name,
+        detail: "Goal deadline passed",
+        amountUgx: goal.targetUgx - goal.savedUgx,
+        tone: "danger" as const,
+      })),
+    ...budgets
+      .filter((budget) => budget.spentUgx > budget.limitUgx)
+      .map((budget) => ({
+        id: `budget-${budget.id}`,
+        title: budget.name,
+        detail: "Budget over limit",
+        amountUgx: budget.spentUgx - budget.limitUgx,
+        tone: "warning" as const,
+      })),
+  ];
+  const dueNow = recurring.filter(
+    (rule) => rule.enabled && rule.nextOn <= today,
+  ).length;
+  const upcoming30 = recurring.filter(
+    (rule) =>
+      rule.enabled &&
+      rule.nextOn > today &&
+      rule.nextOn <= ymd(addDays(new Date(), 30)),
+  ).length;
+  const monthlyLoad = recurring
+    .filter((rule) => rule.enabled)
+    .reduce((total, rule) => {
+      const multiplier =
+        rule.frequency === "daily" ? 30 : rule.frequency === "weekly" ? 4 : 1;
+      return total + rule.amountUgx * multiplier;
+    }, 0);
+  const budgetLabel = activeBudgetMonth
+    ? monthLabel(activeBudgetMonth)
+    : "This month";
+  const canGoNewerBudget = Boolean(
+    activeBudgetMonth && currentMonth && activeBudgetMonth < currentMonth,
+  );
+  const sectionNav = [
+    { id: "attention" as const, label: "Attention", count: attention.length },
+    { id: "goals" as const, label: "Goals", count: goals.length },
+    { id: "debts" as const, label: "Debts", count: debts.length },
+    {
+      id: "recurring" as const,
+      label: "Recurring",
+      count: recurring.length,
+    },
+    { id: "budgets" as const, label: "Budgets", count: budgets.length },
+    {
+      id: "activity" as const,
+      label: "Activity",
+      count: activity.length,
+    },
+  ];
+  const showsSection = (section: PlanSection) =>
+    activeSection === section;
+  const visibleDebts = debts.filter(
+    (debt) => debtFilter === "all" || debt.direction === debtFilter,
+  );
+
+  function moveBudgetMonth(delta: number) {
+    if (!activeBudgetMonth) return;
+    const next = shiftMonthKey(activeBudgetMonth, delta);
+    if (!next || (currentMonth && next > currentMonth)) return;
+    setBudgetMonth(next);
   }
 
   return (
     <div className="space-y-8">
       <header className="flex flex-wrap items-end justify-between gap-6">
         <div>
-          <h1 className="font-display text-5xl leading-none md:text-[56px]">
+          <h1 className="font-display text-4xl leading-none md:text-5xl">
             Give the money a job.
           </h1>
           <p className="mt-4 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-            Goals, debts, budgets and the bills that keep coming back. All of it runs on the
-            mock ledger.
+            Goals, debts, recurring bills and budgets in one place. Actions are
+            mocked, but every balance and history line behaves like the real
+            thing.
           </p>
         </div>
         <Combobox
@@ -250,15 +529,15 @@ export default function PlanPage() {
         >
           <ComboboxTrigger className="h-9 min-w-0 rounded-full px-2.5">
             <ComboboxInput
-              aria-label="Metric timeframe"
-              placeholder="Timeframe"
+              aria-label="Plan activity range"
+              placeholder="Activity range"
               className="h-9 text-[13px]"
               showIcon={false}
             />
           </ComboboxTrigger>
           <ComboboxContent className="w-52 rounded-2xl">
-            <ComboboxList ariaLabel="Metric timeframe" className="p-2">
-              <ComboboxEmpty>No timeframes.</ComboboxEmpty>
+            <ComboboxList ariaLabel="Plan activity range" className="p-2">
+              <ComboboxEmpty>No ranges.</ComboboxEmpty>
               {PERIOD_OPTIONS.map((option) => (
                 <ComboboxItem
                   key={option.value}
@@ -273,16 +552,13 @@ export default function PlanPage() {
         </Combobox>
       </header>
 
-      <div className="grid grid-cols-2 gap-5 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <MetricCard
-          className="col-span-2 lg:col-span-1"
+          compact
           label="Net worth"
-          value={
-            netWorthSpark[netWorthSpark.length - 1]?.value ??
-            netWorth?.total ??
-            0
-          }
-          foot={`${PERIOD_LABELS[period]} · ${formatNumber(netWorth?.assets ?? 0)} assets · ${formatNumber(netWorth?.liabilities ?? 0)} debts`}
+          info="Assets minus liabilities across your accounts and debts."
+          value={netWorth?.total ?? 0}
+          foot={PERIOD_LABELS[period]}
           spark={netWorthSpark}
           sparkKey="value"
           sparkLabelKey={(point) => point.label}
@@ -290,371 +566,772 @@ export default function PlanPage() {
           tone="sky"
         />
         <MetricCard
+          compact
           label="You owe"
-          value={borrowedSpark[borrowedSpark.length - 1]?.value ?? borrowed}
-          foot={`${PERIOD_LABELS[period]} · borrowed balances`}
+          info="Total borrowed balances you still owe."
+          value={borrowed}
+          foot={PERIOD_LABELS[period]}
           spark={borrowedSpark}
           sparkKey="value"
+          sparkLabelKey={(point) => point.label}
           icon={ArrowUp02Icon}
           tone="rose"
         />
         <MetricCard
+          compact
           label="Owed to you"
-          value={lentSpark[lentSpark.length - 1]?.value ?? lent}
-          foot={`${PERIOD_LABELS[period]} · lent balances`}
+          info="Total money lent to others that is still outstanding."
+          value={lent}
+          foot={PERIOD_LABELS[period]}
           spark={lentSpark}
           sparkKey="value"
+          sparkLabelKey={(point) => point.label}
           icon={ArrowDown02Icon}
           tone="emerald"
         />
         <MetricCard
+          compact
           label="Goals saved"
-          value={goalsSpark[goalsSpark.length - 1]?.value ?? goalsSaved}
-          foot={`${PERIOD_LABELS[period]} · ${formatNumber(goalsFunded)} funded · ${formatNumber(
-            goals.length,
-          )} goals`}
+          info="Total saved across all goals."
+          value={goalsSaved}
+          foot={PERIOD_LABELS[period]}
           spark={goalsSpark}
           sparkKey="value"
+          sparkLabelKey={(point) => point.label}
           icon={Target01Icon}
           tone="violet"
         />
       </div>
 
-      <MorphingTabs
-        defaultValue="goals"
-        align="center"
-        showTabBorders={false}
-        classNames={{
-          root: "bg-transparent text-foreground",
-          activeTab: "text-card",
-          content: "bg-card text-card-foreground",
-          tab: "justify-center text-center text-muted-foreground hover:text-foreground aria-selected:text-card-foreground",
-        }}
-        items={[
-          {
-            id: "goals",
-            label: "Goals",
-            content: (
-              <Panel className="p-6">
-                <PanelHeader
-                  title="Savings goals"
-                  hint="What the money is for"
-                  action={
-                    <Button variant="outline" size="sm" onClick={() => setModal({ kind: "goal", item: null })}>
-                      <Icon icon={PlusSignIcon} className="size-4" /> Add goal
-                    </Button>
-                  }
-                  className="p-0 pb-5"
+      <nav
+        aria-label="Plan sections"
+        className="sticky top-16 z-30 mx-auto flex w-fit max-w-full flex-wrap items-center gap-1 rounded-full border border-white/10 bg-zinc-900/95 p-1 text-white shadow-2xl backdrop-blur-xl"
+      >
+        {sectionNav.map((section) => {
+          const active = activeSection === section.id;
+          const count = "count" in section ? section.count : null;
+          return (
+            <button
+              key={section.id}
+              type="button"
+              aria-pressed={active}
+              onClick={() => selectSection(section.id)}
+              className={cn(
+                "inline-flex h-8 items-center rounded-full px-3 text-xs font-medium transition-colors",
+                active
+                  ? "bg-white/[0.16] text-white"
+                  : "text-white/55 hover:bg-white/[0.08] hover:text-white",
+              )}
+            >
+              {section.label}
+              {count !== null ? (
+                <span className="ml-1.5 text-[10px] text-white/40">
+                  {count}
+                </span>
+              ) : null}
+            </button>
+          );
+        })}
+      </nav>
+
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.div
+          key={activeSection}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -6 }}
+          transition={{ duration: 0.18, ease: "easeOut" }}
+          className="space-y-8"
+        >
+      <SectionPanel
+        title="Needs attention"
+        info="Overdue recurring items, debts due soon, overdue goals and over-limit budgets."
+        className={showsSection("attention") ? undefined : "hidden"}
+        hint={
+          attention.length === 0
+            ? "Nothing urgent right now"
+            : `${attention.length} item${attention.length === 1 ? "" : "s"} need a look`
+        }
+        bodyClassName="p-3"
+      >
+        {attention.length === 0 ? (
+          <p className="px-2 py-6 text-center text-sm text-muted-foreground">
+            Everything is caught up. Keep the plan moving.
+          </p>
+        ) : (
+          <ul className="divide-y divide-foreground/5">
+            {attention.slice(0, 8).map((item) => (
+              <li
+                key={item.id}
+                className="flex items-center gap-3 px-2 py-2.5"
+              >
+                <span
+                  className={cn(
+                    "size-2 shrink-0 rounded-full",
+                    item.tone === "danger"
+                      ? "bg-destructive"
+                      : "bg-amber-500",
+                  )}
                 />
-                {goals.length === 0 ? (
-                  <EmptyState title="No goals yet" hint="Add a target and a deadline." />
-                ) : (
-                  <div className="grid gap-4 md:grid-cols-2">
-                    {goals.map((goal) => {
-                      const pct = Math.min(
-                        100,
-                        Math.round((goal.savedUgx / Math.max(1, goal.targetUgx)) * 100),
-                      );
-                      const remaining = Math.max(0, goal.targetUgx - goal.savedUgx);
-                      const months = monthsUntil(goal.deadline);
-                      return (
-                        <div
-                          key={goal.id}
-                          className="rounded-2xl bg-muted/20 p-4"
-                        >
-                          <div className="flex items-start gap-3">
-                            <span
-                              className="grid size-9 shrink-0 place-items-center rounded-lg"
-                              style={{
-                                background: `color-mix(in oklab, ${goal.color} 16%, transparent)`,
-                              }}
-                            >
-                              <Icon icon={Target02Icon} className="size-4" />
-                            </span>
-                            <div className="min-w-0 flex-1">
-                              <p className="truncate text-[13px] font-medium">{goal.name}</p>
-                              <p className="text-[11px] text-muted-foreground">
-                                {dateLabel(goal.deadline)}
-                              </p>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => setModal({ kind: "goal", item: goal })}
-                              aria-label={`Edit ${goal.name}`}
-                              className="grid size-8 place-items-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"
-                            >
-                              <Icon icon={PencilEdit01Icon} className="size-3.5" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => remove("goal", goal.id)}
-                              aria-label={`Delete ${goal.name}`}
-                              className="grid size-8 place-items-center rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                            >
-                              <Icon icon={Delete02Icon} className="size-3.5" />
-                            </button>
-                          </div>
-                          <div className="mt-4 flex items-end justify-between gap-3">
-                            <Money value={goal.savedUgx} size="md" />
-                            <span className="text-[11px] text-muted-foreground">
-                              of {formatNumber(goal.targetUgx)} UGX
-                            </span>
-                          </div>
-                          <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted">
-                            <div
-                              className="h-full rounded-full"
-                              style={{ width: `${pct}%`, background: goal.color }}
-                            />
-                          </div>
-                          <div className="mt-2 flex items-center justify-between text-[11px] text-muted-foreground">
-                            <span>{pct}% funded</span>
-                            <span>
-                              {remaining > 0
-                                ? `${formatNumber(Math.round(remaining / months))} UGX / month`
-                                : "Goal reached"}
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </Panel>
-            ),
-          },
-          {
-            id: "debts",
-            label: "Debts",
-            content: (
-              <Panel className="p-6">
-                <PanelHeader
-                  title="Debts"
-                  hint="Money owed in both directions"
-                  action={
-                    <Button variant="outline" size="sm" onClick={() => setModal({ kind: "debt", item: null })}>
-                      <Icon icon={PlusSignIcon} className="size-4" /> Add debt
-                    </Button>
-                  }
-                  className="p-0 pb-5"
-                />
-                {debts.length === 0 ? (
-                  <EmptyState title="No debts recorded" hint="Borrowed and lent balances live here." />
-                ) : (
-                  <ul className="space-y-2">
-                    {debts.map((debt) => (
-                      <li
-                        key={debt.id}
-                        className="flex flex-wrap items-center gap-3 rounded-2xl bg-muted/20 px-3 py-3"
-                      >
-                        <span
-                          className={cn(
-                            "rounded-full px-2 py-0.5 text-[10px] font-medium",
-                            debt.direction === "borrowed"
-                              ? "bg-destructive/10 text-destructive"
-                              : "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
-                          )}
-                        >
-                          {debt.direction === "borrowed" ? "Borrowed" : "Lent"}
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-[13px]">{debt.counterparty}</p>
-                          <p className="text-[11px] text-muted-foreground">
-                            Due {dateLabel(debt.dueOn)}
-                            {debt.note ? ` · ${debt.note}` : ""}
-                          </p>
-                        </div>
-                        <Money value={debt.balanceUgx} size="sm" />
-                        <button
-                          type="button"
-                          onClick={() => setModal({ kind: "debt", item: debt })}
-                          aria-label={`Edit debt with ${debt.counterparty}`}
-                          className="grid size-8 place-items-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"
-                        >
-                          <Icon icon={PencilEdit01Icon} className="size-3.5" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => remove("debt", debt.id)}
-                          aria-label={`Delete debt with ${debt.counterparty}`}
-                          className="grid size-8 place-items-center rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                        >
-                          <Icon icon={Delete02Icon} className="size-3.5" />
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </Panel>
-            ),
-          },
-          {
-            id: "recurring",
-            label: "Recurring",
-            content: (
-              <Panel className="p-6">
-                <PanelHeader
-                  title="Recurring rules"
-                  hint="Salary, rent and the subscriptions"
-                  action={
-                    <div className="flex items-center gap-2">
-                      <Button variant="ghost" size="sm" onClick={runDue}>
-                        Run due
-                      </Button>
-                      <Button variant="outline" size="sm" onClick={() => setModal({ kind: "recurring", item: null })}>
-                        <Icon icon={PlusSignIcon} className="size-4" /> Add rule
-                      </Button>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[13px]">{item.title}</p>
+                  <p className="truncate text-[10px] text-muted-foreground">
+                    {item.detail}
+                  </p>
+                </div>
+                {item.amountUgx ? (
+                  <Money value={item.amountUgx} size="sm" />
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        )}
+      </SectionPanel>
+
+      <SectionPanel
+        title="Goals"
+        info="Savings targets, progress, contributions and deadlines."
+        className={showsSection("goals") ? undefined : "hidden"}
+        hint={`${display.formatMoney(goalsSaved)} saved across ${formatNumber(goals.length)} goals`}
+        action={
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setModal({ kind: "goal", item: null })}
+          >
+            <Icon icon={PlusSignIcon} className="size-3.5" /> Add goal
+          </Button>
+        }
+        bodyClassName="p-5"
+      >
+        {goals.length === 0 ? (
+          <EmptyState
+            title="No goals yet"
+            hint="Add a target, a deadline, and start contributing."
+          />
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2">
+            {goals.map((goal) => {
+              const pct = Math.min(
+                100,
+                Math.round(
+                  (goal.savedUgx / Math.max(1, goal.targetUgx)) * 100,
+                ),
+              );
+              const remaining = Math.max(
+                0,
+                goal.targetUgx - goal.savedUgx,
+              );
+              const months = monthsUntil(goal.deadline);
+              const last = activity.find(
+                (entry) =>
+                  entry.kind === "goal-contribution" &&
+                  entry.refId === goal.id,
+              );
+              const overdue =
+                goal.deadline < today && goal.savedUgx < goal.targetUgx;
+              return (
+                <div
+                  key={goal.id}
+                  className="rounded-xl border border-foreground/10 bg-card/40 p-4"
+                >
+                  <div className="flex items-start gap-3">
+                    <span
+                      className="grid size-9 shrink-0 place-items-center rounded-lg"
+                      style={{
+                        background: `color-mix(in oklab, ${goal.color} 16%, transparent)`,
+                      }}
+                    >
+                      <Icon icon={Target02Icon} className="size-4" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[13px] font-medium">
+                        {goal.name}
+                      </p>
+                      <p className="text-[11px] text-muted-foreground">
+                        {dateLabel(goal.deadline)}
+                        {overdue ? " · overdue" : ""}
+                      </p>
                     </div>
-                  }
-                  className="p-0 pb-5"
-                />
-                {recurring.length === 0 ? (
-                  <EmptyState title="Nothing recurring yet" hint="Add salary, rent or subscriptions." />
-                ) : (
-                  <ul className="space-y-2">
-                    {recurring.map((rule) => {
-                      const account = accountById.get(rule.accountId);
-                      const destination = rule.toAccountId
-                        ? accountById.get(rule.toAccountId)
-                        : null;
-                      return (
-                        <li
-                          key={rule.id}
-                          className="flex flex-wrap items-center gap-3 rounded-2xl bg-muted/20 px-3 py-3"
-                        >
-                          <Checkbox
-                            checked={rule.enabled}
-                            onCheckedChange={(enabled) => toggleRule(rule, enabled)}
-                            aria-label={`Enable ${rule.name}`}
-                          />
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate text-[13px]">{rule.name}</p>
-                            <p className="text-[11px] text-muted-foreground">
-                              {rule.frequency} · next {dateLabel(rule.nextOn)}
-                              {account ? ` · ${account.name}` : ""}
-                              {destination ? ` → ${destination.name}` : ""}
-                            </p>
-                          </div>
-                          <span
-                            className={cn(
-                              "rounded-full px-2 py-0.5 text-[10px] font-medium",
-                              rule.type === "income"
-                                ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
-                                : rule.type === "transfer"
-                                  ? "bg-sky-500/10 text-sky-700 dark:text-sky-300"
-                                  : "bg-muted text-muted-foreground",
-                            )}
-                          >
-                            {rule.type}
-                          </span>
-                          <Money value={rule.amountUgx} size="sm" />
-                          <button
-                            type="button"
-                            onClick={() => setModal({ kind: "recurring", item: rule })}
-                            aria-label={`Edit ${rule.name}`}
-                            className="grid size-8 place-items-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"
-                          >
-                            <Icon icon={PencilEdit01Icon} className="size-3.5" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => remove("recurring", rule.id)}
-                            aria-label={`Delete ${rule.name}`}
-                            className="grid size-8 place-items-center rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                          >
-                            <Icon icon={Delete02Icon} className="size-3.5" />
-                          </button>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
-              </Panel>
-            ),
-          },
-          {
-            id: "budgets",
-            label: "Budgets",
-            content: (
-              <Panel className="p-6">
-                <PanelHeader
-                  title="Budgets"
-                  hint="This month's limits"
-                  action={
-                    <Button variant="outline" size="sm" onClick={() => setModal({ kind: "budget", item: null })}>
-                      <Icon icon={PlusSignIcon} className="size-4" /> Add budget
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setModal({ kind: "goal", item: goal })
+                      }
+                      aria-label={`Edit ${goal.name}`}
+                      className="grid size-8 place-items-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"
+                    >
+                      <Icon
+                        icon={PencilEdit01Icon}
+                        className="size-3.5"
+                      />
+                    </button>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={() =>
+                        setDeleteTarget({
+                          kind: "goal",
+                          id: goal.id,
+                          label: `Delete ${goal.name}?`,
+                        })
+                      }
+                      loading={removingKey === `goal:${goal.id}`}
+                      aria-label={`Delete ${goal.name}`}
+                      className="text-muted-foreground hover:text-destructive"
+                    >
+                      <Icon icon={Delete02Icon} className="size-3.5" />
                     </Button>
-                  }
-                  className="p-0 pb-5"
-                />
-                {budgets.length === 0 ? (
-                  <EmptyState title="No budgets yet" hint="Set a limit and watch it move." />
-                ) : (
-                  <div className="space-y-4">
-                    {budgets.map((budget) => {
-                      const pct = Math.min(
-                        100,
-                        Math.round((budget.spentUgx / Math.max(1, budget.limitUgx)) * 100),
-                      );
-                      const over = budget.spentUgx > budget.limitUgx;
-                      return (
-                        <div key={budget.id} className="space-y-1.5">
-                          <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-                            <span className="flex items-center gap-2 text-muted-foreground">
-                              <span
-                                className="size-2.5 rounded-full"
-                                style={{ background: budget.color }}
-                              />
-                              {budget.name}
-                              <span className="text-[10px] text-muted-foreground">
-                                {budget.categoryId === "all" ? "overall" : budget.categoryId}
-                              </span>
-                            </span>
-                            <span className="flex items-center gap-2">
-                              <span className={cn("tnum", over ? "text-destructive" : "text-foreground")}>
-                                {formatNumber(budget.spentUgx)} / {formatNumber(budget.limitUgx)} UGX
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() => setModal({ kind: "budget", item: budget })}
-                                aria-label={`Edit ${budget.name}`}
-                                className="grid size-7 place-items-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"
-                              >
-                                <Icon icon={PencilEdit01Icon} className="size-3.5" />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => remove("budget", budget.id)}
-                                aria-label={`Delete ${budget.name}`}
-                                className="grid size-7 place-items-center rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                              >
-                                <Icon icon={Delete02Icon} className="size-3.5" />
-                              </button>
-                            </span>
-                          </div>
-                          <div className="h-1.5 overflow-hidden rounded-full bg-muted">
-                            <div
-                              className="h-full rounded-full"
-                              style={{
-                                width: `${pct}%`,
-                                background: over ? "var(--destructive)" : budget.color,
-                              }}
-                            />
-                          </div>
-                          <p className="text-[10px] text-muted-foreground">
-                            {over
-                              ? `${formatNumber(budget.spentUgx - budget.limitUgx)} UGX over`
-                              : `${formatNumber(budget.limitUgx - budget.spentUgx)} UGX left`}
-                          </p>
-                        </div>
-                      );
-                    })}
                   </div>
-                )}
-              </Panel>
-            ),
-          },
-        ]}
-      />
+
+                  <div className="mt-4 flex items-end justify-between gap-3">
+                    <Money value={goal.savedUgx} size="md" />
+                    <span className="text-[11px] text-muted-foreground">
+                      of {display.formatMoney(goal.targetUgx)}
+                    </span>
+                  </div>
+                  <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted">
+                    <div
+                      className="h-full rounded-full"
+                      style={{
+                        width: `${pct}%`,
+                        background: goal.color,
+                      }}
+                    />
+                  </div>
+                  <div className="mt-2 flex items-center justify-between text-[11px] text-muted-foreground">
+                    <span>{pct}% funded</span>
+                    <span>
+                      {remaining > 0
+                        ? `${display.formatMoney(Math.round(remaining / months))} / month`
+                        : "Goal reached"}
+                    </span>
+                  </div>
+
+                  <div className="mt-3 flex items-center justify-between gap-3">
+                    <p className="min-w-0 truncate text-[10px] text-muted-foreground">
+                      {last
+                        ? `Last · ${shortDateLabel(last.date)} · ${display.formatMoney(last.amountUgx)}`
+                        : "No contributions yet"}
+                    </p>
+                    {goal.savedUgx < goal.targetUgx ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          setActionModal({
+                            kind: "contribution",
+                            goal,
+                            mode: "contribute",
+                          })
+                        }
+                      >
+                        <Icon icon={PlusSignIcon} className="size-3.5" />
+                        Contribute
+                      </Button>
+                    ) : (
+                      <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium text-emerald-700 dark:text-emerald-300">
+                        Funded
+                      </span>
+                    )}
+                    {goal.savedUgx > 0 ? (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() =>
+                          setActionModal({
+                            kind: "contribution",
+                            goal,
+                            mode: "withdraw",
+                          })
+                        }
+                      >
+                        Withdraw
+                      </Button>
+                    ) : null}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </SectionPanel>
+
+      <SectionPanel
+        title="Debts"
+        info="Borrowed and lent balances, payments and due dates."
+        className={showsSection("debts") ? undefined : "hidden"}
+        hint={`${display.formatMoney(borrowed)} owed · ${display.formatMoney(lent)} lent`}
+        action={
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setModal({ kind: "debt", item: null })}
+          >
+            <Icon icon={PlusSignIcon} className="size-3.5" /> Add debt
+          </Button>
+        }
+        bodyClassName="p-3"
+      >
+        <div className="mb-3 flex w-fit items-center gap-1 rounded-full border border-foreground/10 bg-card/50 p-1">
+          {(
+            [
+              { id: "all" as const, label: "All" },
+              { id: "borrowed" as const, label: "Borrowed" },
+              { id: "lent" as const, label: "Lent" },
+            ]
+          ).map((option) => (
+            <button
+              key={option.id}
+              type="button"
+              aria-pressed={debtFilter === option.id}
+              onClick={() => setDebtFilter(option.id)}
+              className={cn(
+                "h-8 rounded-full px-3 text-xs font-medium transition-colors",
+                debtFilter === option.id
+                  ? "bg-muted text-foreground"
+                  : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+              )}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+        {visibleDebts.length === 0 ? (
+          <p className="px-2 py-6 text-center text-sm text-muted-foreground">
+            No {debtFilter === "all" ? "" : `${debtFilter} `}debts match
+            this filter.
+          </p>
+        ) : (
+          <ul className="divide-y divide-foreground/5">
+            {visibleDebts.map((debt) => {
+              const paid = Math.max(
+                0,
+                debt.principalUgx - debt.balanceUgx,
+              );
+              const paidPct = Math.min(
+                100,
+                Math.round(
+                  (paid / Math.max(1, debt.principalUgx)) * 100,
+                ),
+              );
+              const settled = debt.balanceUgx <= 0;
+              const last = activity.find(
+                (entry) =>
+                  entry.kind === "debt-payment" &&
+                  entry.refId === debt.id,
+              );
+              return (
+                <li key={debt.id} className="px-2 py-3">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <span
+                      className={cn(
+                        "rounded-full px-2 py-0.5 text-[10px] font-medium",
+                        debt.direction === "borrowed"
+                          ? "bg-destructive/10 text-destructive"
+                          : "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
+                      )}
+                    >
+                      {debt.direction === "borrowed" ? "Borrowed" : "Lent"}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[13px]">
+                        {debt.counterparty}
+                      </p>
+                      <p className="truncate text-[11px] text-muted-foreground">
+                        Due {dateLabel(debt.dueOn)}
+                        {debt.note ? ` · ${debt.note}` : ""}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <Money value={debt.balanceUgx} size="sm" />
+                      <p className="text-[10px] text-muted-foreground">
+                        {settled ? "Settled" : `${paidPct}% paid`}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-2 flex items-center gap-3">
+                    <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
+                      <div
+                        className="h-full rounded-full bg-foreground/50"
+                        style={{ width: `${paidPct}%` }}
+                      />
+                    </div>
+                    <p className="min-w-0 max-w-[45%] truncate text-[10px] text-muted-foreground">
+                      {last
+                        ? `Last · ${shortDateLabel(last.date)} · ${display.formatMoney(last.amountUgx)}`
+                        : "No payments yet"}
+                    </p>
+                  </div>
+                  <div className="mt-2 flex items-center justify-end gap-1">
+                    {!settled ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          setActionModal({
+                            kind: "payment",
+                            debt,
+                          })
+                        }
+                      >
+                        <Icon
+                          icon={Tick02Icon}
+                          className="size-3.5"
+                        />
+                        Log payment
+                      </Button>
+                    ) : null}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setModal({ kind: "debt", item: debt })
+                      }
+                      aria-label={`Edit debt with ${debt.counterparty}`}
+                      className="grid size-8 place-items-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"
+                    >
+                      <Icon
+                        icon={PencilEdit01Icon}
+                        className="size-3.5"
+                      />
+                    </button>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={() =>
+                        setDeleteTarget({
+                          kind: "debt",
+                          id: debt.id,
+                          label: `Delete debt with ${debt.counterparty}?`,
+                        })
+                      }
+                      loading={removingKey === `debt:${debt.id}`}
+                      aria-label={`Delete debt with ${debt.counterparty}`}
+                      className="text-muted-foreground hover:text-destructive"
+                    >
+                      <Icon icon={Delete02Icon} className="size-3.5" />
+                    </Button>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </SectionPanel>
+
+      <SectionPanel
+        title="Recurring"
+        info="Bills and income that repeat, with due dates and run history."
+        className={showsSection("recurring") ? undefined : "hidden"}
+        hint={`${dueNow} due · ${upcoming30} in the next 30 days · ${display.formatMoney(monthlyLoad)} monthly load`}
+        action={
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={runDue}
+              loading={runningDue}
+            >
+              Run due
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                setModal({ kind: "recurring", item: null })
+              }
+            >
+              <Icon icon={PlusSignIcon} className="size-3.5" /> Add rule
+            </Button>
+          </div>
+        }
+        bodyClassName="p-3"
+      >
+        {recurring.length === 0 ? (
+          <EmptyState
+            title="Nothing recurring yet"
+            hint="Add salary, rent or subscriptions."
+          />
+        ) : (
+          <ul className="divide-y divide-foreground/5">
+            {recurring.map((rule) => {
+              const account = accountById.get(rule.accountId);
+              const destination = rule.toAccountId
+                ? accountById.get(rule.toAccountId)
+                : null;
+              const due = rule.enabled && rule.nextOn <= today;
+              return (
+                <li
+                  key={rule.id}
+                  className={cn(
+                    "flex flex-wrap items-center gap-3 px-2 py-3",
+                    !rule.enabled && "opacity-55",
+                  )}
+                >
+                  <Checkbox
+                    checked={rule.enabled}
+                    onCheckedChange={(enabled) =>
+                      toggleRule(rule, enabled)
+                    }
+                    aria-label={`Enable ${rule.name}`}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[13px]">{rule.name}</p>
+                    <p className="truncate text-[11px] text-muted-foreground">
+                      {rule.frequency} · next {dateLabel(rule.nextOn)}
+                      {account ? ` · ${account.name}` : ""}
+                      {destination ? ` → ${destination.name}` : ""}
+                    </p>
+                  </div>
+                  <span
+                    className={cn(
+                      "rounded-full px-2 py-0.5 text-[10px] font-medium",
+                      due
+                        ? "bg-destructive/10 text-destructive"
+                        : "bg-muted text-muted-foreground",
+                    )}
+                  >
+                    {due ? "Due now" : "Scheduled"}
+                  </span>
+                  <span
+                    className={cn(
+                      "rounded-full px-2 py-0.5 text-[10px] font-medium",
+                      rule.type === "income"
+                        ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+                        : rule.type === "transfer"
+                          ? "bg-sky-500/10 text-sky-700 dark:text-sky-300"
+                          : "bg-muted text-muted-foreground",
+                    )}
+                  >
+                    {rule.type}
+                  </span>
+                  <Money value={rule.amountUgx} size="sm" />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => skipNext(rule)}
+                    loading={skippingId === rule.id}
+                  >
+                    Skip
+                  </Button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setModal({ kind: "recurring", item: rule })
+                    }
+                    aria-label={`Edit ${rule.name}`}
+                    className="grid size-8 place-items-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"
+                  >
+                    <Icon
+                      icon={PencilEdit01Icon}
+                      className="size-3.5"
+                    />
+                  </button>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    onClick={() =>
+                      setDeleteTarget({
+                        kind: "recurring",
+                        id: rule.id,
+                        label: `Delete ${rule.name}?`,
+                      })
+                    }
+                    loading={removingKey === `recurring:${rule.id}`}
+                    aria-label={`Delete ${rule.name}`}
+                    className="text-muted-foreground hover:text-destructive"
+                  >
+                    <Icon icon={Delete02Icon} className="size-3.5" />
+                  </Button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </SectionPanel>
+
+      <SectionPanel
+        title="Budgets"
+        info="Category and overall spending limits with month navigation."
+        className={showsSection("budgets") ? undefined : "hidden"}
+        hint={`${budgetLabel} · monthly and weekly limits`}
+        action={
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={() => moveBudgetMonth(-1)}
+              aria-label="View older budget month"
+            >
+              <Icon icon={ArrowLeft01Icon} className="size-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={() => moveBudgetMonth(1)}
+              disabled={!canGoNewerBudget}
+              aria-label="View newer budget month"
+            >
+              <Icon icon={ArrowRight01Icon} className="size-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setModal({ kind: "budget", item: null })}
+            >
+              <Icon icon={PlusSignIcon} className="size-3.5" /> Add budget
+            </Button>
+          </div>
+        }
+        bodyClassName="p-3"
+      >
+        {budgets.length === 0 ? (
+          <EmptyState
+            title="No budgets yet"
+            hint="Set a limit and watch it move."
+          />
+        ) : (
+          <ul className="divide-y divide-foreground/5">
+            {budgets.map((budget) => {
+              const pct = Math.min(
+                100,
+                Math.round(
+                  (budget.spentUgx / Math.max(1, budget.limitUgx)) *
+                    100,
+                ),
+              );
+              const over = budget.spentUgx > budget.limitUgx;
+              return (
+                <li key={budget.id} className="px-2 py-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                    <span className="flex items-center gap-2 text-muted-foreground">
+                      <span
+                        className="size-2.5 rounded-full"
+                        style={{ background: budget.color }}
+                      />
+                      {budget.name}
+                      <span className="text-[10px] text-muted-foreground">
+                        {budget.categoryId === "all"
+                          ? "overall"
+                          : budget.categoryId}
+                      </span>
+                    </span>
+                    <span className="flex items-center gap-2">
+                      <span
+                        className={cn(
+                          "tnum",
+                          over
+                            ? "text-destructive"
+                            : "text-foreground",
+                        )}
+                      >
+                        {display.formatValue(budget.spentUgx)} /{" "}
+                        {display.formatMoney(budget.limitUgx)}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setModal({ kind: "budget", item: budget })
+                        }
+                        aria-label={`Edit ${budget.name}`}
+                        className="grid size-7 place-items-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"
+                      >
+                        <Icon
+                          icon={PencilEdit01Icon}
+                          className="size-3.5"
+                        />
+                      </button>
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        onClick={() =>
+                          setDeleteTarget({
+                            kind: "budget",
+                            id: budget.id,
+                            label: `Delete ${budget.name}?`,
+                          })
+                        }
+                        loading={removingKey === `budget:${budget.id}`}
+                        aria-label={`Delete ${budget.name}`}
+                        className="text-muted-foreground hover:text-destructive"
+                      >
+                        <Icon
+                          icon={Delete02Icon}
+                          className="size-3.5"
+                        />
+                      </Button>
+                    </span>
+                  </div>
+                  <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
+                    <div
+                      className="h-full rounded-full"
+                      style={{
+                        width: `${pct}%`,
+                        background: over
+                          ? "var(--destructive)"
+                          : budget.color,
+                      }}
+                    />
+                  </div>
+                  <div className="mt-1.5 flex items-center justify-between text-[10px] text-muted-foreground">
+                    <span>{pct}% used</span>
+                    <span>
+                      {over
+                        ? `${display.formatMoney(budget.spentUgx - budget.limitUgx)} over`
+                        : `${display.formatMoney(budget.limitUgx - budget.spentUgx)} left`}
+                    </span>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </SectionPanel>
+
+      <SectionPanel
+        title="Plan activity"
+        info="Contributions, debt payments and recurring runs in the selected range."
+        className={showsSection("activity") ? undefined : "hidden"}
+        hint={`${PERIOD_LABELS[period]} · contributions, payments and recurring runs`}
+        bodyClassName="p-3"
+      >
+        {activity.length === 0 ? (
+          <p className="px-2 py-6 text-center text-sm text-muted-foreground">
+            No plan activity in this range yet.
+          </p>
+        ) : (
+          <ul className="divide-y divide-foreground/5">
+            {activity.slice(0, 10).map((entry) => (
+              <li
+                key={entry.id}
+                className="flex items-center gap-3 px-2 py-2.5"
+              >
+                <span
+                  className={cn(
+                    "size-2 shrink-0 rounded-full",
+                    entry.kind === "goal-contribution"
+                      ? "bg-violet-500"
+                      : entry.kind === "debt-payment"
+                        ? "bg-sky-500"
+                        : "bg-emerald-500",
+                  )}
+                />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[13px]">
+                    {entry.title}
+                  </p>
+                  <p className="truncate text-[10px] text-muted-foreground">
+                    {entry.detail} · {shortDateLabel(entry.date)}
+                  </p>
+                </div>
+                <Money value={entry.amountUgx} size="sm" />
+              </li>
+            ))}
+          </ul>
+        )}
+      </SectionPanel>
+        </motion.div>
+      </AnimatePresence>
 
       <MorphingModal
         viewId={modal?.kind ?? null}
@@ -697,7 +1374,292 @@ export default function PlanPage() {
           />
         ) : null}
       </MorphingModal>
+
+      <MorphingModal
+        viewId={actionModal ? "plan-action" : null}
+        onClose={() => setActionModal(null)}
+        placement="center"
+        className="max-w-md"
+        ariaLabel={
+          actionModal?.kind === "payment"
+            ? "Log debt payment"
+            : "Add goal contribution"
+        }
+      >
+        {actionModal?.kind === "contribution" ? (
+          <ContributionForm
+            key={`${actionModal.goal.id}-${actionModal.mode}`}
+            goal={actionModal.goal}
+            mode={actionModal.mode}
+            accounts={accounts}
+            defaultAccountId={accounts[0]?.id ?? ""}
+            onSaved={actionSaved}
+            onCancel={() => setActionModal(null)}
+          />
+        ) : null}
+        {actionModal?.kind === "payment" ? (
+          <PaymentForm
+            key={actionModal.debt.id}
+            debt={actionModal.debt}
+            accounts={accounts}
+            defaultAccountId={accounts[0]?.id ?? ""}
+            onSaved={actionSaved}
+            onCancel={() => setActionModal(null)}
+          />
+        ) : null}
+      </MorphingModal>
+
+      <MorphingModal
+        viewId={deleteTarget ? "delete-plan-item" : null}
+        onClose={() => {
+          if (!removingKey) setDeleteTarget(null);
+        }}
+        placement="center"
+        className="max-w-sm"
+        ariaLabel="Confirm delete"
+      >
+        {deleteTarget ? (
+          <div className="space-y-4">
+            <div>
+              <h2 className="text-lg font-semibold tracking-[-0.02em]">
+                {deleteTarget.label}
+              </h2>
+              <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">
+                This removes the item and its related mock history.
+              </p>
+            </div>
+            <div className="flex justify-end gap-2 pt-1">
+              <Button
+                variant="ghost"
+                onClick={() => setDeleteTarget(null)}
+                disabled={Boolean(removingKey)}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                loading={Boolean(removingKey)}
+                onClick={async () => {
+                  if (!deleteTarget) return;
+                  await remove(deleteTarget.kind, deleteTarget.id);
+                  setDeleteTarget(null);
+                }}
+              >
+                <Icon icon={Delete02Icon} className="size-4" />
+                Delete
+              </Button>
+            </div>
+          </div>
+        ) : null}
+      </MorphingModal>
     </div>
+  );
+}
+
+function ContributionForm({
+  goal,
+  mode,
+  accounts,
+  defaultAccountId,
+  onSaved,
+  onCancel,
+}: {
+  goal: Goal;
+  mode: "contribute" | "withdraw";
+  accounts: Account[];
+  defaultAccountId: string;
+  onSaved: () => void;
+  onCancel: () => void;
+}) {
+  const display = useCurrency();
+  const [amount, setAmount] = useState("");
+  const [date, setDate] = useState(ymd(new Date()));
+  const [accountId, setAccountId] = useState(defaultAccountId);
+  const [note, setNote] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  async function submit() {
+    const entered = parseNumericInput(amount);
+    if (!Number.isFinite(entered) || entered <= 0 || saving) return;
+    if (mode === "withdraw" && entered > goal.savedUgx) {
+      gooeyToast.error("Not enough saved", {
+        description: `You can withdraw up to ${display.formatMoney(goal.savedUgx)}.`,
+      });
+      return;
+    }
+    setSaving(true);
+    try {
+      await api.post(`/api/goals/${goal.id}/contributions`, {
+        amountUgx:
+          mode === "withdraw"
+            ? -Math.round(entered)
+            : Math.round(entered),
+        date,
+        accountId,
+        note,
+      });
+      gooeyToast.success(
+        mode === "withdraw" ? "Withdrawal logged" : "Contribution added",
+        {
+          description: `${display.formatMoney(entered)} ${
+            mode === "withdraw" ? "from" : "toward"
+          } ${goal.name}.`,
+        },
+      );
+      onSaved();
+    } catch (error) {
+      gooeyToast.error(
+        mode === "withdraw"
+          ? "Could not withdraw"
+          : "Could not add contribution",
+        {
+          description: (error as Error).message,
+        },
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <FormShell
+      title={
+        mode === "withdraw"
+          ? `Withdraw from ${goal.name}`
+          : `Contribute to ${goal.name}`
+      }
+      hint={`${display.formatMoney(goal.savedUgx)} of ${display.formatMoney(goal.targetUgx)} saved.`}
+      onCancel={onCancel}
+      onSubmit={submit}
+      saving={saving}
+      editing
+      submitLabel={mode === "withdraw" ? "Withdraw" : "Contribute"}
+    >
+      <Input
+        label="Amount (UGX)"
+        value={amount}
+        onChange={(value) => setAmount(formatNumericInput(value))}
+        placeholder="100000"
+      />
+      <Input
+        label="Date"
+        type="date"
+        value={date}
+        onChange={setDate}
+      />
+      <div className="grid grid-cols-[88px_176px] items-center gap-2">
+        <p className="text-[13px] text-muted-foreground">
+          {mode === "withdraw" ? "To" : "From"}
+        </p>
+        <AccountSelect
+          label={mode === "withdraw" ? "To" : "From"}
+          value={accountId}
+          accounts={accounts}
+          onValueChange={setAccountId}
+          compact
+          hideLabel
+        />
+      </div>
+      <Input
+        label="Note"
+        value={note}
+        onChange={setNote}
+        placeholder={
+          mode === "withdraw" ? "Why you withdrew" : "Monthly top-up"
+        }
+      />
+    </FormShell>
+  );
+}
+
+function PaymentForm({
+  debt,
+  accounts,
+  defaultAccountId,
+  onSaved,
+  onCancel,
+}: {
+  debt: Debt;
+  accounts: Account[];
+  defaultAccountId: string;
+  onSaved: () => void;
+  onCancel: () => void;
+}) {
+  const display = useCurrency();
+  const [amount, setAmount] = useState("");
+  const [date, setDate] = useState(ymd(new Date()));
+  const [accountId, setAccountId] = useState(defaultAccountId);
+  const [note, setNote] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  async function submit() {
+    const amountUgx = parseNumericInput(amount);
+    if (!Number.isFinite(amountUgx) || amountUgx <= 0 || saving) return;
+    setSaving(true);
+    try {
+      await api.post(`/api/debts/${debt.id}/payments`, {
+        amountUgx: Math.round(amountUgx),
+        date,
+        accountId,
+        note,
+      });
+      gooeyToast.success("Payment logged", {
+        description: `${display.formatMoney(amountUgx)} with ${debt.counterparty}.`,
+      });
+      onSaved();
+    } catch (error) {
+      gooeyToast.error("Could not log payment", {
+        description: (error as Error).message,
+      });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <FormShell
+      title={`Log payment · ${debt.counterparty}`}
+      hint={`${display.formatMoney(debt.balanceUgx)} still outstanding.`}
+      onCancel={onCancel}
+      onSubmit={submit}
+      saving={saving}
+      editing
+      submitLabel="Log payment"
+    >
+      <Input
+        label="Amount (UGX)"
+        value={amount}
+        onChange={(value) => setAmount(formatNumericInput(value))}
+        placeholder={String(debt.balanceUgx)}
+      />
+      <Input
+        label="Date"
+        type="date"
+        value={date}
+        onChange={setDate}
+      />
+      <div className="grid grid-cols-[88px_176px] items-center gap-2">
+        <p className="text-[13px] text-muted-foreground">
+          {debt.direction === "borrowed" ? "Paid from" : "Received in"}
+        </p>
+        <AccountSelect
+          label={
+            debt.direction === "borrowed" ? "Paid from" : "Received in"
+          }
+          value={accountId}
+          accounts={accounts}
+          onValueChange={setAccountId}
+          compact
+          hideLabel
+        />
+      </div>
+      <Input
+        label="Note"
+        value={note}
+        onChange={setNote}
+        placeholder="Part payment"
+      />
+    </FormShell>
   );
 }
 
@@ -709,6 +1671,7 @@ function FormShell({
   onSubmit,
   saving,
   editing,
+  submitLabel,
   onDelete,
 }: {
   title: string;
@@ -718,6 +1681,7 @@ function FormShell({
   onSubmit: () => void;
   saving: boolean;
   editing: boolean;
+  submitLabel?: string;
   onDelete?: () => void;
 }) {
   return (
@@ -737,9 +1701,9 @@ function FormShell({
             Cancel
           </Button>
         )}
-        <Button onClick={onSubmit} disabled={saving}>
+        <Button onClick={onSubmit} loading={saving}>
           <Icon icon={Tick02Icon} className="size-4" />
-          {editing ? "Save changes" : "Add"}
+          {submitLabel ?? (editing ? "Save changes" : "Add")}
         </Button>
       </div>
     </div>
@@ -755,12 +1719,10 @@ function GoalForm({
   onSaved: () => void;
   onCancel: () => void;
 }) {
+  const display = useCurrency();
   const [name, setName] = useState(goal?.name ?? "");
   const [target, setTarget] = useState(
     goal ? formatNumericInput(String(goal.targetUgx)) : "",
-  );
-  const [saved, setSaved] = useState(
-    goal ? formatNumericInput(String(goal.savedUgx)) : "0",
   );
   const [deadline, setDeadline] = useState(
     goal?.deadline ?? ymd(addDays(new Date(), 90)),
@@ -776,7 +1738,7 @@ function GoalForm({
       const payload = {
         name: name.trim(),
         targetUgx: Math.round(targetUgx),
-        savedUgx: Math.max(0, Math.round(parseNumericInput(saved))),
+        savedUgx: goal?.savedUgx ?? 0,
         deadline,
         note,
         color: goal?.color ?? "oklch(0.7 0.15 155)",
@@ -787,7 +1749,7 @@ function GoalForm({
         await api.post("/api/goals", payload);
       }
       gooeyToast.success(goal ? "Goal updated" : "Goal added", {
-        description: `${name.trim()} · ${formatNumber(Math.round(targetUgx))} UGX target`,
+        description: `${name.trim()} · ${display.formatMoney(Math.round(targetUgx))} target`,
       });
       onSaved();
     } catch (error) {
@@ -807,20 +1769,12 @@ function GoalForm({
       editing={Boolean(goal)}
     >
       <Input label="Name" value={name} onChange={setName} placeholder="Emergency fund" />
-      <div className="grid grid-cols-2 gap-3">
-        <Input
-          label="Target (UGX)"
-          value={target}
-          onChange={(value) => setTarget(formatNumericInput(value))}
-          placeholder="3000000"
-        />
-        <Input
-          label="Saved (UGX)"
-          value={saved}
-          onChange={(value) => setSaved(formatNumericInput(value))}
-          placeholder="0"
-        />
-      </div>
+      <Input
+        label="Target (UGX)"
+        value={target}
+        onChange={(value) => setTarget(formatNumericInput(value))}
+        placeholder="3000000"
+      />
       <label className="block">
         <span className="mb-1 block text-[13px] text-muted-foreground">Deadline</span>
         <input
@@ -844,15 +1798,13 @@ function DebtForm({
   onSaved: () => void;
   onCancel: () => void;
 }) {
+  const display = useCurrency();
   const [direction, setDirection] = useState<Debt["direction"]>(
     debt?.direction ?? "borrowed",
   );
   const [counterparty, setCounterparty] = useState(debt?.counterparty ?? "");
   const [principal, setPrincipal] = useState(
     debt ? formatNumericInput(String(debt.principalUgx)) : "",
-  );
-  const [balance, setBalance] = useState(
-    debt ? formatNumericInput(String(debt.balanceUgx)) : "",
   );
   const [dueOn, setDueOn] = useState(debt?.dueOn ?? ymd(addDays(new Date(), 30)));
   const [note, setNote] = useState(debt?.note ?? "");
@@ -867,7 +1819,7 @@ function DebtForm({
         direction,
         counterparty: counterparty.trim(),
         principalUgx: Math.round(principalUgx),
-        balanceUgx: Math.max(0, Math.round(parseNumericInput(balance) || principalUgx)),
+        balanceUgx: debt?.balanceUgx ?? Math.round(principalUgx),
         dueOn,
         note,
       };
@@ -877,7 +1829,7 @@ function DebtForm({
         await api.post("/api/debts", payload);
       }
       gooeyToast.success(debt ? "Debt updated" : "Debt added", {
-        description: `${counterparty.trim()} · ${formatNumber(principalUgx)} UGX ${
+        description: `${counterparty.trim()} · ${display.formatMoney(principalUgx)} ${
           direction === "borrowed" ? "borrowed" : "lent"
         }`,
       });
@@ -898,22 +1850,19 @@ function DebtForm({
       saving={saving}
       editing={Boolean(debt)}
     >
-      <div className="flex rounded-full border border-border bg-muted p-0.5">
-        {(["borrowed", "lent"] as Debt["direction"][]).map((option) => (
-          <button
-            key={option}
-            type="button"
-            onClick={() => setDirection(option)}
-            className={cn(
-              "flex-1 rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
-              direction === option
-                ? "bg-card text-foreground shadow-sm"
-                : "text-muted-foreground",
-            )}
-          >
-            {option === "borrowed" ? "I borrowed" : "I lent"}
-          </button>
-        ))}
+      <div className="grid grid-cols-[88px_176px] items-center gap-2">
+        <p className="text-[13px] text-muted-foreground">Direction</p>
+        <DropdownSelect
+          value={direction}
+          onValueChange={(value) =>
+            setDirection(value as Debt["direction"])
+          }
+          ariaLabel="Debt direction"
+          options={[
+            { value: "borrowed", label: "I borrowed" },
+            { value: "lent", label: "I lent" },
+          ]}
+        />
       </div>
       <Input
         label="Counterparty"
@@ -921,20 +1870,12 @@ function DebtForm({
         onChange={setCounterparty}
         placeholder="Mum, Brian, SACCO"
       />
-      <div className="grid grid-cols-2 gap-3">
-        <Input
-          label="Principal (UGX)"
-          value={principal}
-          onChange={(value) => setPrincipal(formatNumericInput(value))}
-          placeholder="500000"
-        />
-        <Input
-          label="Balance (UGX)"
-          value={balance}
-          onChange={(value) => setBalance(formatNumericInput(value))}
-          placeholder="300000"
-        />
-      </div>
+      <Input
+        label="Principal (UGX)"
+        value={principal}
+        onChange={(value) => setPrincipal(formatNumericInput(value))}
+        placeholder="500000"
+      />
       <label className="block">
         <span className="mb-1 block text-[13px] text-muted-foreground">Due date</span>
         <input
@@ -958,6 +1899,7 @@ function BudgetForm({
   onSaved: () => void;
   onCancel: () => void;
 }) {
+  const display = useCurrency();
   const [name, setName] = useState(budget?.name ?? "");
   const [categoryId, setCategoryId] = useState(budget?.categoryId ?? "all");
   const [limit, setLimit] = useState(
@@ -984,7 +1926,7 @@ function BudgetForm({
         await api.post("/api/budgets", payload);
       }
       gooeyToast.success(budget ? "Budget updated" : "Budget added", {
-        description: `${name.trim()} · ${formatNumber(limitUgx)} UGX per ${period}`,
+        description: `${name.trim()} · ${display.formatMoney(limitUgx)} per ${period}`,
       });
       onSaved();
     } catch (error) {
@@ -1004,41 +1946,34 @@ function BudgetForm({
       editing={Boolean(budget)}
     >
       <Input label="Name" value={name} onChange={setName} placeholder="Food" />
-      <div>
-        <p className="mb-1 text-[13px] text-muted-foreground">Category</p>
+      <div className="grid grid-cols-[88px_176px] items-center gap-2">
+        <p className="text-[13px] text-muted-foreground">Category</p>
         <CategorySelect
           value={categoryId}
           onValueChange={setCategoryId}
           allLabel="All categories"
+          compact
         />
       </div>
-      <div className="grid grid-cols-2 gap-3">
-        <Input
-          label="Limit (UGX)"
-          value={limit}
-          onChange={(value) => setLimit(formatNumericInput(value))}
-          placeholder="800000"
+      <Input
+        label="Limit (UGX)"
+        value={limit}
+        onChange={(value) => setLimit(formatNumericInput(value))}
+        placeholder="800000"
+      />
+      <div className="grid grid-cols-[88px_176px] items-center gap-2">
+        <p className="text-[13px] text-muted-foreground">Period</p>
+        <DropdownSelect
+          value={period}
+          onValueChange={(value) =>
+            setPeriod(value as Budget["period"])
+          }
+          ariaLabel="Budget period"
+          options={[
+            { value: "monthly", label: "Monthly" },
+            { value: "weekly", label: "Weekly" },
+          ]}
         />
-        <div>
-          <p className="mb-1 text-[13px] text-muted-foreground">Period</p>
-          <div className="flex rounded-full border border-border bg-muted p-0.5">
-            {(["monthly", "weekly"] as Budget["period"][]).map((option) => (
-              <button
-                key={option}
-                type="button"
-                onClick={() => setPeriod(option)}
-                className={cn(
-                  "flex-1 rounded-full px-2 py-1.5 text-[11px] font-medium transition-colors",
-                  period === option
-                    ? "bg-card text-foreground shadow-sm"
-                    : "text-muted-foreground",
-                )}
-              >
-                {option}
-              </button>
-            ))}
-          </div>
-        </div>
       </div>
     </FormShell>
   );
@@ -1055,6 +1990,8 @@ function RecurringForm({
   onSaved: () => void;
   onCancel: () => void;
 }) {
+  const display = useCurrency();
+  const { categoriesFor } = useCategories();
   const [name, setName] = useState(rule?.name ?? "");
   const [type, setType] = useState<TransactionType>(rule?.type ?? "expense");
   const [amount, setAmount] = useState(
@@ -1111,7 +2048,7 @@ function RecurringForm({
         await api.post("/api/recurring", payload);
       }
       gooeyToast.success(rule ? "Rule updated" : "Rule added", {
-        description: `${name.trim()} · ${formatNumber(amountUgx)} UGX ${frequency}`,
+        description: `${name.trim()} · ${display.formatMoney(amountUgx)} ${frequency}`,
       });
       onSaved();
     } catch (error) {
@@ -1131,22 +2068,16 @@ function RecurringForm({
       editing={Boolean(rule)}
     >
       <Input label="Name" value={name} onChange={setName} placeholder="Rent" />
-      <div className="flex rounded-full border border-border bg-muted p-0.5">
-        {TYPES.map((option) => (
-          <button
-            key={option.value}
-            type="button"
-            onClick={() => changeType(option.value)}
-            className={cn(
-              "flex-1 rounded-full px-2 py-1.5 text-[11px] font-medium transition-colors",
-              type === option.value
-                ? "bg-card text-foreground shadow-sm"
-                : "text-muted-foreground",
-            )}
-          >
-            {option.label}
-          </button>
-        ))}
+      <div className="grid grid-cols-[88px_176px] items-center gap-2">
+        <p className="text-[13px] text-muted-foreground">Type</p>
+        <DropdownSelect
+          value={type}
+          onValueChange={(value) =>
+            changeType(value as TransactionType)
+          }
+          ariaLabel="Recurring type"
+          options={TYPES}
+        />
       </div>
       <div className="grid grid-cols-2 gap-3">
         <Input
@@ -1166,50 +2097,55 @@ function RecurringForm({
         </label>
       </div>
       {!isTransfer ? (
-        <div>
-          <p className="mb-1 text-[13px] text-muted-foreground">Category</p>
+        <div className="grid grid-cols-[88px_176px] items-center gap-2">
+          <p className="text-[13px] text-muted-foreground">Category</p>
           <CategorySelect
             value={category}
             onValueChange={setCategory}
             kind={type === "income" ? "income" : "expense"}
+            compact
           />
         </div>
       ) : null}
-      <div className={isTransfer ? "grid grid-cols-2 gap-3" : ""}>
+      <div className="grid grid-cols-[88px_176px] items-center gap-2">
+        <p className="text-[13px] text-muted-foreground">
+          {isTransfer ? "From" : "Account"}
+        </p>
         <AccountSelect
           label={isTransfer ? "From" : "Account"}
           value={accountId}
           accounts={accounts}
           onValueChange={setAccountId}
+          compact
+          hideLabel
         />
-        {isTransfer ? (
+      </div>
+      {isTransfer ? (
+        <div className="grid grid-cols-[88px_176px] items-center gap-2">
+          <p className="text-[13px] text-muted-foreground">To</p>
           <AccountSelect
             label="To"
             value={toAccountId}
             accounts={accounts}
             onValueChange={setToAccountId}
+            compact
+            hideLabel
           />
-        ) : null}
-      </div>
-      <div>
-        <p className="mb-1 text-[13px] text-muted-foreground">Frequency</p>
-        <div className="flex rounded-full border border-border bg-muted p-0.5">
-          {FREQUENCIES.map((option) => (
-            <button
-              key={option}
-              type="button"
-              onClick={() => setFrequency(option)}
-              className={cn(
-                "flex-1 rounded-full px-2 py-1.5 text-[11px] font-medium capitalize transition-colors",
-                frequency === option
-                  ? "bg-card text-foreground shadow-sm"
-                  : "text-muted-foreground",
-              )}
-            >
-              {option}
-            </button>
-          ))}
         </div>
+      ) : null}
+      <div className="grid grid-cols-[88px_176px] items-center gap-2">
+        <p className="text-[13px] text-muted-foreground">Frequency</p>
+        <DropdownSelect
+          value={frequency}
+          onValueChange={(value) =>
+            setFrequency(value as RecurringRule["frequency"])
+          }
+          ariaLabel="Recurring frequency"
+          options={FREQUENCIES.map((value) => ({
+            value,
+            label: value.charAt(0).toUpperCase() + value.slice(1),
+          }))}
+        />
       </div>
       <Checkbox checked={enabled} onCheckedChange={setEnabled} label="Enabled" />
       <Input label="Note" value={note} onChange={setNote} placeholder="Optional" />

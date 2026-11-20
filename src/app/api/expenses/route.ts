@@ -1,6 +1,6 @@
 import { connection, type NextRequest } from "next/server";
 import { addExpense, listExpenses } from "@/lib/db";
-import { CATEGORY_BY_ID } from "@/lib/categories";
+import { categoryExists } from "@/lib/db";
 import type { Currency } from "@/lib/types";
 
 
@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
   if (!Number.isFinite(amount) || amount <= 0) {
     return Response.json({ error: "Amount must be a positive number" }, { status: 400 });
   }
-  if (!CATEGORY_BY_ID.has(category)) {
+  if (!categoryExists(category)) {
     return Response.json({ error: "Unknown category" }, { status: 400 });
   }
   if (!/^\d{4}-\d{2}-\d{2}$/.test(spentOn)) {

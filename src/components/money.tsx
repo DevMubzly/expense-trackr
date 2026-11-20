@@ -1,5 +1,5 @@
 import type { Currency } from "@/lib/types";
-import { formatNumber } from "@/lib/format";
+import { useCurrency } from "@/components/currency-provider";
 import { cn } from "@/lib/utils";
 
 const SIZES = {
@@ -18,7 +18,7 @@ export type MoneySize = keyof typeof SIZES;
  */
 export function Money({
   value,
-  currency = "UGX",
+  currency,
   size = "md",
   tone = "default",
   className,
@@ -31,8 +31,10 @@ export function Money({
   className?: string;
   amountClassName?: string;
 }) {
+  const display = useCurrency();
   const scale = SIZES[size];
   const inverted = tone === "inverted";
+  const unit = currency === "USD" ? "$" : currency === "UGX" ? "UGX" : display.unit;
   return (
     <span className={cn("tnum inline-flex items-baseline gap-1.5", className)}>
       <span
@@ -43,7 +45,7 @@ export function Money({
           amountClassName,
         )}
       >
-        {currency === "UGX" ? "UGX" : "USD"}
+        {unit}
       </span>
       <span
         className={cn(
@@ -53,7 +55,7 @@ export function Money({
           amountClassName,
         )}
       >
-        {formatNumber(value)}
+        {display.formatValue(value)}
       </span>
     </span>
   );

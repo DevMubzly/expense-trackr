@@ -1,5 +1,5 @@
 import { connection, type NextRequest } from "next/server";
-import { CATEGORY_BY_ID, isCategoryOfKind } from "@/lib/categories";
+import { categoryExists, isCategoryKind } from "@/lib/db";
 import { addTransaction, getAccount, listTransactions } from "@/lib/db";
 import type { Currency, TransactionSource, TransactionType } from "@/lib/types";
 
@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
     }
   } else {
     category = typeof body.category === "string" ? body.category : "";
-    if (!CATEGORY_BY_ID.has(category) || !isCategoryOfKind(category, type)) {
+    if (!categoryExists(category) || !isCategoryKind(category, type)) {
       return Response.json({ error: "Unknown category" }, { status: 400 });
     }
   }

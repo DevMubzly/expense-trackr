@@ -242,7 +242,7 @@
 /* xpense-trackr palette: light first, one deep green accent, quiet surfaces. */
 
 :root {
-  --background: oklch(0.988 0.002 95);
+  --background: oklch(1 0 0);
   --foreground: oklch(0.205 0.008 285);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.205 0.008 285);
@@ -293,19 +293,19 @@
 }
 
 .dark {
-  --background: oklch(0.165 0.008 285);
+  --background: oklch(0.195 0.008 285);
   --foreground: oklch(0.965 0.004 285);
-  --card: oklch(0.2 0.009 285);
+  --card: oklch(0.235 0.009 285);
   --card-foreground: oklch(0.965 0.004 285);
-  --popover: oklch(0.215 0.009 285);
+  --popover: oklch(0.25 0.009 285);
   --popover-foreground: oklch(0.965 0.004 285);
   --primary: oklch(0.86 0.17 128);
   --primary-foreground: oklch(0.22 0.05 132);
-  --secondary: oklch(0.26 0.01 285);
+  --secondary: oklch(0.295 0.01 285);
   --secondary-foreground: oklch(0.95 0.004 285);
-  --muted: oklch(0.245 0.009 285);
+  --muted: oklch(0.275 0.009 285);
   --muted-foreground: oklch(0.69 0.012 285);
-  --accent: oklch(0.28 0.03 140);
+  --accent: oklch(0.31 0.03 140);
   --accent-foreground: oklch(0.92 0.05 128);
   --destructive: oklch(0.68 0.19 24);
   --border: oklch(1 0 0 / 9%);
@@ -324,20 +324,20 @@
   --chart-label: oklch(0.72 0.012 285);
   --chart-grid: oklch(1 0 0 / 7%);
   --chart-crosshair: oklch(0.6 0.012 285);
-  --chart-marker-background: oklch(0.245 0.009 285);
+  --chart-marker-background: oklch(0.275 0.009 285);
   --chart-marker-border: oklch(1 0 0 / 18%);
   --chart-marker-foreground: oklch(0.965 0.004 285);
   --chart-marker-badge-background: oklch(0.86 0.17 128);
   --chart-marker-badge-foreground: oklch(0.22 0.05 132);
-  --chart-scale-mix: oklch(0.27 0.009 285);
-  --chart-scale-01: oklch(0.29 0.009 285);
-  --chart-scale-pattern-color: oklch(0.165 0.008 285);
-  --chart-tooltip-background: oklch(0.245 0.009 285);
+  --chart-scale-mix: oklch(0.3 0.009 285);
+  --chart-scale-01: oklch(0.32 0.009 285);
+  --chart-scale-pattern-color: oklch(0.195 0.008 285);
+  --chart-tooltip-background: oklch(0.275 0.009 285);
   --chart-tooltip-foreground: oklch(0.965 0.004 285);
   --chart-tooltip-muted: oklch(0.7 0.012 285);
-  --legend: oklch(0.215 0.009 285);
+  --legend: oklch(0.25 0.009 285);
   --legend-foreground: oklch(0.965 0.004 285);
-  --legend-muted: oklch(0.26 0.01 285);
+  --legend-muted: oklch(0.295 0.01 285);
   --legend-muted-foreground: oklch(0.7 0.012 285);
   --legend-track: oklch(1 0 0 / 10%);
 }
@@ -349,12 +349,7 @@
     text-rendering: optimizeLegibility;
   }
   body {
-    background-image: radial-gradient(
-      110% 70% at 50% -10%,
-      color-mix(in oklab, var(--primary) 5%, transparent),
-      transparent 65%
-    );
-    background-attachment: fixed;
+    background-color: var(--background);
   }
   ::selection {
     background: color-mix(in oklab, var(--primary) 22%, transparent);
@@ -378,21 +373,12 @@
     scrollbar-width: none;
   }
 
-  /* Give icons inside buttons a theme-aware backing: white in light mode,
-     black in dark mode. */
-  button:not([role="checkbox"]):not([role="option"]) .app-icon,
-  [role="button"]:not([role="checkbox"]):not([role="option"]) .app-icon {
-    box-sizing: content-box;
-    padding: 0.2rem;
-    border-radius: 9999px;
-    background-color: var(--background);
-  }
-
-  /* On inverse/primary buttons the glyph flips so it stays visible against
-     the theme-aware icon plate. */
-  button:not([role="checkbox"]):not([role="option"]):not(.app-dock button) .app-icon,
-  [role="button"]:not([role="checkbox"]):not([role="option"]):not(.app-dock [role="button"]) .app-icon {
-    color: var(--foreground) !important;
+  /* Icons never get their own backing plate, including inside buttons. */
+  .app-icon {
+    box-sizing: border-box !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+    background-color: transparent !important;
   }
 
   /* Dock tabs keep plain, evenly aligned icons. */

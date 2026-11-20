@@ -42,10 +42,11 @@ import { Icon } from "@/components/huge-icon";
 import { MetricCard } from "@/components/metric-card";
 import { AnimatedNumber } from "@/components/motion/animated-number";
 import { PageLoader } from "@/components/page-loader";
-import { Panel, PanelHeader } from "@/components/panel";
+import { SectionPanel } from "@/components/panel";
 import { Button } from "@/components/ui/button";
 import { useApi } from "@/lib/use-api";
-import { CATEGORIES } from "@/lib/categories";
+import { useCategories } from "@/components/categories-provider";
+import { useCurrency } from "@/components/currency-provider";
 import { addDays, formatNumber, parseYmd, ymd } from "@/lib/format";
 import type { StatPeriod, Stats } from "@/lib/types";
 import { useNow } from "@/lib/use-now";
@@ -92,6 +93,15 @@ function toHeatmap(days: { date: string; total: number }[]) {
 }
 
 export function InsightsBento({ period }: { period: StatPeriod }) {
+  const { expense: expenseCategories } = useCategories();
+  const display = useCurrency();
+  const formatDisplay = (value: number) =>
+    display.currency === "USD"
+      ? display.convert(value).toLocaleString("en-US", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        })
+      : formatNumber(value);
   const { version } = useTransactionDialog();
   const now = useNow();
   const [monthPage, setMonthPage] = useState(0);
@@ -305,6 +315,7 @@ export function InsightsBento({ period }: { period: StatPeriod }) {
         <MetricCard
           compact
           label="Spent"
+          info="Total spending in the selected period."
           value={periodStats?.expense ?? 0}
           foot={periodStats?.label}
           spark={spark}
@@ -315,6 +326,7 @@ export function InsightsBento({ period }: { period: StatPeriod }) {
         <MetricCard
           compact
           label="Income"
+          info="Total income recorded in the selected period."
           value={periodStats?.income ?? 0}
           foot={periodStats?.label}
           spark={spark}
@@ -325,6 +337,7 @@ export function InsightsBento({ period }: { period: StatPeriod }) {
         <MetricCard
           compact
           label="Net"
+          info="Income minus spending for the selected period."
           value={periodStats?.net ?? 0}
           foot="Income minus spending"
           spark={spark}
@@ -335,6 +348,7 @@ export function InsightsBento({ period }: { period: StatPeriod }) {
         <MetricCard
           compact
           label="Entries"
+          info="Number of transactions in the selected period."
           value={periodStats?.count ?? 0}
           money={false}
           foot={periodStats?.label}
@@ -346,6 +360,7 @@ export function InsightsBento({ period }: { period: StatPeriod }) {
         <MetricCard
           compact
           label="Average day"
+          info="Average spending per day in the selected period."
           value={periodStats?.avgExpensePerDay ?? 0}
           foot={`Per day · ${periodStats?.label ?? "selected period"}`}
           spark={spark}
@@ -356,6 +371,7 @@ export function InsightsBento({ period }: { period: StatPeriod }) {
         <MetricCard
           compact
           label="Largest single"
+          info="Largest single expense in the selected period."
           value={periodStats?.largestExpense ?? 0}
           foot={`Biggest expense · ${periodStats?.label ?? "selected period"}`}
           spark={spark}
@@ -366,6 +382,7 @@ export function InsightsBento({ period }: { period: StatPeriod }) {
         <MetricCard
           compact
           label="Average entry"
+          info="Average amount per expense entry in the selected period."
           value={averageEntry}
           foot={`Per entry · ${periodStats?.label ?? "selected period"}`}
           spark={spark}
@@ -376,6 +393,7 @@ export function InsightsBento({ period }: { period: StatPeriod }) {
         <MetricCard
           compact
           label="Peak spend"
+          info="Highest spending day or bucket in the selected period."
           value={biggestSpark?.expense ?? 0}
           foot={biggestSpark?.label ?? "No spending"}
           spark={spark}
@@ -386,13 +404,13 @@ export function InsightsBento({ period }: { period: StatPeriod }) {
       </div>
 
       <div className="relative left-1/2 grid w-[min(calc(100vw-2rem),1400px)] -translate-x-1/2 grid-cols-1 gap-4 pt-4 md:grid-cols-2 xl:grid-cols-4">
-        <Panel className="p-5 xl:col-span-3">
-          <PanelHeader
-            title="Spending heat"
-            hint={heatHint}
-            className="p-0 pb-3"
-            action={heatNav}
-          />
+        <SectionPanel
+          title="Spending heat"
+          hint={heatHint}
+          action={heatNav}
+          className="xl:col-span-3"
+          bodyClassName="p-3"
+        >
           <HeatmapInteractionProvider>
             <HeatmapInteractionBoundary>
               <div className="flex w-full flex-col gap-2.5">
@@ -408,7 +426,7 @@ export function InsightsBento({ period }: { period: StatPeriod }) {
                   <HeatmapTooltip
                     formatLabel={(count, date) => {
                       const entries = entriesByDate.get(ymd(date)) ?? 0;
-                      return `UGX ${formatNumber(count)} spent · ${formatNumber(entries)} ${
+                      return `${display.formatMoney(count)} spent · ${formatNumber(entries)} ${
                         entries === 1 ? "entry" : "entries"
                       }`;
                     }}
@@ -418,19 +436,19 @@ export function InsightsBento({ period }: { period: StatPeriod }) {
               </div>
             </HeatmapInteractionBoundary>
           </HeatmapInteractionProvider>
-        </Panel>
+        </SectionPanel>
 
-        <Panel className="p-5 xl:col-span-1">
-          <PanelHeader
-            title="By weekday"
-            hint={weekdayLabel}
-            className="p-0 pb-2"
-            action={monthNav(
-              "by weekday",
-              weekdayMonthKey,
-              setWeekdayMonth,
-            )}
-          />
+        <SectionPanel
+          title="By weekday"
+          hint={weekdayLabel}
+          className="xl:col-span-1"
+          bodyClassName="p-3"
+          action={monthNav(
+            "by weekday",
+            weekdayMonthKey,
+            setWeekdayMonth,
+          )}
+        >
           <RadialChart
             angleType="band"
             data={weekday}
@@ -441,48 +459,64 @@ export function InsightsBento({ period }: { period: StatPeriod }) {
           >
             <RadialBar />
             <RadialAxis showCircle={false} />
-            <RadialCenter
-              prefix="UGX"
-              valueClassName="text-[11px] font-semibold leading-none"
-              labelClassName="text-[9px]"
-            />
+            <RadialCenter>
+              {({ totals, values, index, label }) => {
+                const value =
+                  index === null
+                    ? totals.value ?? 0
+                    : values.value ?? 0;
+                return (
+                  <div className="text-center">
+                    <p className="text-[9px] text-muted-foreground">
+                      {display.unit}
+                    </p>
+                    <p className="tnum mt-0.5 text-[11px] font-semibold leading-none">
+                      {display.formatValue(value)}
+                    </p>
+                    <p className="mt-0.5 text-[9px] text-muted-foreground">
+                      {index === null ? "Total" : label}
+                    </p>
+                  </div>
+                );
+              }}
+            </RadialCenter>
           </RadialChart>
-        </Panel>
+        </SectionPanel>
 
-        <Panel className="p-5 xl:col-span-2">
-          <PanelHeader
-            title="Month by month"
-            hint="Six months at a time"
-            className="p-0 pb-3"
-            action={
-              <div className="flex shrink-0 items-center justify-end gap-1">
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  onClick={() =>
-                    setMonthPage((page) =>
-                      Math.min(monthPageCount - 1, page + 1),
-                    )
-                  }
-                  disabled={safeMonthPage >= monthPageCount - 1}
-                  aria-label="View older months"
-                >
-                  <Icon icon={ArrowLeft01Icon} className="size-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  onClick={() =>
-                    setMonthPage((page) => Math.max(0, page - 1))
-                  }
-                  disabled={safeMonthPage === 0}
-                  aria-label="View newer months"
-                >
-                  <Icon icon={ArrowRight01Icon} className="size-4" />
-                </Button>
-              </div>
-            }
-          />
+        <SectionPanel
+          title="Month by month"
+          hint="Six months at a time"
+          className="xl:col-span-2"
+          bodyClassName="p-3"
+          action={
+            <div className="flex shrink-0 items-center justify-end gap-1">
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={() =>
+                  setMonthPage((page) =>
+                    Math.min(monthPageCount - 1, page + 1),
+                  )
+                }
+                disabled={safeMonthPage >= monthPageCount - 1}
+                aria-label="View older months"
+              >
+                <Icon icon={ArrowLeft01Icon} className="size-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={() =>
+                  setMonthPage((page) => Math.max(0, page - 1))
+                }
+                disabled={safeMonthPage === 0}
+                aria-label="View newer months"
+              >
+                <Icon icon={ArrowRight01Icon} className="size-4" />
+              </Button>
+            </div>
+          }
+        >
           <BarChart
             data={visibleMonths}
             xDataKey="label"
@@ -491,7 +525,7 @@ export function InsightsBento({ period }: { period: StatPeriod }) {
             margin={{ top: 8, right: 8, bottom: 40, left: 96 }}
           >
             <Grid horizontal />
-            <YAxis formatValue={(value) => `UGX ${formatNumber(value)}`} />
+            <YAxis formatValue={display.formatMoney} />
             <Bar dataKey="total" fill="var(--chart-1)" lineCap="round" />
             <BarXAxis />
             <ChartTooltip
@@ -499,24 +533,23 @@ export function InsightsBento({ period }: { period: StatPeriod }) {
                 {
                   color: "var(--chart-1)",
                   label: "Spend",
-                  value: `UGX ${formatNumber(Number(point.total) || 0)}`,
+                  value: display.formatMoney(Number(point.total) || 0),
                 },
               ]}
             />
           </BarChart>
-        </Panel>
+        </SectionPanel>
 
-        <Panel className="p-5 xl:col-span-2">
-          <PanelHeader
-            title="Categories"
-            hint={`${categoriesLabel}, share of spend`}
-            className="p-0 pb-4"
-            action={monthNav(
-              "categories",
-              categoriesMonthKey,
-              setCategoriesMonth,
-            )}
-          />
+        <SectionPanel
+          title="Categories"
+          hint={`${categoriesLabel}, share of spend`}
+          className="xl:col-span-2"
+          action={monthNav(
+            "categories",
+            categoriesMonthKey,
+            setCategoriesMonth,
+          )}
+        >
           {rankedCategories.length > 0 ? (
             <div className="grid gap-5 sm:grid-cols-[220px_minmax(0,1fr)] sm:items-center">
               <div className="flex justify-center">
@@ -541,13 +574,13 @@ export function InsightsBento({ period }: { period: StatPeriod }) {
                     {({ value, label }) => (
                       <div className="text-center">
                         <p className="text-[10px] text-muted-foreground">
-                          UGX
+                          {display.unit}
                         </p>
                         <AnimatedNumber
-                          value={value}
+                          value={display.convert(value)}
                           duration={0.4}
                           startOnView={false}
-                          format={formatNumber}
+                          format={formatDisplay}
                           className="mt-0.5 text-sm font-semibold leading-none text-foreground"
                         />
                         <p className="mt-0.5 text-[10px] text-muted-foreground">
@@ -577,8 +610,8 @@ export function InsightsBento({ period }: { period: StatPeriod }) {
                         <span className="truncate">{entry.label}</span>
                       </span>
                       <span className="tnum shrink-0 text-sm text-foreground">
-                        {formatNumber(entry.value)}{" "}
-                        <span className="text-muted-foreground">UGX</span>
+                        {display.formatValue(entry.value)}{" "}
+                        <span className="text-muted-foreground">{display.unit}</span>
                         <span className="ml-2 text-muted-foreground">
                           {Math.round(
                             (entry.value / Math.max(1, total)) * 100,
@@ -596,15 +629,15 @@ export function InsightsBento({ period }: { period: StatPeriod }) {
               No spending recorded for this month yet.
             </p>
           )}
-        </Panel>
+        </SectionPanel>
 
-        <Panel className="p-5 xl:col-span-2">
-          <PanelHeader
-            title="Daily rhythm"
-            hint={dailyHint}
-            className="p-0 pb-3"
-            action={dailyNav}
-          />
+        <SectionPanel
+          title="Daily rhythm"
+          hint={dailyHint}
+          className="xl:col-span-2"
+          bodyClassName="p-3"
+          action={dailyNav}
+        >
           <BarChart
             data={daily30.map((point) => ({
               ...point,
@@ -618,8 +651,8 @@ export function InsightsBento({ period }: { period: StatPeriod }) {
             margin={{ top: 8, right: 8, bottom: 40, left: 96 }}
           >
             <Grid horizontal />
-            <YAxis formatValue={(value) => `UGX ${formatNumber(value)}`} />
-            {CATEGORIES.map((category) => (
+            <YAxis formatValue={display.formatMoney} />
+            {expenseCategories.map((category) => (
               <Bar
                 key={category.id}
                 dataKey={category.id}
@@ -630,7 +663,7 @@ export function InsightsBento({ period }: { period: StatPeriod }) {
             <BarXAxis />
             <ChartTooltip
               rows={(point) =>
-                CATEGORIES.map((category) => ({
+                expenseCategories.map((category) => ({
                   color: category.color,
                   label: category.label,
                   value: Number(point[category.id]) || 0,
@@ -639,24 +672,24 @@ export function InsightsBento({ period }: { period: StatPeriod }) {
                   .map((entry) => ({
                     color: entry.color,
                     label: entry.label,
-                    value: `UGX ${formatNumber(entry.value)}`,
+                    value: display.formatMoney(entry.value),
                   }))
               }
             />
           </BarChart>
-        </Panel>
+        </SectionPanel>
 
-        <Panel className="p-5 xl:col-span-2">
-          <PanelHeader
-            title="Cumulative pace"
-            hint={`${cumulativeLabel} · spend against a straight-line budget`}
-            className="p-0 pb-3"
-            action={monthNav(
-              "cumulative pace",
-              cumulativeMonthKey,
-              setCumulativeMonth,
-            )}
-          />
+        <SectionPanel
+          title="Cumulative pace"
+          hint={`${cumulativeLabel} · spend against a straight-line budget`}
+          className="xl:col-span-2"
+          bodyClassName="p-3"
+          action={monthNav(
+            "cumulative pace",
+            cumulativeMonthKey,
+            setCumulativeMonth,
+          )}
+        >
           <AreaChart
             data={cumulativeData}
             aspectRatio="2.2 / 1"
@@ -683,19 +716,19 @@ export function InsightsBento({ period }: { period: StatPeriod }) {
                 Math.floor(cumulativeData.length * 0.72),
               )}
             />
-            <YAxis formatValue={(value) => `UGX ${formatNumber(value)}`} />
+            <YAxis formatValue={display.formatMoney} />
             <XAxis />
             <ChartTooltip
               rows={(point) => [
                 {
                   color: "var(--chart-1)",
                   label: "Spent",
-                  value: `UGX ${formatNumber(Number(point.spent) || 0)}`,
+                  value: display.formatMoney(Number(point.spent) || 0),
                 },
                 {
                   color: "var(--muted-foreground)",
                   label: "Budget pace",
-                  value: `UGX ${formatNumber(Number(point.pace) || 0)}`,
+                  value: display.formatMoney(Number(point.pace) || 0),
                 },
               ]}
               dotHaloScale={0}
@@ -703,7 +736,7 @@ export function InsightsBento({ period }: { period: StatPeriod }) {
               dotStrokeWidth={0}
             />
           </AreaChart>
-        </Panel>
+        </SectionPanel>
 
 
       </div>

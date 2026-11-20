@@ -1,4 +1,8 @@
-import { EXPENSE_CATEGORIES } from "./categories";
+import {
+  DEFAULT_CATEGORY_RECORDS,
+  type CategoryKind,
+  type CategoryRecord,
+} from "./categories";
 import { addDays, daysInMonth, monthKey, monthLabel, parseYmd, ymd } from "./format";
 import { ACCOUNTS, createSettings, createTransactions } from "./mock-data";
 import { PERIOD_LABELS } from "./periods";
@@ -16,10 +20,12 @@ import type {
   BudgetProgress,
   DailyPoint,
   Debt,
+  DebtPayment,
   Expense,
   Forecast,
   ForecastPoint,
   Goal,
+  GoalContribution,
   HouseholdMember,
   MonthTotal,
   NetWorth,
@@ -27,7 +33,9 @@ import type {
   NewExpense,
   NewTransaction,
   PeriodStats,
+  PlanActivity,
   RecurringRule,
+  RecurringRun,
   Settings,
   StatPeriod,
   Stats,
@@ -40,10 +48,14 @@ type Store = {
   accounts: Account[];
   settings: Settings;
   goals: Goal[];
+  goalContributions: GoalContribution[];
   debts: Debt[];
+  debtPayments: DebtPayment[];
   budgets: Budget[];
   recurring: RecurringRule[];
+  recurringRuns: RecurringRun[];
   members: HouseholdMember[];
+  categories: CategoryRecord[];
   nextTransactionId: number;
   nextAccountId: number;
   nextGoalId: number;
@@ -51,25 +63,119 @@ type Store = {
   nextBudgetId: number;
   nextRecurringId: number;
   nextMemberId: number;
+  nextGoalContributionId: number;
+  nextDebtPaymentId: number;
+  nextRecurringRunId: number;
 };
 
 // Mock data lives in memory. Swap this module for Supabase later, the route
 // handlers already speak the same shapes.
 const globalStore = globalThis as unknown as { __ledgerStore?: Store };
 
+function seedGoalContributions(
+  goals: Goal[],
+  now: Date,
+): GoalContribution[] {
+  const entries: GoalContribution[] = [];
+  let counter = 1;
+  for (const [goalIndex, goal] of goals.entries()) {
+    const total = Math.max(0, goal.savedUgx);
+    if (total <= 0) continue;
+    const chunks = 3;
+    const base = Math.floor(total / (chunks + 1));
+    for (let index = 0; index < chunks; index += 1) {
+      const amount =
+        index === chunks - 1 ? total - base * chunks : base;
+      if (amount <= 0) continue;
+      const date = ymd(addDays(now, -(18 + index * 29 + goalIndex * 4)));
+      entries.push({
+        id: `gcon_${String(counter).padStart(4, "0")}`,
+        goalId: goal.id,
+        amountUgx: index === 0 ? Math.min(amount, total) : amount,
+        date,
+        accountId: "acc_mtn",
+        note: index === 0 ? "Opening top-up" : "Monthly top-up",
+        createdAt: new Date(`${date}T09:00:00`).toISOString(),
+      });
+      counter += 1;
+    }
+  }
+  return entries;
+}
+
+function seedDebtPayments(
+  debts: Debt[],
+  now: Date,
+): DebtPayment[] {
+  const entries: DebtPayment[] = [];
+  let counter = 1;
+  for (const [debtIndex, debt] of debts.entries()) {
+    if (debt.balanceUgx <= 0) continue;
+    for (let index = 0; index < 2; index += 1) {
+      const amount = Math.round(debt.principalUgx * 0.12);
+      if (amount <= 0) continue;
+      const date = ymd(addDays(now, -(24 + index * 34 + debtIndex * 3)));
+      entries.push({
+        id: `dpay_${String(counter).padStart(4, "0")}`,
+        debtId: debt.id,
+        amountUgx: amount,
+        date,
+        accountId: "acc_mtn",
+        note: index === 0 ? "Part payment" : "Monthly payment",
+        createdAt: new Date(`${date}T10:30:00`).toISOString(),
+      });
+      counter += 1;
+    }
+  }
+  return entries;
+}
+
+function seedRecurringRuns(
+  rules: RecurringRule[],
+  now: Date,
+): RecurringRun[] {
+  const entries: RecurringRun[] = [];
+  let counter = 1;
+  for (const [ruleIndex, rule] of rules.entries()) {
+    for (let index = 0; index < 2; index += 1) {
+      const date = ymd(addDays(now, -(12 + index * 30 + ruleIndex * 2)));
+      entries.push({
+        id: `rrun_${String(counter).padStart(4, "0")}`,
+        ruleId: rule.id,
+        amountUgx: rule.amountUgx,
+        date,
+        createdAt: new Date(`${date}T08:00:00`).toISOString(),
+      });
+      counter += 1;
+    }
+  }
+  return entries;
+}
+
 function store(): Store {
   if (!globalStore.__ledgerStore) {
     const transactions = createTransactions();
     const accounts = ACCOUNTS.map((account) => ({ ...account }));
+    const goals = createGoals();
+    const debts = createDebts();
+    const recurring = createRecurring();
+    const now = new Date();
+    const goalContributions = seedGoalContributions(goals, now);
+    const debtPayments = seedDebtPayments(debts, now);
+    const recurringRuns = seedRecurringRuns(recurring, now);
     globalStore.__ledgerStore = {
       transactions,
       accounts,
       settings: createSettings("acc_mtn"),
-      goals: createGoals(),
-      debts: createDebts(),
+      goals,
+      goalContributions,
+      debts,
+      debtPayments,
       budgets: createBudgets(),
-      recurring: createRecurring(),
+      recurring,
+      recurringRuns,
       members: createMembers(),
+      categories: DEFAULT_CATEGORY_RECORDS.map((category) => ({ ...category })),
       nextTransactionId: transactions.length + 1,
       nextAccountId: 1,
       nextGoalId: 1,
@@ -77,9 +183,104 @@ function store(): Store {
       nextBudgetId: 1,
       nextRecurringId: 1,
       nextMemberId: 1,
+      nextGoalContributionId: goalContributions.length + 1,
+      nextDebtPaymentId: debtPayments.length + 1,
+      nextRecurringRunId: recurringRuns.length + 1,
     };
   }
   return globalStore.__ledgerStore;
+}
+
+export function listCategories(): CategoryRecord[] {
+  const state = store();
+  if (!Array.isArray(state.categories)) {
+    state.categories = DEFAULT_CATEGORY_RECORDS.map((category) => ({
+      ...category,
+    }));
+  }
+  return state.categories.map((category) => ({ ...category }));
+}
+
+export function categoryExists(id: string): boolean {
+  return store().categories.some((category) => category.id === id);
+}
+
+export function isCategoryKind(
+  id: string,
+  kind: CategoryKind,
+): boolean {
+  return store().categories.some(
+    (category) => category.id === id && category.kind === kind,
+  );
+}
+
+export function addCategory(input: {
+  label: string;
+  kind: CategoryKind;
+  color: string;
+  iconKey: CategoryRecord["iconKey"];
+}): CategoryRecord {
+  const state = store();
+  const base = input.label
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "") || "category";
+  let id = base;
+  let suffix = 2;
+  while (state.categories.some((category) => category.id === id)) {
+    id = `${base}-${suffix}`;
+    suffix += 1;
+  }
+
+  const category: CategoryRecord = {
+    id,
+    label: input.label.trim(),
+    kind: input.kind,
+    color: input.color,
+    iconKey: input.iconKey,
+  };
+  state.categories.push(category);
+  return { ...category };
+}
+
+export function updateCategory(
+  id: string,
+  patch: Partial<Pick<CategoryRecord, "label" | "color" | "iconKey">>,
+): CategoryRecord | undefined {
+  const state = store();
+  const category = state.categories.find((entry) => entry.id === id);
+  if (!category) return undefined;
+  if (patch.label !== undefined) category.label = patch.label.trim();
+  if (patch.color !== undefined) category.color = patch.color;
+  if (patch.iconKey !== undefined) category.iconKey = patch.iconKey;
+  return { ...category };
+}
+
+export function categoryInUse(id: string): boolean {
+  const state = store();
+  return (
+    state.transactions.some((transaction) => transaction.category === id) ||
+    state.budgets.some((budget) => budget.categoryId === id) ||
+    state.recurring.some((rule) => rule.category === id)
+  );
+}
+
+export function deleteCategory(id: string): {
+  ok: boolean;
+  error?: string;
+} {
+  const state = store();
+  const category = state.categories.find((entry) => entry.id === id);
+  if (!category) return { ok: false, error: "Category not found" };
+  if (id === "other" || id === "other-income") {
+    return { ok: false, error: "Fallback categories cannot be removed" };
+  }
+  if (categoryInUse(id)) {
+    return { ok: false, error: "Category is still used by transactions or budgets" };
+  }
+  state.categories = state.categories.filter((entry) => entry.id !== id);
+  return { ok: true };
 }
 
 export type ExpenseFilters = {
@@ -388,7 +589,12 @@ export function totalLiquidBalance(): number {
 /* -------------------------------------------------------------------------- */
 
 export function getSettings(): Settings {
-  return store().settings;
+  const state = store();
+  state.settings = {
+    ...createSettings(state.settings.defaultAccountId),
+    ...state.settings,
+  };
+  return state.settings;
 }
 
 export function updateSettings(patch: Partial<Settings>): Settings {
@@ -672,6 +878,9 @@ export function computeStats(
   const today = ymd(now);
   const key = month ?? monthKey(today);
   const budget = state.settings.monthlyBudget;
+  const expenseCategories = state.categories.filter(
+    (category) => category.kind === "expense",
+  );
   const dayCount = daysInMonth(key);
   const isCurrent = key === monthKey(today);
   const accounts = listAccountBalances();
@@ -700,7 +909,7 @@ export function computeStats(
       transaction.spentOn <= today,
   );
 
-  const byCategory = EXPENSE_CATEGORIES.map((category) => ({
+  const byCategory = expenseCategories.map((category) => ({
     id: category.id,
     label: category.label,
     value: sum(monthExpenses.filter((expense) => expense.category === category.id)),
@@ -719,7 +928,7 @@ export function computeStats(
     const date = ymd(new Date(year, monthNumber - 1, day));
     const dayExpenses = monthExpenses.filter((expense) => expense.spentOn === date);
     const point: DailyPoint = { date, total: sum(dayExpenses) };
-    for (const category of EXPENSE_CATEGORIES) {
+    for (const category of expenseCategories) {
       point[category.id] = sum(
         dayExpenses.filter((expense) => expense.category === category.id),
       );
@@ -741,7 +950,7 @@ export function computeStats(
       (expense) => expense.spentOn === date,
     );
     const point: DailyPoint = { date, total: sum(dayExpenses) };
-    for (const category of EXPENSE_CATEGORIES) {
+    for (const category of expenseCategories) {
       point[category.id] = sum(
         dayExpenses.filter((expense) => expense.category === category.id),
       );
@@ -892,7 +1101,41 @@ export function deleteGoal(id: string): boolean {
   const state = store();
   const before = state.goals.length;
   state.goals = state.goals.filter((goal) => goal.id !== id);
+  state.goalContributions = state.goalContributions.filter(
+    (entry) => entry.goalId !== id,
+  );
   return state.goals.length !== before;
+}
+
+export function addGoalContribution(
+  goalId: string,
+  input: {
+    amountUgx: number;
+    date: string;
+    accountId?: string;
+    note?: string;
+  },
+): GoalContribution | undefined {
+  const state = store();
+  const goal = state.goals.find((entry) => entry.id === goalId);
+  if (!goal) return undefined;
+  const amountUgx = Math.round(input.amountUgx);
+  if (amountUgx === 0) return undefined;
+  if (goal.savedUgx + amountUgx < 0) return undefined;
+
+  const contribution: GoalContribution = {
+    id: `gcon_${String(state.nextGoalContributionId).padStart(4, "0")}`,
+    goalId,
+    amountUgx,
+    date: input.date,
+    accountId: input.accountId,
+    note: input.note?.trim() ?? "",
+    createdAt: new Date().toISOString(),
+  };
+  state.nextGoalContributionId += 1;
+  state.goalContributions.push(contribution);
+  goal.savedUgx += amountUgx;
+  return contribution;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -926,18 +1169,58 @@ export function deleteDebt(id: string): boolean {
   const state = store();
   const before = state.debts.length;
   state.debts = state.debts.filter((debt) => debt.id !== id);
+  state.debtPayments = state.debtPayments.filter(
+    (entry) => entry.debtId !== id,
+  );
   return state.debts.length !== before;
+}
+
+export function addDebtPayment(
+  debtId: string,
+  input: {
+    amountUgx: number;
+    date: string;
+    accountId?: string;
+    note?: string;
+  },
+): DebtPayment | undefined {
+  const state = store();
+  const debt = state.debts.find((entry) => entry.id === debtId);
+  if (!debt) return undefined;
+  const amountUgx = Math.max(0, Math.round(input.amountUgx));
+  if (amountUgx <= 0) return undefined;
+
+  const payment: DebtPayment = {
+    id: `dpay_${String(state.nextDebtPaymentId).padStart(4, "0")}`,
+    debtId,
+    amountUgx,
+    date: input.date,
+    accountId: input.accountId,
+    note: input.note?.trim() ?? "",
+    createdAt: new Date().toISOString(),
+  };
+  state.nextDebtPaymentId += 1;
+  state.debtPayments.push(payment);
+  debt.balanceUgx = Math.max(0, debt.balanceUgx - amountUgx);
+  return payment;
 }
 
 /* -------------------------------------------------------------------------- */
 /* Budgets                                                                    */
 /* -------------------------------------------------------------------------- */
 
-export function listBudgets(): BudgetProgress[] {
+export function listBudgets(month?: string): BudgetProgress[] {
   const state = store();
   const now = new Date();
-  const key = monthKey(now);
-  const weekStart = ymd(addDays(now, -6));
+  const currentKey = monthKey(now);
+  const key = month ?? currentKey;
+  const [year, monthNumber] = key.split("-").map(Number);
+  const monthEnd = ymd(new Date(year, monthNumber, 0));
+  const isCurrent = key === currentKey;
+  const weekStart = isCurrent
+    ? ymd(addDays(now, -6))
+    : ymd(addDays(parseYmd(monthEnd), -6));
+  const weekEnd = isCurrent ? ymd(now) : monthEnd;
   const monthExpenses = state.transactions.filter(
     (transaction) =>
       transaction.type === "expense" && transaction.spentOn.startsWith(key),
@@ -946,7 +1229,7 @@ export function listBudgets(): BudgetProgress[] {
     (transaction) =>
       transaction.type === "expense" &&
       transaction.spentOn >= weekStart &&
-      transaction.spentOn <= ymd(now),
+      transaction.spentOn <= weekEnd,
   );
 
   return state.budgets.map((budget) => {
@@ -998,6 +1281,65 @@ export function listRecurring(): RecurringRule[] {
   return [...store().recurring].sort((a, b) => a.nextOn.localeCompare(b.nextOn));
 }
 
+export function listPlanActivity(
+  period: StatPeriod = "30d",
+): PlanActivity[] {
+  const state = store();
+  const now = new Date();
+  const to = ymd(now);
+  const from = ymd(startOfPeriod(period, now, state.transactions));
+
+  const goalById = new Map(state.goals.map((goal) => [goal.id, goal]));
+  const debtById = new Map(state.debts.map((debt) => [debt.id, debt]));
+  const ruleById = new Map(state.recurring.map((rule) => [rule.id, rule]));
+
+  const activity: PlanActivity[] = [
+    ...state.goalContributions.map((entry) => {
+      const goal = goalById.get(entry.goalId);
+      return {
+        id: entry.id,
+        kind: "goal-contribution" as const,
+        date: entry.date,
+        amountUgx: entry.amountUgx,
+        title: goal?.name ?? "Goal",
+        detail: entry.note || (entry.amountUgx < 0 ? "Withdrawal" : "Contribution"),
+        refId: entry.goalId,
+      };
+    }),
+    ...state.debtPayments.map((entry) => {
+      const debt = debtById.get(entry.debtId);
+      return {
+        id: entry.id,
+        kind: "debt-payment" as const,
+        date: entry.date,
+        amountUgx: entry.amountUgx,
+        title: debt?.counterparty ?? "Debt",
+        detail:
+          debt?.direction === "lent"
+            ? "Payment received"
+            : entry.note || "Debt payment",
+        refId: entry.debtId,
+      };
+    }),
+    ...state.recurringRuns.map((entry) => {
+      const rule = ruleById.get(entry.ruleId);
+      return {
+        id: entry.id,
+        kind: "recurring-run" as const,
+        date: entry.date,
+        amountUgx: entry.amountUgx,
+        title: rule?.name ?? "Recurring rule",
+        detail: rule ? `Recurring · ${rule.frequency}` : "Recurring run",
+        refId: entry.ruleId,
+      };
+    }),
+  ]
+    .filter((entry) => entry.date >= from && entry.date <= to)
+    .sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id));
+
+  return activity;
+}
+
 export function addRecurring(input: Omit<RecurringRule, "id">): RecurringRule {
   const state = store();
   const rule: RecurringRule = {
@@ -1023,7 +1365,20 @@ export function deleteRecurring(id: string): boolean {
   const state = store();
   const before = state.recurring.length;
   state.recurring = state.recurring.filter((rule) => rule.id !== id);
+  state.recurringRuns = state.recurringRuns.filter(
+    (entry) => entry.ruleId !== id,
+  );
   return state.recurring.length !== before;
+}
+
+export function skipRecurringNext(
+  id: string,
+): RecurringRule | undefined {
+  const state = store();
+  const rule = state.recurring.find((entry) => entry.id === id);
+  if (!rule) return undefined;
+  rule.nextOn = advanceDate(rule.nextOn, rule.frequency);
+  return rule;
 }
 
 function advanceDate(date: string, frequency: RecurringRule["frequency"]): string {
@@ -1033,15 +1388,19 @@ function advanceDate(date: string, frequency: RecurringRule["frequency"]): strin
   return ymd(shiftMonths(parsed, 1));
 }
 
-export function runDueRecurring(now = new Date()): { created: number } {
+export function runDueRecurring(
+  now = new Date(),
+): { created: number; runs: RecurringRun[] } {
   const state = store();
   const today = ymd(now);
   let created = 0;
+  const runs: RecurringRun[] = [];
 
   for (const rule of state.recurring) {
     if (!rule.enabled) continue;
     let guard = 0;
     while (rule.nextOn <= today && guard < 24) {
+      const runDate = rule.nextOn;
       addTransaction({
         type: rule.type,
         amount: rule.amountUgx,
@@ -1050,16 +1409,26 @@ export function runDueRecurring(now = new Date()): { created: number } {
         accountId: rule.accountId,
         toAccountId: rule.toAccountId,
         note: rule.note || rule.name,
-        spentOn: rule.nextOn,
+        spentOn: runDate,
         source: "recurring",
       });
+      const run: RecurringRun = {
+        id: `rrun_${String(state.nextRecurringRunId).padStart(4, "0")}`,
+        ruleId: rule.id,
+        amountUgx: rule.amountUgx,
+        date: runDate,
+        createdAt: new Date().toISOString(),
+      };
+      state.nextRecurringRunId += 1;
+      state.recurringRuns.push(run);
+      runs.push(run);
       rule.nextOn = advanceDate(rule.nextOn, rule.frequency);
       created += 1;
       guard += 1;
     }
   }
 
-  return { created };
+  return { created, runs };
 }
 
 /* -------------------------------------------------------------------------- */

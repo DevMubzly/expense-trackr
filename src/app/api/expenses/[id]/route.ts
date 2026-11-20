@@ -1,5 +1,5 @@
 import type { NextRequest } from "next/server";
-import { CATEGORY_BY_ID } from "@/lib/categories";
+import { categoryExists } from "@/lib/db";
 import { deleteExpense, getExpense, updateExpense } from "@/lib/db";
 import type { NewExpense } from "@/lib/types";
 
@@ -17,7 +17,7 @@ const patchable = (body: Record<string, unknown>): Partial<NewExpense> => {
     patch.currency = body.currency;
   }
   if (body.category !== undefined) {
-    if (typeof body.category !== "string" || !CATEGORY_BY_ID.has(body.category)) {
+    if (typeof body.category !== "string" || !categoryExists(body.category)) {
       throw new Error("Invalid category");
     }
     patch.category = body.category;

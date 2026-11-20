@@ -1,6 +1,7 @@
 "use client";
 
 import { Icon } from "@/components/huge-icon";
+import { useCategories } from "@/components/categories-provider";
 import {
   Combobox,
   ComboboxContent,
@@ -10,7 +11,7 @@ import {
   ComboboxList,
   ComboboxTrigger,
 } from "@/components/motion/combobox";
-import { categoriesFor, type Category, type CategoryKind } from "@/lib/categories";
+import type { Category, CategoryKind } from "@/lib/categories";
 
 export function CategorySelect({
   value,
@@ -29,7 +30,8 @@ export function CategorySelect({
   allLabel?: string;
   compact?: boolean;
 }) {
-  const options = categories ?? categoriesFor(kind);
+  const contextCategories = useCategories();
+  const options = categories ?? contextCategories.categoriesFor(kind);
 
   return (
     <Combobox value={value} onValueChange={onValueChange}>

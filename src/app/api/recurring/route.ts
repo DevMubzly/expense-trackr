@@ -1,5 +1,5 @@
 import { connection, type NextRequest } from "next/server";
-import { CATEGORY_BY_ID, isCategoryOfKind } from "@/lib/categories";
+import { categoryExists, isCategoryKind } from "@/lib/db";
 import { addRecurring, getAccount, listRecurring } from "@/lib/db";
 import type { RecurringRule, TransactionType } from "@/lib/types";
 
@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
     if (!toAccountId || toAccountId === accountId || !getAccount(toAccountId)) {
       return Response.json({ error: "Choose two different accounts" }, { status: 400 });
     }
-  } else if (!CATEGORY_BY_ID.has(category) || !isCategoryOfKind(category, type)) {
+  } else if (!categoryExists(category) || !isCategoryKind(category, type)) {
     return Response.json({ error: "Invalid category" }, { status: 400 });
   }
 

@@ -40,7 +40,7 @@ const CONTENT_SPRING = {
 // Constant radius — never animated. The browser clamps it to half the shell
 // height, so the pill-to-rounded-rect morph falls out of the resize for free
 // with zero chance of corner glitches.
-const RADIUS = 9999;
+const RADIUS = 16;
 
 // iPhone pill dimensions. Also the shell's pre-measure animate target: if the
 // first commit already has a view active (e.g. a click replayed after
@@ -162,13 +162,18 @@ export function DynamicIsland({
             : { width: PILL_WIDTH, height: PILL_HEIGHT }
         }
         transition={reduce ? { duration: 0 } : SHELL_SPRING}
-        style={{ borderRadius: RADIUS }}
+        style={{
+          borderTopLeftRadius: 0,
+          borderTopRightRadius: 0,
+          borderBottomLeftRadius: RADIUS,
+          borderBottomRightRadius: RADIUS,
+        }}
         // items-start pins content to the top edge while the shell springs, so
         // expansion reads as unfurling downward out of the pill. Top-align the
         // island in its parent (like under a notch) to complete the effect.
         className={cn(
           "relative inline-flex items-start justify-center overflow-hidden",
-          "bg-zinc-950 text-white shadow-2xl ring-1 ring-white/15",
+          "border border-white/10 bg-zinc-900/95 text-white shadow-2xl backdrop-blur-xl",
           className,
         )}
       >

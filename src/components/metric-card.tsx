@@ -7,9 +7,11 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import { AreaSparkline } from "@/components/charts";
+import { useCurrency } from "@/components/currency-provider";
 import { Icon } from "@/components/huge-icon";
 import { AnimatedNumber } from "@/components/motion/animated-number";
 import { Panel } from "@/components/panel";
+import { SectionInfo } from "@/components/section-info";
 import { formatNumber } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -37,13 +39,14 @@ export function MetricCard<T extends SparkDatum = SparkDatum>({
   value,
   foot,
   money = true,
-  unit = "UGX",
+  unit,
   spark,
   sparkKey,
   sparkLabelKey,
   compact = false,
   sparkColor = "var(--chart-1)",
   icon,
+  info,
   tone = "orange",
   className,
 }: {
@@ -58,10 +61,21 @@ export function MetricCard<T extends SparkDatum = SparkDatum>({
   compact?: boolean;
   sparkColor?: string;
   icon?: IconSvgElement;
+  info?: string;
   tone?: MetricTone;
   className?: string;
 }) {
   const dataKey = (sparkKey ?? "value") as keyof T;
+  const display = useCurrency();
+  const displayUnit = unit ?? display.unit;
+  const displayValue = money ? display.convert(value) : value;
+  const formatDisplay = (next: number) =>
+    money && display.currency === "USD"
+      ? next.toLocaleString("en-US", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        })
+      : formatNumber(next);
   const [hovered, setHovered] = useState<{
     datum: T;
     index: number;
@@ -107,13 +121,22 @@ export function MetricCard<T extends SparkDatum = SparkDatum>({
 
   return (
     <Panel
-      className={cn("flex flex-col", compact ? "p-4" : "p-5", className)}
+      className={cn(
+        "flex flex-col border border-foreground/10",
+        "p-1",
+        className,
+      )}
     >
-      <div className="flex min-w-0 items-center gap-2">
+      <div
+        className={cn(
+          "flex min-w-0 items-center gap-2",
+          compact ? "px-3 pb-1.5 pt-2" : "px-3.5 pb-2 pt-2",
+        )}
+      >
         {icon ? (
           <Icon
             icon={icon}
-            className={cn("size-4 shrink-0", TONES[tone])}
+            className={cn("size-3.5 shrink-0", TONES[tone])}
           />
         ) : null}
         <p
@@ -124,18 +147,34 @@ export function MetricCard<T extends SparkDatum = SparkDatum>({
         >
           {label}
         </p>
+        {info ? <SectionInfo label={label}>{info}</SectionInfo> : null}
       </div>
 
-      <div className={compact ? "mt-1.5" : "mt-2"}>
-        {money ? (
-          <span className="tnum inline-flex items-baseline gap-1.5">
-            <span
-              className={cn(
-                "text-sm font-semibold leading-none tracking-[-0.02em] text-muted-foreground",
-              )}
-            >
-              {unit}
+      <div
+        className={cn(
+          "flex flex-1 flex-col rounded-xl border border-foreground/10 bg-muted/50",
+          compact ? "mt-1 p-3 px-4" : "mt-1 p-3.5 px-4",
+        )}
+      >
+        <div className={compact ? "mt-1" : "mt-1.5"}>
+          {money ? (
+            <span className="tnum inline-flex items-baseline gap-1.5">
+              <span
+                className={cn(
+                  "text-sm font-semibold leading-none tracking-[-0.02em] text-muted-foreground",
+                )}
+              >
+                {displayUnit}
+              </span>
+              <AnimatedNumber
+                value={displayValue}
+                duration={0.6}
+                startOnView={false}
+                format={formatDisplay}
+                className="text-sm font-semibold leading-none tracking-[-0.02em]"
+              />
             </span>
+          ) : (
             <AnimatedNumber
               value={value}
               duration={0.6}
@@ -143,76 +182,68 @@ export function MetricCard<T extends SparkDatum = SparkDatum>({
               format={formatNumber}
               className="text-sm font-semibold leading-none tracking-[-0.02em]"
             />
-          </span>
+          )}
+        </div>
+
+        {foot ? (
+          <p
+            className={cn(
+              "text-muted-foreground",
+              compact ? "mt-1 text-[10px]" : "mt-1.5 text-[11px]",
+            )}
+          >
+            {foot}
+          </p>
+        ) : null}
+
+        {spark && spark.length > 0 ? (
+          <div
+            className={cn(
+              "relative",
+              compact ? "mt-auto pt-2" : "mt-auto pt-2.5",
+            )}
+            onPointerMove={handleSparkPointerMove}
+            onPointerLeave={() => setHovered(null)}
+          >
+            {hovered ? (
+              <div
+                className="pointer-events-none absolute bottom-full z-20 mb-1 -translate-x-1/2 whitespace-nowrap rounded-full border border-border/50 bg-popover/95 px-2 py-1 text-[10px] leading-none text-popover-foreground shadow-lg backdrop-blur-sm"
+                style={{ left: hovered.x }}
+              >
+                <span className="text-muted-foreground">
+                  {readSparkLabel(hovered.datum, hovered.index)}
+                </span>
+                <span className="tnum ml-1.5 font-medium">
+                  {money ? (
+                    <>
+                      <span className="font-normal text-muted-foreground">
+                        {displayUnit}
+                      </span>{" "}
+                      {display.formatValue(
+                        readSparkValue(hovered.datum, hovered.index),
+                      )}
+                    </>
+                  ) : (
+                    formatNumber(
+                      readSparkValue(hovered.datum, hovered.index),
+                    )
+                  )}
+                </span>
+              </div>
+            ) : null}
+            <AreaSparkline
+              data={spark.length > 1 ? spark : [...spark, ...spark]}
+              dataKey={dataKey}
+              height={compact ? 32 : 40}
+              color={sparkColor}
+              fill="gradient"
+              onHoverChange={handleHoverChange}
+            />
+          </div>
         ) : (
-          <AnimatedNumber
-            value={value}
-            duration={0.6}
-            startOnView={false}
-            format={formatNumber}
-            className="text-sm font-semibold leading-none tracking-[-0.02em]"
-          />
+          <div className="mt-auto" />
         )}
       </div>
-
-      {foot ? (
-        <p
-          className={cn(
-            "text-muted-foreground",
-            compact ? "mt-1 text-[10px]" : "mt-1.5 text-[11px]",
-          )}
-        >
-          {foot}
-        </p>
-      ) : null}
-
-      {spark && spark.length > 0 ? (
-        <div
-          className={cn(
-            "relative",
-            compact ? "mt-auto pt-2.5" : "mt-auto pt-3",
-          )}
-          onPointerMove={handleSparkPointerMove}
-          onPointerLeave={() => setHovered(null)}
-        >
-          {hovered ? (
-            <div
-              className="pointer-events-none absolute bottom-full z-20 mb-1 -translate-x-1/2 whitespace-nowrap rounded-full border border-border/50 bg-popover/95 px-2 py-1 text-[10px] leading-none text-popover-foreground shadow-lg backdrop-blur-sm"
-              style={{ left: hovered.x }}
-            >
-              <span className="text-muted-foreground">
-                {readSparkLabel(hovered.datum, hovered.index)}
-              </span>
-              <span className="tnum ml-1.5 font-medium">
-                {money ? (
-                  <>
-                    <span className="font-normal text-muted-foreground">
-                      UGX
-                    </span>{" "}
-                    {formatNumber(
-                      readSparkValue(hovered.datum, hovered.index),
-                    )}
-                  </>
-                ) : (
-                  formatNumber(
-                    readSparkValue(hovered.datum, hovered.index),
-                  )
-                )}
-              </span>
-            </div>
-          ) : null}
-          <AreaSparkline
-            data={spark.length > 1 ? spark : [...spark, ...spark]}
-            dataKey={dataKey}
-            height={compact ? 32 : 40}
-            color={sparkColor}
-            fill="gradient"
-            onHoverChange={handleHoverChange}
-          />
-        </div>
-      ) : (
-        <div className="mt-auto" />
-      )}
     </Panel>
   );
 }
