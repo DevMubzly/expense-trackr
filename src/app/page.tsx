@@ -1,10 +1,24 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight01Icon, Tick02Icon, Wallet02Icon } from "@hugeicons/core-free-icons";
+import { useEffect, useState } from "react";
+import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
+import { AuthDialog } from "@/components/auth-dialog";
 import { Icon } from "@/components/huge-icon";
 import { buttonVariants } from "@/components/ui/button";
 
 export default function LandingPage() {
+  const [authOpen, setAuthOpen] = useState(false);
+
+  useEffect(() => {
+    // Post-hydration only: the query string is not available during prerender.
+    if (new URLSearchParams(window.location.search).get("auth") === "1") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setAuthOpen(true);
+    }
+  }, []);
+
   return (
     <div className="theme-light min-h-dvh bg-black text-foreground">
       <div className="relative isolate min-h-dvh overflow-hidden">
@@ -20,13 +34,11 @@ export default function LandingPage() {
 
         <div className="relative flex min-h-dvh flex-col">
           <header className="flex items-center justify-between px-6 py-6 lg:px-10">
-            <Link href="/" className="flex items-center gap-2.5">
-              <span className="grid size-9 place-items-center rounded-xl bg-white text-black">
-                <Icon icon={Wallet02Icon} className="size-4" />
-              </span>
-              <span className="text-sm font-semibold tracking-[-0.02em] text-white">
-                Expense Trackr
-              </span>
+            <Link
+              href="/"
+              className="text-sm font-semibold tracking-[-0.02em] text-white"
+            >
+              Expense Trackr
             </Link>
 
             <nav className="flex items-center gap-6">
@@ -36,8 +48,9 @@ export default function LandingPage() {
               >
                 Pricing
               </Link>
-              <Link
-                href="/dashboard"
+              <button
+                type="button"
+                onClick={() => setAuthOpen(true)}
                 className={buttonVariants({
                   size: "sm",
                   className: "bg-white text-black hover:bg-white/90",
@@ -45,18 +58,13 @@ export default function LandingPage() {
               >
                 Open App
                 <Icon icon={ArrowRight01Icon} className="size-3.5" />
-              </Link>
+              </button>
             </nav>
           </header>
 
           <main className="flex flex-1 items-center justify-center px-6 pb-24 pt-10 lg:px-10">
             <div className="max-w-3xl text-center">
-              <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-[11px] text-white/85 backdrop-blur-sm">
-                <Icon icon={Tick02Icon} className="size-3" />
-                A calmer way to run your money
-              </span>
-
-              <h1 className="mt-7 font-display text-5xl leading-[0.95] tracking-[-0.05em] text-white [text-shadow:0_2px_30px_rgba(0,0,0,0.45)] sm:text-7xl lg:text-8xl">
+              <h1 className="font-display text-5xl leading-[0.95] tracking-[-0.05em] text-white [text-shadow:0_2px_30px_rgba(0,0,0,0.45)] sm:text-7xl lg:text-8xl">
                 Every shilling
                 <span className="block text-white/70">has a job.</span>
               </h1>
@@ -68,8 +76,9 @@ export default function LandingPage() {
               </p>
 
               <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
-                <Link
-                  href="/dashboard"
+                <button
+                  type="button"
+                  onClick={() => setAuthOpen(true)}
                   className={buttonVariants({
                     size: "lg",
                     className: "h-11 bg-white px-5 text-black hover:bg-white/90",
@@ -77,7 +86,7 @@ export default function LandingPage() {
                 >
                   Open App
                   <Icon icon={ArrowRight01Icon} className="size-4" />
-                </Link>
+                </button>
                 <Link
                   href="/pricing"
                   className="inline-flex h-11 items-center gap-2 rounded-full px-4 text-[13px] font-medium text-white/85 transition-colors hover:bg-white/10 hover:text-white"
@@ -85,14 +94,12 @@ export default function LandingPage() {
                   View pricing
                 </Link>
               </div>
-
-              <p className="mt-5 text-[11px] text-white/60 [text-shadow:0_1px_12px_rgba(0,0,0,0.6)]">
-                No bank connection. Any email and password opens the demo.
-              </p>
             </div>
           </main>
         </div>
       </div>
+
+      <AuthDialog open={authOpen} onClose={() => setAuthOpen(false)} />
     </div>
   );
 }

@@ -3,6 +3,7 @@ import { ArrowLeft01Icon, ArrowRight01Icon, Tick02Icon, Wallet02Icon } from "@hu
 import { Icon } from "@/components/huge-icon";
 import { buttonVariants } from "@/components/ui/button";
 import { LandingFooter } from "@/components/landing-footer";
+import { OpenAppButton } from "@/components/open-app-button";
 import { cn } from "@/lib/utils";
 
 const PLANS = [
@@ -11,7 +12,6 @@ const PLANS = [
     price: "Free",
     detail: "One person, the whole month.",
     features: ["Accounts and wallets", "Expenses and income", "Budgets and categories", "Basic insights"],
-    href: "/dashboard",
     cta: "Open App",
     featured: false,
   },
@@ -27,7 +27,6 @@ const PLANS = [
       "Multi-currency ledger",
       "Full heatmaps and trends",
     ],
-    href: "/dashboard",
     cta: "Open App",
     featured: true,
   },
@@ -37,7 +36,6 @@ const PLANS = [
     suffix: "USD / month",
     detail: "Shared household or small team.",
     features: ["Everything in Pro", "Shared workspace", "Household members", "Export and import"],
-    href: "/dashboard",
     cta: "Open App",
     featured: false,
   },
@@ -141,8 +139,7 @@ export default function PricingPage() {
                   ))}
                 </ul>
 
-                <Link
-                  href={plan.href}
+                <OpenAppButton
                   className={buttonVariants({
                     size: "lg",
                     variant: plan.featured ? "outline" : "default",
@@ -155,7 +152,7 @@ export default function PricingPage() {
                 >
                   {plan.cta}
                   <Icon icon={ArrowRight01Icon} className="size-4" />
-                </Link>
+                </OpenAppButton>
               </div>
             ))}
           </div>

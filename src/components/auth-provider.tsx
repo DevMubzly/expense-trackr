@@ -38,7 +38,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const frame = window.requestAnimationFrame(() => {
+    // A timer, not requestAnimationFrame: rAF is paused in background tabs and
+    // would leave the app stuck on the session skeleton.
+    const timer = window.setTimeout(() => {
       try {
         const stored = window.localStorage.getItem(STORAGE_KEY);
         if (stored) {
@@ -50,8 +52,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } finally {
         setLoading(false);
       }
-    });
-    return () => window.cancelAnimationFrame(frame);
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, []);
 
   const login = useCallback((email: string, password: string) => {

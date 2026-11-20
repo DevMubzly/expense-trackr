@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowRight01Icon, Tick02Icon } from "@hugeicons/core-free-icons";
 import { Icon } from "@/components/huge-icon";
 import { buttonVariants } from "@/components/ui/button";
+import { OpenAppButton } from "@/components/open-app-button";
 
 export function LandingFooter() {
   return (
@@ -22,8 +23,7 @@ export function LandingFooter() {
                 workspace with a full month of sample data.
               </p>
             </div>
-            <Link
-              href="/dashboard"
+            <OpenAppButton
               className={buttonVariants({
                 size: "lg",
                 className:
@@ -32,7 +32,7 @@ export function LandingFooter() {
             >
               Open App
               <Icon icon={ArrowRight01Icon} className="size-4" />
-            </Link>
+            </OpenAppButton>
           </div>
         </div>
 

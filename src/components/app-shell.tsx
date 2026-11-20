@@ -70,7 +70,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
-  const publicRoute = pathname === "/" || pathname === "/login" || pathname === "/pricing";
+  const publicRoute = pathname === "/" || pathname === "/pricing";
   const { version, openTransaction } = useTransactionDialog();
   const display = useCurrency();
   const { data: stats, loading: statsLoading } = useApi<Stats>(
@@ -124,7 +124,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (publicRoute || authLoading || user) return;
-    router.replace("/login");
+    router.replace("/?auth=1");
   }, [authLoading, publicRoute, router, user]);
 
   const commands = useMemo<CommandItem[]>(
