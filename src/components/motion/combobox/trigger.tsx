@@ -31,7 +31,7 @@ export function ComboboxTrigger({ children, className }: ComboboxTriggerProps) {
         context.setOpen(true);
       }}
       className={cn(
-        "relative z-20 flex h-10 w-full min-w-52 cursor-text items-center justify-between gap-3 rounded-full bg-transparent px-3 text-sm text-foreground transition-colors",
+        "relative z-20 flex h-10 w-full min-w-52 cursor-pointer items-center justify-between gap-3 rounded-full bg-muted/60 px-3 text-sm text-foreground transition-colors hover:bg-muted",
         "focus-within:ring-2 focus-within:ring-foreground/20",
         context.disabled && "pointer-events-none opacity-50",
         className,

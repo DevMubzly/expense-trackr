@@ -45,6 +45,8 @@ export interface MorphingModalProps {
   className?: string;
   /** Override any built-in string. */
   labels?: Partial<MorphingModalMessages>;
+  /** Extra classes for the inner content wrapper (padding lives here). */
+  contentClassName?: string;
 }
 
 export function MorphingModal({
@@ -55,6 +57,7 @@ export function MorphingModal({
   fullScreen = false,
   ariaLabel,
   className,
+  contentClassName,
   labels,
 }: MorphingModalProps) {
   const t = useMessages("morphingModal", morphingModalMessages, labels);
@@ -185,7 +188,7 @@ export function MorphingModal({
                   className,
                 )}
               >
-                <motion.div layout="position" className="p-5">
+                <motion.div layout="position" className={cn("p-5", contentClassName)}>
                   <AnimatePresence mode="popLayout" initial={false}>
                     {/* The motion element is the direct child so popLayout can
                         take its ref and lift the outgoing view out of flow;

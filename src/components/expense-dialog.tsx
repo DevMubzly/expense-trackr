@@ -143,7 +143,8 @@ export function TransactionDialogProvider({ children }: { children: React.ReactN
         viewId={mode}
         onClose={close}
         placement="center"
-        fullScreen
+        className="dark max-w-xl text-foreground"
+        contentClassName="p-1"
         ariaLabel={
           mode === "quick-add"
             ? "Quick add transactions"
@@ -165,6 +166,7 @@ export function TransactionDialogProvider({ children }: { children: React.ReactN
           />
         ) : null}
         {mode === "quick-add" ? (
+          <div className="rounded-xl border border-foreground/10 bg-muted/15 p-3.5">
           <QuickAddForm
             key="quick-add"
             accounts={accounts}
@@ -172,6 +174,7 @@ export function TransactionDialogProvider({ children }: { children: React.ReactN
             onSaved={saved}
             onCancel={close}
           />
+          </div>
         ) : null}
         </div>
       </MorphingModal>
@@ -375,7 +378,7 @@ function TransactionForm({
 
   return (
     <div className="flex h-[580px] max-h-[calc(100dvh-4.5rem)] flex-col">
-      <div className="min-h-0 flex-1 space-y-5 overflow-y-auto pr-1">
+      <div className="min-h-0 flex-1 space-y-5 overflow-y-auto rounded-xl border border-foreground/10 bg-muted/15 p-3.5">
         <div className="flex items-start justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold tracking-[-0.02em]">

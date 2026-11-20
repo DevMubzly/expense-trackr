@@ -2,7 +2,12 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight01Icon, Cancel01Icon, GoogleIcon } from "@hugeicons/core-free-icons";
+import {
+  ArrowRight01Icon,
+  Cancel01Icon,
+  GoogleIcon,
+  Wallet02Icon,
+} from "@hugeicons/core-free-icons";
 import { useAuth } from "@/components/auth-provider";
 import { Input } from "@/components/motion/input";
 import { Icon } from "@/components/huge-icon";
@@ -38,34 +43,40 @@ export function AuthDialog({
 
   return (
     <div className="fixed inset-0 z-[90] flex items-center justify-center p-4">
-      <button
-        type="button"
-        aria-label="Close sign in"
+      <div
+        aria-hidden="true"
         onClick={onClose}
-        className="absolute inset-0 cursor-default bg-foreground/50"
+        className="absolute inset-0 bg-foreground/50"
       />
       <div
         ref={panelRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="relative z-10 max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto rounded-2xl border border-foreground/10 bg-card p-6 shadow-2xl"
+        className="dark relative z-10 text-foreground max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto rounded-2xl border border-foreground/10 bg-card p-1 shadow-2xl"
       >
-        <button
-          type="button"
-          aria-label="Close sign in"
-          onClick={onClose}
-          className="absolute right-3 top-3 grid size-8 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-        >
-          <Icon icon={Cancel01Icon} className="size-4" />
-        </button>
-        <AuthForm titleId={titleId} onDone={onClose} />
+        <div className="flex items-center gap-2 px-3.5 pb-2 pt-2">
+          <Icon icon={Wallet02Icon} className="size-3.5 shrink-0 text-muted-foreground" />
+          <p id={titleId} className="truncate text-[15px]">
+            Open Expense Trackr
+          </p>
+          <button
+            type="button"
+            aria-label="Close sign in"
+            onClick={onClose}
+            className="ml-auto grid size-7 shrink-0 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          >
+            <Icon icon={Cancel01Icon} className="size-4" />
+          </button>
+        </div>
+
+        <AuthForm onDone={onClose} />
       </div>
     </div>
   );
 }
 
-function AuthForm({ titleId, onDone }: { titleId: string; onDone: () => void }) {
+function AuthForm({ onDone }: { onDone: () => void }) {
   const { login } = useAuth();
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -88,58 +99,56 @@ function AuthForm({ titleId, onDone }: { titleId: string; onDone: () => void }) 
   }
 
   return (
-    <div className="space-y-5">
-      <div className="pr-8">
-        <h2 id={titleId} className="text-lg font-semibold tracking-[-0.02em]">
-          Open Expense Trackr
-        </h2>
-        <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">
+    <>
+      <div className="rounded-xl border border-foreground/10 bg-muted/15 p-3.5 px-4">
+        <p className="text-[11px] leading-relaxed text-muted-foreground">
           Sign in to your workspace. Any email and password works.
         </p>
+        <div className="mt-3 space-y-3">
+          <Input
+            label="Email"
+            type="email"
+            value={email}
+            onChange={setEmail}
+            placeholder="you@example.com"
+            autoComplete="email"
+          />
+          <Input
+            label="Password"
+            type="password"
+            value={password}
+            onChange={setPassword}
+            placeholder="Anything you like"
+            autoComplete="current-password"
+            error={error}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") enter();
+            }}
+          />
+        </div>
       </div>
 
-      <div className="space-y-4">
-        <Input
-          label="Email"
-          type="email"
-          value={email}
-          onChange={setEmail}
-          placeholder="you@example.com"
-          autoComplete="email"
-        />
-        <Input
-          label="Password"
-          type="password"
-          value={password}
-          onChange={setPassword}
-          placeholder="Anything you like"
-          autoComplete="current-password"
-          error={error}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") enter();
-          }}
-        />
+      <div className="mt-1 rounded-xl border border-foreground/10 bg-muted/15 p-3 px-4">
+        <Button onClick={() => enter()} className="w-full">
+          Open App
+          <Icon icon={ArrowRight01Icon} className="size-4" />
+        </Button>
+
+        <div className="my-3 flex items-center gap-3">
+          <span className="h-px flex-1 bg-border" />
+          <span className="text-[11px] text-muted-foreground">or</span>
+          <span className="h-px flex-1 bg-border" />
+        </div>
+
+        <Button
+          variant="outline"
+          className="w-full bg-muted/50"
+          onClick={() => enter("demo@expense.app", "google")}
+        >
+          <Icon icon={GoogleIcon} className="size-4" />
+          Continue with Google
+        </Button>
       </div>
-
-      <Button onClick={() => enter()} className="w-full">
-        Open App
-        <Icon icon={ArrowRight01Icon} className="size-4" />
-      </Button>
-
-      <div className="flex items-center gap-3">
-        <span className="h-px flex-1 bg-border" />
-        <span className="text-[11px] text-muted-foreground">or</span>
-        <span className="h-px flex-1 bg-border" />
-      </div>
-
-      <Button
-        variant="outline"
-        className="w-full bg-muted/50"
-        onClick={() => enter("demo@expense.app", "google")}
-      >
-        <Icon icon={GoogleIcon} className="size-4" />
-        Continue with Google
-      </Button>
-    </div>
+    </>
   );
 }
