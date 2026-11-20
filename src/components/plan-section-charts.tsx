@@ -43,7 +43,7 @@ function ChartCard({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex h-full flex-col rounded-xl border border-foreground/10 bg-muted/10 p-3">
+    <div className="flex h-full flex-col">
       {showHeading ? (
         <div className="mb-2 flex items-start justify-between gap-3 px-1">
           <p className="text-[13px] font-medium">{title}</p>
@@ -157,7 +157,7 @@ export function PlanSectionCharts({
       <ChartCard title="Savings growth" hint="All contributions, cumulative">
         <AreaChart
           data={goalTrend}
-          style={{ height: 320 }}
+          style={{ height: 280 }}
           margin={{ top: 10, right: 10, bottom: 36, left: 92 }}
         >
           <Grid horizontal />
@@ -190,7 +190,7 @@ export function PlanSectionCharts({
       <ChartCard title="Net debt" hint="Borrowed minus lent over time">
         <AreaChart
           data={debtTrend}
-          style={{ height: 320 }}
+          style={{ height: 280 }}
           margin={{ top: 10, right: 10, bottom: 36, left: 92 }}
         >
           <Grid horizontal />
@@ -229,7 +229,7 @@ export function PlanSectionCharts({
         xDataKey="label"
         stacked
         barGap={0.3}
-        className={cn("h-[320px]")}
+        className={cn("h-[280px]")}
         margin={{ top: 10, right: 10, bottom: 40, left: 92 }}
       >
         <Grid horizontal />

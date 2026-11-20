@@ -40,7 +40,13 @@ import { MorphingModal } from "@/components/motion/morphing-modal";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/huge-icon";
 import { Money } from "@/components/money";
-import { EmptyState, Panel, SectionPanel, sectionCardClass } from "@/components/panel";
+import {
+  EmptyState,
+  Panel,
+  SectionPanel,
+  sectionBodyClass,
+  sectionCardClass,
+} from "@/components/panel";
 import { useTransactionDialog } from "@/components/expense-dialog";
 import { useApi, api } from "@/lib/use-api";
 import {
@@ -783,14 +789,16 @@ export default function PlanPage() {
       {activeSection === "goals" ||
       activeSection === "debts" ||
       activeSection === "activity" ? (
-        <Panel className={cn(sectionCardClass, "p-3")}>
-          <PlanSectionCharts
-            section={activeSection}
-            goals={goals}
-            debts={debts}
-            activity={activity}
-            allActivity={activityAll}
-          />
+        <Panel className={sectionCardClass}>
+          <div className={cn(sectionBodyClass, "p-3")}>
+            <PlanSectionCharts
+              section={activeSection}
+              goals={goals}
+              debts={debts}
+              activity={activity}
+              allActivity={activityAll}
+            />
+          </div>
         </Panel>
       ) : null}
       <SectionPanel
