@@ -279,6 +279,7 @@ export default function DashboardPage() {
                 </SectionInfo>
               </span>
             }
+            hint="Spending against the monthly budget"
             className={SECTION_HEADER}
             action={
               stats?.month ? (
@@ -351,6 +352,7 @@ export default function DashboardPage() {
                 </SectionInfo>
               </span>
             }
+            hint="Balance history and projection to next payday"
             action={
               <span className="rounded-full bg-muted px-2.5 py-1 text-[10px] text-muted-foreground">
                 {formatNumber(forecast?.daysToPayday ?? 0)} days to payday
@@ -499,7 +501,7 @@ export default function DashboardPage() {
                 (total, account) => total + account.balanceUgx,
                 0,
               ),
-            )} total`}
+            )} total across accounts`}
             className={SECTION_HEADER}
           />
           <div className={cn(SECTION_BODY, "divide-y divide-foreground/5 p-1")}>
@@ -536,6 +538,7 @@ export default function DashboardPage() {
                 </SectionInfo>
               </span>
             }
+            hint="Latest transactions across all accounts"
             action={
               <Link
                 href="/expenses"
@@ -608,6 +611,7 @@ export default function DashboardPage() {
                 </SectionInfo>
               </span>
             }
+            hint="This month's spending split by category"
             className={SECTION_HEADER}
             action={
               <span className="text-[11px] text-muted-foreground">
@@ -705,6 +709,7 @@ export default function DashboardPage() {
                 </SectionInfo>
               </span>
             }
+            hint="Last 30 days, stacked by category"
             className={SECTION_HEADER}
           />
           <div className={cn(SECTION_BODY, "flex flex-1 flex-col p-3")}>

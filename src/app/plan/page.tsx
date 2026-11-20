@@ -40,7 +40,7 @@ import { MorphingModal } from "@/components/motion/morphing-modal";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/huge-icon";
 import { Money } from "@/components/money";
-import { EmptyState, SectionPanel } from "@/components/panel";
+import { EmptyState, Panel, SectionPanel, sectionCardClass } from "@/components/panel";
 import { useTransactionDialog } from "@/components/expense-dialog";
 import { useApi, api } from "@/lib/use-api";
 import {
@@ -275,6 +275,7 @@ export default function PlanPage() {
   const [activityFilter, setActivityFilter] = useState<
     "all" | "goals" | "debts" | "recurring"
   >("all");
+  const [activityPage, setActivityPage] = useState(1);
   const [deleteTarget, setDeleteTarget] = useState<{
     kind: ModalKind;
     id: string;
@@ -377,15 +378,26 @@ export default function PlanPage() {
     [activity, activityFilter],
   );
 
+  const ACTIVITY_PAGE_SIZE = 8;
+  const activityPageCount = Math.max(
+    1,
+    Math.ceil(filteredActivity.length / ACTIVITY_PAGE_SIZE),
+  );
+  const safeActivityPage = Math.min(activityPage, activityPageCount);
+  const pagedActivity = filteredActivity.slice(
+    (safeActivityPage - 1) * ACTIVITY_PAGE_SIZE,
+    safeActivityPage * ACTIVITY_PAGE_SIZE,
+  );
+
   const groupedActivity = useMemo(() => {
     const groups = new Map<string, PlanActivity[]>();
-    for (const entry of filteredActivity) {
+    for (const entry of pagedActivity) {
       const list = groups.get(entry.date) ?? [];
       list.push(entry);
       groups.set(entry.date, list);
     }
     return Array.from(groups.entries());
-  }, [filteredActivity]);
+  }, [pagedActivity]);
 
   const ready =
     goalsApi.data && debtsApi.data && budgetsApi.data && recurringApi.data;
@@ -595,16 +607,6 @@ export default function PlanPage() {
   ];
   const showsSection = (section: PlanSection) =>
     activeSection === section;
-  const activeSectionMeta = sectionNav.find(
-    (section) => section.id === activeSection,
-  );
-  const chartHints: Record<string, string> = {
-    goals: "Savings growth and target progress",
-    debts: "Balance mix and net debt trend",
-    recurring: "Monthly load and the next eight weeks",
-    budgets: "Spending against category limits",
-    activity: "Volume and mix across plan activity",
-  };
   const visibleDebts = debts.filter(
     (debt) => debtFilter === "all" || debt.direction === debtFilter,
   );
@@ -629,7 +631,10 @@ export default function PlanPage() {
         </div>
         <Combobox
           value={period}
-          onValueChange={(value) => setPeriod(value as StatPeriod)}
+          onValueChange={(value) => {
+            setActivityPage(1);
+            setPeriod(value as StatPeriod);
+          }}
           className="w-36 shrink-0"
         >
           <ComboboxTrigger className="h-9 min-w-0 rounded-full px-2.5">
@@ -775,24 +780,18 @@ export default function PlanPage() {
           transition={{ duration: 0.28, ease: EASE_OUT }}
           className="space-y-8"
         >
-      {activeSection !== "attention" ? (
-        <SectionPanel
-          title={`${activeSectionMeta?.label ?? "Plan"} overview`}
-          info="A visual read of the active plan section."
-          hint={chartHints[activeSection] ?? ""}
-          className="col-span-12"
-          bodyClassName="p-3"
-        >
+      {activeSection === "goals" ||
+      activeSection === "debts" ||
+      activeSection === "activity" ? (
+        <Panel className={cn(sectionCardClass, "p-3")}>
           <PlanSectionCharts
             section={activeSection}
             goals={goals}
             debts={debts}
-            recurring={recurring}
-            budgets={budgets}
             activity={activity}
             allActivity={activityAll}
           />
-        </SectionPanel>
+        </Panel>
       ) : null}
       <SectionPanel
         title="Needs attention"
@@ -1457,54 +1456,52 @@ export default function PlanPage() {
           </p>
         </div>
 
-        <div className="grid gap-2 px-2 pb-4 sm:grid-cols-3">
-          <div className="rounded-xl border border-foreground/10 bg-muted/10 p-3">
-            <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
-              Goal savings
-            </p>
-            <div className="mt-1.5">
-              <Money value={activitySummary.goals.total} size="sm" />
-            </div>
-            <p className="mt-1 text-[10px] text-muted-foreground">
-              {formatNumber(activitySummary.goals.count)}{" "}
-              {activitySummary.goals.count === 1 ? "change" : "changes"}
-            </p>
-          </div>
-          <div className="rounded-xl border border-foreground/10 bg-muted/10 p-3">
-            <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
-              Debt payments
-            </p>
-            <div className="mt-1.5">
-              <Money value={activitySummary.debts.total} size="sm" />
-            </div>
-            <p className="mt-1 text-[10px] text-muted-foreground">
-              {formatNumber(activitySummary.debts.count)}{" "}
-              {activitySummary.debts.count === 1 ? "payment" : "payments"}
-            </p>
-          </div>
-          <div className="rounded-xl border border-foreground/10 bg-muted/10 p-3">
-            <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
-              Recurring runs
-            </p>
-            <div className="mt-1.5">
-              <Money value={activitySummary.recurring.total} size="sm" />
-            </div>
-            <p className="mt-1 text-[10px] text-muted-foreground">
-              {formatNumber(activitySummary.recurring.count)}{" "}
-              {activitySummary.recurring.count === 1 ? "run" : "runs"}
-            </p>
-          </div>
+        <div className="grid gap-4 px-2 pb-4 sm:grid-cols-3">
+          <MetricCard
+            compact
+            label="Goal savings"
+            info="Net change in goal balances in the selected range."
+            value={activitySummary.goals.total}
+            foot={`${formatNumber(activitySummary.goals.count)} ${
+              activitySummary.goals.count === 1 ? "change" : "changes"
+            }`}
+            icon={Target01Icon}
+            tone="violet"
+          />
+          <MetricCard
+            compact
+            label="Debt payments"
+            info="Debt payments recorded in the selected range."
+            value={activitySummary.debts.total}
+            foot={`${formatNumber(activitySummary.debts.count)} ${
+              activitySummary.debts.count === 1 ? "payment" : "payments"
+            }`}
+            icon={Tick02Icon}
+            tone="sky"
+          />
+          <MetricCard
+            compact
+            label="Recurring runs"
+            info="Recurring bills and income applied in the selected range."
+            value={activitySummary.recurring.total}
+            foot={`${formatNumber(activitySummary.recurring.count)} ${
+              activitySummary.recurring.count === 1 ? "run" : "runs"
+            }`}
+            icon={Wallet02Icon}
+            tone="emerald"
+          />
         </div>
 
         <div className="flex items-center justify-between gap-3 px-2 pb-3">
           <p className="text-[11px] text-muted-foreground">Newest first</p>
           <DropdownSelect
             value={activityFilter}
-            onValueChange={(value) =>
+            onValueChange={(value) => {
+              setActivityPage(1);
               setActivityFilter(
                 value as "all" | "goals" | "debts" | "recurring",
-              )
-            }
+              );
+            }}
             ariaLabel="Activity type"
             options={[
               { value: "all", label: "All activity" },
@@ -1596,6 +1593,45 @@ export default function PlanPage() {
                 </ul>
               </div>
             ))}
+            <div className="flex flex-wrap items-center justify-between gap-3 px-2 pt-1">
+              <p className="text-[11px] text-muted-foreground">
+                Showing{" "}
+                {filteredActivity.length === 0
+                  ? 0
+                  : (safeActivityPage - 1) * ACTIVITY_PAGE_SIZE + 1}
+                –{Math.min(safeActivityPage * ACTIVITY_PAGE_SIZE, filteredActivity.length)}{" "}
+                of {formatNumber(filteredActivity.length)}
+              </p>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  onClick={() =>
+                    setActivityPage((page) => Math.max(1, page - 1))
+                  }
+                  disabled={safeActivityPage === 1}
+                  aria-label="Previous activity page"
+                >
+                  <Icon icon={ArrowLeft01Icon} className="size-4" />
+                </Button>
+                <span className="px-1 text-[11px] text-muted-foreground">
+                  Page {safeActivityPage} of {activityPageCount}
+                </span>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  onClick={() =>
+                    setActivityPage((page) =>
+                      Math.min(activityPageCount, page + 1),
+                    )
+                  }
+                  disabled={safeActivityPage === activityPageCount}
+                  aria-label="Next activity page"
+                >
+                  <Icon icon={ArrowRight01Icon} className="size-4" />
+                </Button>
+              </div>
+            </div>
           </div>
         )}
       </SectionPanel>
