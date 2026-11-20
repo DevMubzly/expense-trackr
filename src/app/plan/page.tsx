@@ -104,7 +104,6 @@ function moneyInputDecimals(display: CurrencyDisplay): boolean {
 }
 
 type PlanSection =
-  | "attention"
   | "goals"
   | "debts"
   | "recurring"
@@ -112,7 +111,6 @@ type PlanSection =
   | "activity";
 
 const PLAN_SECTION_ORDER: PlanSection[] = [
-  "attention",
   "goals",
   "debts",
   "recurring",
@@ -122,7 +120,6 @@ const PLAN_SECTION_ORDER: PlanSection[] = [
 
 function isPlanSection(value: string | null): value is PlanSection {
   return (
-    value === "attention" ||
     value === "goals" ||
     value === "debts" ||
     value === "recurring" ||
@@ -529,50 +526,6 @@ export default function PlanPage() {
   }
 
   const today = ymd(new Date());
-  const soon = ymd(addDays(new Date(), 14));
-  const attention = [
-    ...recurring
-      .filter((rule) => rule.enabled && rule.nextOn <= today)
-      .map((rule) => ({
-        id: `rule-${rule.id}`,
-        title: rule.name,
-        detail: `Recurring due ${shortDateLabel(rule.nextOn)}`,
-        amountUgx: rule.amountUgx,
-        tone: "danger" as const,
-      })),
-    ...debts
-      .filter((debt) => debt.balanceUgx > 0 && debt.dueOn <= soon)
-      .map((debt) => ({
-        id: `debt-${debt.id}`,
-        title: debt.counterparty,
-        detail:
-          debt.dueOn < today
-            ? `${debt.direction === "borrowed" ? "Owed by you" : "Owed to you"} · overdue`
-            : `${debt.direction === "borrowed" ? "Owed by you" : "Owed to you"} · due ${shortDateLabel(debt.dueOn)}`,
-        amountUgx: debt.balanceUgx,
-        tone: debt.dueOn < today ? ("danger" as const) : ("warning" as const),
-      })),
-    ...goals
-      .filter(
-        (goal) => goal.savedUgx < goal.targetUgx && goal.deadline <= today,
-      )
-      .map((goal) => ({
-        id: `goal-${goal.id}`,
-        title: goal.name,
-        detail: "Goal deadline passed",
-        amountUgx: goal.targetUgx - goal.savedUgx,
-        tone: "danger" as const,
-      })),
-    ...budgets
-      .filter((budget) => budget.spentUgx > budget.limitUgx)
-      .map((budget) => ({
-        id: `budget-${budget.id}`,
-        title: budget.name,
-        detail: "Budget over limit",
-        amountUgx: budget.spentUgx - budget.limitUgx,
-        tone: "warning" as const,
-      })),
-  ];
   const dueNow = recurring.filter(
     (rule) => rule.enabled && rule.nextOn <= today,
   ).length;
@@ -596,7 +549,6 @@ export default function PlanPage() {
     activeBudgetMonth && currentMonth && activeBudgetMonth < currentMonth,
   );
   const sectionNav = [
-    { id: "attention" as const, label: "Attention", count: attention.length },
     { id: "goals" as const, label: "Goals", count: goals.length },
     { id: "debts" as const, label: "Debts", count: debts.length },
     {
@@ -801,51 +753,6 @@ export default function PlanPage() {
           </div>
         </Panel>
       ) : null}
-      <SectionPanel
-        title="Needs attention"
-        info="Overdue recurring items, debts due soon, overdue goals and over-limit budgets."
-        className={showsSection("attention") ? undefined : "hidden"}
-        hint={
-          attention.length === 0
-            ? "Nothing urgent right now"
-            : `${attention.length} item${attention.length === 1 ? "" : "s"} need a look`
-        }
-        bodyClassName="p-3"
-      >
-        {attention.length === 0 ? (
-          <p className="px-2 py-6 text-center text-sm text-muted-foreground">
-            Everything is caught up. Keep the plan moving.
-          </p>
-        ) : (
-          <ul className="divide-y divide-foreground/5">
-            {attention.slice(0, 8).map((item) => (
-              <li
-                key={item.id}
-                className="flex items-center gap-3 px-2 py-2.5"
-              >
-                <span
-                  className={cn(
-                    "size-2 shrink-0 rounded-full",
-                    item.tone === "danger"
-                      ? "bg-destructive"
-                      : "bg-amber-500",
-                  )}
-                />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-[13px]">{item.title}</p>
-                  <p className="truncate text-[10px] text-muted-foreground">
-                    {item.detail}
-                  </p>
-                </div>
-                {item.amountUgx ? (
-                  <Money value={item.amountUgx} size="sm" />
-                ) : null}
-              </li>
-            ))}
-          </ul>
-        )}
-      </SectionPanel>
-
       <SectionPanel
         title="Goals"
         info="Savings targets, progress, contributions and deadlines."
@@ -1456,14 +1363,6 @@ export default function PlanPage() {
         hint={`${PERIOD_LABELS[period]} · ${formatNumber(activity.length)} entries`}
         bodyClassName="p-3"
       >
-        <div className="px-2 pb-4">
-          <p className="max-w-2xl text-[12px] leading-relaxed text-muted-foreground">
-            A timeline of changes made inside Plan. Contributions grow a goal,
-            withdrawals shrink it, debt payments reduce a balance, and recurring
-            runs record a bill or income being applied.
-          </p>
-        </div>
-
         <div className="grid gap-4 px-2 pb-4 sm:grid-cols-3">
           <MetricCard
             compact
