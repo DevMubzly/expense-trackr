@@ -10,7 +10,7 @@ import {
   Tick02Icon,
   Upload01Icon,
 } from "@hugeicons/core-free-icons";
-import { AccountSelect, accountIcon } from "@/components/account-select";
+import { accountIcon } from "@/components/account-select";
 import { useCategories } from "@/components/categories-provider";
 import { useCurrency } from "@/components/currency-provider";
 import { DropdownSelect } from "@/components/dropdown-select";
@@ -194,6 +194,7 @@ function SettingsForm({
         return;
       }
       event.preventDefault();
+      event.stopPropagation();
       setPendingHref(`${url.pathname}${url.search}${url.hash}`);
     };
     document.addEventListener("click", onClick, true);
@@ -274,7 +275,10 @@ function SettingsForm({
 
   async function confirmRemoveAccount() {
     if (!deletingAccount) return;
-    if (deletingAccount.id === settings.defaultAccountId) {
+    if (
+      deletingAccount.id === settings.defaultAccountId ||
+      deletingAccount.id === defaultAccountId
+    ) {
       gooeyToast.error("Default account required", {
         description: "Choose another default account before removing this one.",
       });
@@ -483,59 +487,95 @@ function SettingsForm({
 
         <SectionPanel
           title="Money defaults"
-          info="The monthly budget, payday and forecast buffer that drive Home and Plan."
+          info="The monthly budget, payday and safety cushion that drive Home and Plan."
           hint="Budget, payday and forecast behavior"
           className="col-span-12"
           bodyClassName="p-5"
         >
-          <div className="mb-5">
-            <Money value={budget} size="xl" />
-          </div>
-          <InlineSlider
-            label="Monthly budget"
-            value={budget}
-            onValueChange={setBudget}
-            min={0}
-            max={8_000_000}
-            step={50_000}
-            format={(value) => display.formatMoney(value)}
-            aria-label="Monthly budget"
-          />
-          <div className="mt-6 grid gap-5 md:grid-cols-3">
-            <div>
-              <p className="mb-2 text-[13px] text-muted-foreground">
-                Payday of the month
-              </p>
-              <WheelPicker
-                options={Array.from({ length: 31 }, (_, index) =>
-                  String(index + 1),
+          <div className="grid gap-7 lg:grid-cols-2">
+            <div className="space-y-4">
+              <Input
+                label={`Monthly budget (${display.unit})`}
+                value={
+                  display.currency === "USD"
+                    ? formatNumericInput(
+                        (budget / display.usdRate).toFixed(2),
+                        true,
+                      )
+                    : formatNumericInput(String(budget))
+                }
+                onChange={(value) => {
+                  const entered = parseNumericInput(value);
+                  setBudget(
+                    Math.max(
+                      0,
+                      Math.round(
+                        display.currency === "USD"
+                          ? entered * display.usdRate
+                          : entered,
+                      ),
+                    ),
+                  );
+                }}
+                placeholder="3000000"
+              />
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="mr-1 text-[11px] text-muted-foreground">
+                  Quick set
+                </span>
+                {[1_000_000, 3_000_000, 5_000_000, 10_000_000].map(
+                  (preset) => (
+                    <button
+                      key={preset}
+                      type="button"
+                      onClick={() => setBudget(preset)}
+                      className={cn(
+                        "rounded-full border px-2.5 py-1 text-[11px] transition-colors",
+                        budget === preset
+                          ? "border-foreground/20 bg-muted text-foreground"
+                          : "border-border text-muted-foreground hover:bg-muted hover:text-foreground",
+                      )}
+                    >
+                      {display.formatMoney(preset)}
+                    </button>
+                  ),
                 )}
-                value={String(payday)}
-                onValueChange={(value) => setPayday(Number(value))}
-                visibleCount={3}
-                itemHeight={34}
-                className="w-28 border-x-0"
-                aria-label="Payday of the month"
-              />
+              </div>
             </div>
-            <div>
-              <InlineSlider
-                label="Forecast buffer"
-                value={buffer}
-                onValueChange={setBuffer}
-                min={0}
-                max={1_000_000}
-                step={25_000}
-                format={(value) => display.formatMoney(value)}
-                aria-label="Forecast buffer"
-              />
+
+            <div className="grid gap-5 sm:grid-cols-[auto_minmax(0,1fr)] sm:items-start">
+              <div>
+                <p className="mb-2 text-[13px] text-muted-foreground">
+                  Payday of the month
+                </p>
+                <WheelPicker
+                  options={Array.from({ length: 31 }, (_, index) =>
+                    String(index + 1),
+                  )}
+                  value={String(payday)}
+                  onValueChange={(value) => setPayday(Number(value))}
+                  visibleCount={3}
+                  itemHeight={34}
+                  className="w-28 border-x-0"
+                  aria-label="Payday of the month"
+                />
+              </div>
+              <div>
+                <InlineSlider
+                  label="Safety cushion"
+                  value={buffer}
+                  onValueChange={setBuffer}
+                  min={0}
+                  max={2_000_000}
+                  step={25_000}
+                  format={(value) => display.formatMoney(value)}
+                  aria-label="Safety cushion"
+                />
+                <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
+                  Cash held back before calculating safe-to-spend until payday.
+                </p>
+              </div>
             </div>
-            <AccountSelect
-              label="Default account"
-              value={defaultAccountId}
-              accounts={accounts}
-              onValueChange={setDefaultAccountId}
-            />
           </div>
         </SectionPanel>
 
@@ -581,6 +621,19 @@ function SettingsForm({
                   </p>
                 </div>
                 <Money value={account.balanceUgx} size="sm" />
+                {account.id === defaultAccountId ? (
+                  <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                    Default
+                  </span>
+                ) : (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setDefaultAccountId(account.id)}
+                  >
+                    Set default
+                  </Button>
+                )}
                 <Button
                   variant="ghost"
                   size="icon-sm"
