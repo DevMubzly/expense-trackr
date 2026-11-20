@@ -20,6 +20,7 @@ import { ThemeToggle } from "@/components/motion/theme-toggle";
 import { DynamicIsland, DynamicIslandView } from "@/components/motion/dynamic-island";
 import { CommandPalette, type CommandItem } from "@/components/motion/command-palette";
 import { useCurrency } from "@/components/currency-provider";
+import { useAuth } from "@/components/auth-provider";
 import { useTransactionDialog } from "@/components/expense-dialog";
 import { Icon } from "@/components/huge-icon";
 import { useApi } from "@/lib/use-api";
@@ -30,7 +31,7 @@ const FRAME =
   "mx-auto w-full max-w-[1200px] px-6 sm:px-10 md:px-14 lg:px-16 xl:px-24";
 
 const NAV = [
-  { href: "/", label: "Dashboard", icon: Home01Icon },
+  { href: "/dashboard", label: "Dashboard", icon: Home01Icon },
   { href: "/expenses", label: "Expenses", icon: ReceiptTextIcon },
   { href: "/stats", label: "Insights", icon: ChartLineData01Icon },
   { href: "/plan", label: "Plan", icon: Target02Icon },
@@ -51,11 +52,30 @@ function IslandSkeleton({ className }: { className?: string }) {
   );
 }
 
-export function AppShell({ children }: { children: React.ReactNode }) {  const pathname = usePathname();
+function SessionGateSkeleton() {
+  return (
+    <div className="grid min-h-dvh place-items-center bg-background">
+      <div className="flex flex-col items-center gap-4">
+        <div className="skeleton-shimmer relative size-12 overflow-hidden rounded-2xl bg-muted/40" />
+        <div className="h-2 w-32 overflow-hidden rounded-full bg-muted/40">
+          <span className="skeleton-shimmer block h-full w-full -translate-x-full bg-gradient-to-r from-transparent via-foreground/10 to-transparent" />
+        </div>
+        <span className="sr-only">Checking your session</span>
+      </div>
+    </div>
+  );
+}
+
+export function AppShell({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
   const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
+  const publicRoute = pathname === "/" || pathname === "/login";
   const { version, openTransaction } = useTransactionDialog();
   const display = useCurrency();
-  const { data: stats, loading: statsLoading } = useApi<Stats>(`/api/stats?v=${version}`);
+  const { data: stats, loading: statsLoading } = useApi<Stats>(
+    publicRoute ? null : `/api/stats?v=${version}`,
+  );
   const [commandOpen, setCommandOpen] = useState(false);
   const [islandView, setIslandView] = useState<string | null>(null);
   const [navTip, setNavTip] = useState<{ label: string; x: number } | null>(
@@ -102,6 +122,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {  const p
     };
   }, [islandView]);
 
+  useEffect(() => {
+    if (publicRoute || authLoading || user) return;
+    router.replace("/login");
+  }, [authLoading, publicRoute, router, user]);
+
   const commands = useMemo<CommandItem[]>(
     () => [
       {
@@ -145,6 +170,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {  const p
 
   const today = stats?.totals.todayNet ?? 0;
   const remaining = Math.max(0, (stats?.totals.budget ?? 0) - (stats?.totals.month ?? 0));
+
+  if (publicRoute) return <>{children}</>;
+  if (authLoading || !user) return <SessionGateSkeleton />;
 
   return (
     <div className="flex min-h-dvh flex-col">

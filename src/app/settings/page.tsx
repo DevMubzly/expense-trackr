@@ -13,6 +13,7 @@ import {
   Upload01Icon,
 } from "@hugeicons/core-free-icons";
 import { accountIcon } from "@/components/account-select";
+import { useAuth } from "@/components/auth-provider";
 import { useCategories } from "@/components/categories-provider";
 import { useCurrency } from "@/components/currency-provider";
 import { DropdownSelect } from "@/components/dropdown-select";
@@ -126,6 +127,7 @@ function SettingsForm({
   bumpVersion: () => void;
 }) {
   const { expense, income, refresh: refreshCategories } = useCategories();
+  const { logout } = useAuth();
   const display = useCurrency();
   const router = useRouter();
   const overallBudget = budgets.find(
@@ -467,6 +469,15 @@ function SettingsForm({
               Unsaved changes
             </span>
           ) : null}
+          <Button
+            variant="ghost"
+            onClick={() => {
+              logout();
+              router.push("/");
+            }}
+          >
+            Sign out
+          </Button>
           <Button
             variant="ghost"
             onClick={discard}

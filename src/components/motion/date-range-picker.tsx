@@ -550,7 +550,7 @@ export function DateRangePickerGrid({
                                 className={cn(
                                   "relative mx-auto flex h-8 w-full max-w-8 items-center justify-center rounded-full text-xs tabular-nums focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-30",
                                   endpoint
-                                    ? "bg-foreground font-medium text-background"
+                                    ? "bg-[var(--chart-positive)] font-medium text-emerald-950"
                                     : canHover &&
                                         !unavailable(date) &&
                                         !inRange &&
@@ -711,7 +711,7 @@ export function DateRangePickerPreset({
       className={cn(
         "rounded-lg px-3 py-1.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-40",
         selected
-          ? "bg-foreground text-background"
+          ? "bg-[var(--chart-positive)] text-emerald-950"
           : "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground",
         className,
       )}
@@ -989,7 +989,7 @@ function CalendarChoices({
           className={cn(
             "flex h-13 items-center justify-center rounded-xl px-1 text-[13px] tabular-nums transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-25",
             choice.id === selected
-              ? "bg-foreground font-medium text-background"
+              ? "bg-[var(--chart-positive)] font-medium text-emerald-950"
               : "bg-muted/40 hover:bg-muted",
           )}
         >

@@ -75,7 +75,7 @@ export function NotFoundActions({
         whileTap={whileTap}
         whileHover={whileHover}
         transition={SPRING_PRESS}
-        className="inline-flex h-9 select-none items-center justify-center rounded-full bg-foreground px-3 text-sm font-medium text-background transition-colors hover:bg-foreground/90"
+        className="inline-flex h-9 select-none items-center justify-center rounded-full bg-[var(--chart-positive)] px-3 text-sm font-medium text-emerald-950 transition-colors hover:bg-[color-mix(in_oklab,var(--chart-positive),black_8%)]"
       >
         {homeLabel ?? t("homeLabel")}
       </motion.a>
