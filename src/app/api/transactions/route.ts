@@ -1,6 +1,7 @@
 import { connection, type NextRequest } from "next/server";
 import { categoryExists, isCategoryKind } from "@/lib/db";
 import { addTransaction, getAccount, listTransactions } from "@/lib/db";
+import { CURRENCY_META } from "@/lib/currencies";
 import type { Currency, TransactionSource, TransactionType } from "@/lib/types";
 
 const TYPES: TransactionType[] = ["expense", "income", "transfer"];
@@ -49,7 +50,10 @@ export async function POST(request: NextRequest) {
     return Response.json({ error: "Amount must be a positive number" }, { status: 400 });
   }
 
-  const currency = body.currency === "USD" ? "USD" : ("UGX" satisfies Currency);
+  const currency: Currency =
+    typeof body.currency === "string" && body.currency in CURRENCY_META
+      ? (body.currency as Currency)
+      : "UGX";
   const accountId = typeof body.accountId === "string" ? body.accountId : "";
   if (!getAccount(accountId)) {
     return Response.json({ error: "Unknown account" }, { status: 400 });

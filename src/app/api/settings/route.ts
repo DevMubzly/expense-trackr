@@ -1,6 +1,7 @@
 import { connection, type NextRequest } from "next/server";
 import { getAccount, getSettings, updateSettings } from "@/lib/db";
-import type { Settings } from "@/lib/types";
+import { CURRENCY_META } from "@/lib/currencies";
+import type { Currency, Settings } from "@/lib/types";
 
 
 export async function GET() {
@@ -33,10 +34,13 @@ export async function PATCH(request: NextRequest) {
     patch.usdRate = rate;
   }
   if (body.defaultCurrency !== undefined) {
-    if (body.defaultCurrency !== "UGX" && body.defaultCurrency !== "USD") {
+    if (
+      typeof body.defaultCurrency !== "string" ||
+      !(body.defaultCurrency in CURRENCY_META)
+    ) {
       return Response.json({ error: "Invalid currency" }, { status: 400 });
     }
-    patch.defaultCurrency = body.defaultCurrency;
+    patch.defaultCurrency = body.defaultCurrency as Currency;
   }
   if (body.defaultAccountId !== undefined) {
     if (typeof body.defaultAccountId !== "string" || !getAccount(body.defaultAccountId)) {

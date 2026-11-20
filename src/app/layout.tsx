@@ -19,7 +19,7 @@ const bricolage = Bricolage_Grotesque({
 
 export const metadata: Metadata = {
   title: "Expense Trackr",
-  description: "A desktop expense tracker for UGX and USD.",
+  description: "A desktop expense tracker for UGX, USD, KES, RWF and TZS.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

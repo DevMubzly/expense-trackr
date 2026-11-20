@@ -139,7 +139,7 @@ export function MorphingModal({
               transition={{ duration: 0.2, ease: EASE_OUT }}
               {...gate}
               onClick={onClose}
-              className="pointer-events-auto fixed inset-0 z-[80] bg-background/10 [backdrop-filter:blur(6px)_saturate(120%)] [-webkit-backdrop-filter:blur(6px)_saturate(120%)]"
+              className="pointer-events-auto fixed inset-0 z-[80] rounded-none bg-background/10 [backdrop-filter:blur(6px)_saturate(120%)] [-webkit-backdrop-filter:blur(6px)_saturate(120%)]"
             />
           )}
         </PresenceGate>
@@ -153,7 +153,7 @@ export function MorphingModal({
             <div
               inert={!isPresent}
               className={cn(
-                "pointer-events-none fixed inset-4 z-[80] flex justify-center",
+                "pointer-events-none fixed inset-0 z-[80] flex justify-center p-4",
                 placement === "bottom" ? "items-end pb-4" : "items-center",
               )}
             >

@@ -21,10 +21,10 @@ export default function StatsPage() {
     <div className="space-y-8">
       <header className="flex flex-wrap items-end justify-between gap-6">
         <div>
-          <h1 className="font-display text-4xl leading-none md:text-5xl">
+          <h1 className="font-display text-2xl leading-none tracking-[-0.03em] md:text-3xl">
             The shape of your spending.
           </h1>
-          <p className="mt-4 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
             Trends, category splits, and the days your wallet notices.
           </p>
         </div>

@@ -39,6 +39,10 @@ import {
   formatNumericInput,
   parseNumericInput,
 } from "@/lib/format";
+import {
+  CURRENCY_META,
+  CURRENCY_OPTIONS,
+} from "@/lib/currencies";
 import type {
   Account,
   AccountBalance,
@@ -88,14 +92,11 @@ function SettingsForm({
   const display = useCurrency();
   const router = useRouter();
   const [budget, setBudget] = useState(settings.monthlyBudget);
-  const [rate, setRate] = useState(
-    formatNumericInput(String(settings.usdRate), true),
-  );
+  const [budgetDraft, setBudgetDraft] = useState<string | null>(null);
   const [defaultCurrency, setDefaultCurrency] = useState<Currency>(
     settings.defaultCurrency,
   );
   const [payday, setPayday] = useState(settings.payday);
-  const [buffer, setBuffer] = useState(settings.forecastBufferUgx);
   const [defaultAccountId, setDefaultAccountId] = useState(
     settings.defaultAccountId,
   );
@@ -124,10 +125,8 @@ function SettingsForm({
   const dirty = useMemo(
     () =>
       budget !== settings.monthlyBudget ||
-      (parseNumericInput(rate) || 0) !== settings.usdRate ||
       defaultCurrency !== settings.defaultCurrency ||
       payday !== settings.payday ||
-      buffer !== settings.forecastBufferUgx ||
       defaultAccountId !== settings.defaultAccountId ||
       profileName !== (settings.profileName ?? "") ||
       profileEmail !== (settings.profileEmail ?? "") ||
@@ -135,23 +134,36 @@ function SettingsForm({
     [
       avatarDataUrl,
       budget,
-      buffer,
       defaultAccountId,
       defaultCurrency,
       payday,
       profileEmail,
       profileName,
-      rate,
       settings,
     ],
   );
 
+  const budgetMeta = CURRENCY_META[display.currency];
+  const budgetFormatted = formatNumericInput(
+    budgetMeta.decimals > 0
+      ? budget.toFixed(budgetMeta.decimals)
+      : String(Math.round(budget)),
+    budgetMeta.decimals > 0,
+  );
+  const budgetPlaceholder = formatNumericInput(
+    budgetMeta.decimals > 0 ? (3_000_000).toFixed(budgetMeta.decimals) : "3000000",
+    budgetMeta.decimals > 0,
+  );
+  const budgetSliderMax = Math.max(
+    8_000_000,
+    Math.ceil((budget * 1.5) / 1_000_000) * 1_000_000,
+  );
+
   function discard() {
     setBudget(settings.monthlyBudget);
-    setRate(formatNumericInput(String(settings.usdRate), true));
+    setBudgetDraft(null);
     setDefaultCurrency(settings.defaultCurrency);
     setPayday(settings.payday);
-    setBuffer(settings.forecastBufferUgx);
     setDefaultAccountId(settings.defaultAccountId);
     setProfileName(settings.profileName ?? "");
     setProfileEmail(settings.profileEmail ?? "");
@@ -212,10 +224,8 @@ function SettingsForm({
     try {
       await api.patch("/api/settings", {
         monthlyBudget: budget,
-        usdRate: parseNumericInput(rate) || settings.usdRate,
         defaultCurrency,
         payday,
-        forecastBufferUgx: buffer,
         defaultAccountId,
         profileName: profileName.trim(),
         profileEmail: profileEmail.trim(),
@@ -343,10 +353,10 @@ function SettingsForm({
     <div className="space-y-6">
       <header className="flex flex-wrap items-end justify-between gap-6">
         <div>
-          <h1 className="font-display text-4xl leading-none md:text-5xl">
+          <h1 className="font-display text-2xl leading-none tracking-[-0.03em] md:text-3xl">
             Make it yours.
           </h1>
-          <p className="mt-4 max-w-xl text-sm leading-relaxed text-muted-foreground">
+          <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted-foreground">
             Profile, money defaults, accounts and the categories behind every
             chart.
           </p>
@@ -437,7 +447,7 @@ function SettingsForm({
 
         <SectionPanel
           title="Preferences"
-          info="Appearance, default currency and the USD rate used for display."
+          info="Appearance and the currency used for symbols and number formatting."
           hint="Appearance and currency defaults"
           className="col-span-12 lg:col-span-5"
           bodyClassName="p-5"
@@ -458,123 +468,70 @@ function SettingsForm({
             </div>
             <div className="grid grid-cols-[88px_176px] items-center gap-2">
               <p className="text-[13px] text-muted-foreground">Currency</p>
-              <div className="flex rounded-full border border-border bg-muted p-0.5">
-                {(["UGX", "USD"] as Currency[]).map((currency) => (
-                  <button
-                    key={currency}
-                    type="button"
-                    onClick={() => setDefaultCurrency(currency)}
-                    className={cn(
-                      "flex-1 rounded-full px-2 py-1.5 text-[11px] font-medium transition-colors",
-                      defaultCurrency === currency
-                        ? "bg-card text-foreground shadow-sm"
-                        : "text-muted-foreground",
-                    )}
-                  >
-                    {currency}
-                  </button>
-                ))}
-              </div>
+              <DropdownSelect
+                value={defaultCurrency}
+                onValueChange={(value) =>
+                  setDefaultCurrency(value as Currency)
+                }
+                ariaLabel="Default currency"
+                options={CURRENCY_OPTIONS}
+              />
             </div>
-            <Input
-              label="USD rate (UGX per 1 USD)"
-              value={rate}
-              onChange={(value) => setRate(formatNumericInput(value, true))}
-              placeholder="3720"
-            />
           </div>
         </SectionPanel>
 
         <SectionPanel
           title="Money defaults"
-          info="The monthly budget, payday and safety cushion that drive Home and Plan."
-          hint="Budget, payday and forecast behavior"
+          info="The monthly budget and payday that drive Home and Plan."
+          hint="Budget and payday"
           className="col-span-12"
           bodyClassName="p-5"
         >
-          <div className="grid gap-7 lg:grid-cols-2">
-            <div className="space-y-4">
+          <div className="grid gap-7 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
+            <div className="space-y-5">
               <Input
                 label={`Monthly budget (${display.unit})`}
-                value={
-                  display.currency === "USD"
-                    ? formatNumericInput(
-                        (budget / display.usdRate).toFixed(2),
-                        true,
-                      )
-                    : formatNumericInput(String(budget))
-                }
+                value={budgetDraft ?? budgetFormatted}
+                onFocus={() => setBudgetDraft(String(Math.round(budget)))}
+                onBlur={() => setBudgetDraft(null)}
                 onChange={(value) => {
-                  const entered = parseNumericInput(value);
-                  setBudget(
-                    Math.max(
-                      0,
-                      Math.round(
-                        display.currency === "USD"
-                          ? entered * display.usdRate
-                          : entered,
-                      ),
-                    ),
-                  );
+                  const digits = value.replace(/[^\d]/g, "");
+                  setBudgetDraft(digits);
+                  setBudget(digits ? Number(digits) : 0);
                 }}
-                placeholder="3000000"
+                inputMode="numeric"
+                placeholder={budgetPlaceholder}
               />
-              <div className="flex flex-wrap items-center gap-1.5">
-                <span className="mr-1 text-[11px] text-muted-foreground">
-                  Quick set
-                </span>
-                {[1_000_000, 3_000_000, 5_000_000, 10_000_000].map(
-                  (preset) => (
-                    <button
-                      key={preset}
-                      type="button"
-                      onClick={() => setBudget(preset)}
-                      className={cn(
-                        "rounded-full border px-2.5 py-1 text-[11px] transition-colors",
-                        budget === preset
-                          ? "border-foreground/20 bg-muted text-foreground"
-                          : "border-border text-muted-foreground hover:bg-muted hover:text-foreground",
-                      )}
-                    >
-                      {display.formatMoney(preset)}
-                    </button>
-                  ),
-                )}
-              </div>
+              <InlineSlider
+                label="Monthly budget"
+                value={budget}
+                onValueChange={(value) => {
+                  setBudget(value);
+                  setBudgetDraft(null);
+                }}
+                min={0}
+                max={budgetSliderMax}
+                step={50_000}
+                format={(value) => display.formatMoney(value)}
+                aria-label="Monthly budget"
+              />
             </div>
 
-            <div className="grid gap-5 sm:grid-cols-[auto_minmax(0,1fr)] sm:items-start">
-              <div>
-                <p className="mb-2 text-[13px] text-muted-foreground">
-                  Payday of the month
-                </p>
-                <WheelPicker
-                  options={Array.from({ length: 31 }, (_, index) =>
-                    String(index + 1),
-                  )}
-                  value={String(payday)}
-                  onValueChange={(value) => setPayday(Number(value))}
-                  visibleCount={3}
-                  itemHeight={34}
-                  className="w-28 border-x-0"
-                  aria-label="Payday of the month"
-                />
-              </div>
-              <div>
-                <InlineSlider
-                  label="Safety cushion"
-                  value={buffer}
-                  onValueChange={setBuffer}
-                  min={0}
-                  max={2_000_000}
-                  step={25_000}
-                  format={(value) => display.formatMoney(value)}
-                  aria-label="Safety cushion"
-                />
-                <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
-                  Cash held back before calculating safe-to-spend until payday.
-                </p>
-              </div>
+            <div className="flex flex-col gap-1.5 lg:w-28 lg:justify-self-end">
+              <p className="px-1 text-sm font-medium text-foreground">
+                Payday of the month
+              </p>
+              <WheelPicker
+                options={Array.from({ length: 31 }, (_, index) =>
+                  String(index + 1),
+                )}
+                value={String(payday)}
+                onValueChange={(value) => setPayday(Number(value))}
+                visibleCount={3}
+                itemHeight={34}
+                className="w-28 border-x-0"
+                aria-label="Payday of the month"
+              />
             </div>
           </div>
         </SectionPanel>
@@ -597,11 +554,11 @@ function SettingsForm({
           className="col-span-12"
           bodyClassName="p-4"
         >
-          <ul className="grid gap-2 md:grid-cols-2">
+          <ul className="divide-y divide-border">
             {accounts.map((account) => (
               <li
                 key={account.id}
-                className="flex items-center gap-3 rounded-xl border border-foreground/5 px-2 py-2.5"
+                className="flex items-center gap-3 px-2 py-3"
               >
                 <span
                   className="grid size-8 place-items-center rounded-lg"
@@ -707,7 +664,7 @@ function SettingsForm({
                 without saving.
               </p>
             </div>
-            <div className="flex flex-wrap justify-end gap-2 pt-1">
+            <div className="grid grid-cols-2 gap-2 pt-1">
               <Button
                 variant="ghost"
                 onClick={() => setPendingHref(null)}
@@ -722,7 +679,11 @@ function SettingsForm({
               >
                 Leave without saving
               </Button>
-              <Button onClick={saveAndLeave} loading={saving}>
+              <Button
+                className="col-span-2"
+                onClick={saveAndLeave}
+                loading={saving}
+              >
                 <Icon icon={Tick02Icon} className="size-4" />
                 Save and leave
               </Button>
@@ -1083,23 +1044,27 @@ function AccountForm({
   onCancel: () => void;
 }) {
   const display = useCurrency();
+  const decimals = CURRENCY_META[display.currency].decimals;
   const [name, setName] = useState(account?.name ?? "");
   const [type, setType] = useState<AccountType>(account?.type ?? "cash");
   const [provider, setProvider] = useState(account?.provider ?? "");
   const [openingBalance, setOpeningBalance] = useState(
-    account ? formatNumericInput(String(account.openingBalanceUgx)) : "0",
+    account
+      ? formatNumericInput(String(account.openingBalanceUgx), decimals > 0)
+      : "0",
   );
   const [saving, setSaving] = useState(false);
 
   async function submit() {
     if (!name.trim() || saving) return;
+    const openingBalanceUgx = Math.round(parseNumericInput(openingBalance));
     setSaving(true);
     try {
       const payload = {
         name: name.trim(),
         type,
         provider: type === "momo" ? provider.trim() || undefined : undefined,
-        openingBalanceUgx: parseNumericInput(openingBalance),
+        openingBalanceUgx,
       };
       if (account) {
         await api.patch(`/api/accounts/${account.id}`, payload);
@@ -1110,7 +1075,7 @@ function AccountForm({
         await api.post("/api/accounts", payload);
         gooeyToast.success("Account added", {
           description: `${name.trim()} is ready with a ${display.formatMoney(
-            parseNumericInput(openingBalance),
+            openingBalanceUgx,
           )} opening balance.`,
         });
       }
@@ -1162,9 +1127,11 @@ function AccountForm({
       ) : null}
 
       <Input
-        label="Opening balance (UGX)"
+        label={`Opening balance (${display.unit})`}
         value={openingBalance}
-        onChange={(value) => setOpeningBalance(formatNumericInput(value))}
+        onChange={(value) =>
+          setOpeningBalance(formatNumericInput(value, decimals > 0))
+        }
         placeholder="0"
       />
 

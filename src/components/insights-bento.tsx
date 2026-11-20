@@ -47,6 +47,7 @@ import { Button } from "@/components/ui/button";
 import { useApi } from "@/lib/use-api";
 import { useCategories } from "@/components/categories-provider";
 import { useCurrency } from "@/components/currency-provider";
+import { CURRENCY_META } from "@/lib/currencies";
 import { addDays, formatNumber, parseYmd, ymd } from "@/lib/format";
 import type { StatPeriod, Stats } from "@/lib/types";
 import { useNow } from "@/lib/use-now";
@@ -96,12 +97,12 @@ export function InsightsBento({ period }: { period: StatPeriod }) {
   const { expense: expenseCategories } = useCategories();
   const display = useCurrency();
   const formatDisplay = (value: number) =>
-    display.currency === "USD"
-      ? display.convert(value).toLocaleString("en-US", {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2,
-        })
-      : formatNumber(value);
+    display.currency === "UGX"
+      ? formatNumber(value)
+      : value.toLocaleString("en-US", {
+          minimumFractionDigits: CURRENCY_META[display.currency].decimals,
+          maximumFractionDigits: CURRENCY_META[display.currency].decimals,
+        });
   const { version } = useTransactionDialog();
   const now = useNow();
   const [monthPage, setMonthPage] = useState(0);
@@ -577,7 +578,7 @@ export function InsightsBento({ period }: { period: StatPeriod }) {
                           {display.unit}
                         </p>
                         <AnimatedNumber
-                          value={display.convert(value)}
+                          value={value}
                           duration={0.4}
                           startOnView={false}
                           format={formatDisplay}

@@ -388,8 +388,7 @@ export function getTransaction(id: string): Transaction | undefined {
 export function addTransaction(input: NewTransaction): Transaction {
   const state = store();
   const rate = input.usdRate || state.settings.usdRate;
-  const amountUgx =
-    input.currency === "USD" ? Math.round(input.amount * rate) : Math.round(input.amount);
+  const amountUgx = Math.round(input.amount);
   const type = input.type;
   const category =
     type === "transfer"
@@ -433,7 +432,7 @@ export function updateTransaction(
   const currency = patch.currency ?? current.currency;
   const amount = patch.amount ?? current.amount;
   const rate = patch.usdRate ?? current.usdRate;
-  const amountUgx = currency === "USD" ? Math.round(amount * rate) : Math.round(amount);
+  const amountUgx = Math.round(amount);
   const category =
     type === "transfer"
       ? ""

@@ -8,6 +8,7 @@ import {
 } from "react";
 import { AreaSparkline } from "@/components/charts";
 import { useCurrency } from "@/components/currency-provider";
+import { CURRENCY_META } from "@/lib/currencies";
 import { Icon } from "@/components/huge-icon";
 import { AnimatedNumber } from "@/components/motion/animated-number";
 import { Panel } from "@/components/panel";
@@ -68,12 +69,12 @@ export function MetricCard<T extends SparkDatum = SparkDatum>({
   const dataKey = (sparkKey ?? "value") as keyof T;
   const display = useCurrency();
   const displayUnit = unit ?? display.unit;
-  const displayValue = money ? display.convert(value) : value;
+  const displayValue = value;
   const formatDisplay = (next: number) =>
-    money && display.currency === "USD"
+    money && display.currency !== "UGX"
       ? next.toLocaleString("en-US", {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2,
+          minimumFractionDigits: CURRENCY_META[display.currency].decimals,
+          maximumFractionDigits: CURRENCY_META[display.currency].decimals,
         })
       : formatNumber(next);
   const [hovered, setHovered] = useState<{

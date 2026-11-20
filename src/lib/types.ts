@@ -1,4 +1,4 @@
-export type Currency = "UGX" | "USD";
+export type Currency = "UGX" | "USD" | "KES" | "RWF" | "TZS";
 
 export type TransactionType = "expense" | "income" | "transfer";
 

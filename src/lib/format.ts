@@ -1,4 +1,5 @@
 import type { Currency } from "./types";
+import { formatCurrencyAmount } from "./currencies";
 
 const nf = new Intl.NumberFormat("en-UG", { maximumFractionDigits: 0 });
 
@@ -8,9 +9,7 @@ export function formatNumber(n: number): string {
 
 /** "UGX 555,000" for places that cannot use the Money component (toasts, aria). */
 export function formatAmount(n: number, currency: Currency = "UGX"): string {
-  return currency === "UGX"
-    ? `UGX ${formatNumber(n)}`
-    : `USD ${n.toLocaleString("en-US", { maximumFractionDigits: 2 })}`;
+  return formatCurrencyAmount(n, currency);
 }
 
 /** Group digits in a free-form numeric input string while typing. */

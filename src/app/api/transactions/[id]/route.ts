@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import { categoryExists, isCategoryKind } from "@/lib/db";
 import { deleteTransaction, getAccount, getTransaction, updateTransaction } from "@/lib/db";
+import { CURRENCY_META } from "@/lib/currencies";
 import type { Currency, TransactionSource, TransactionType } from "@/lib/types";
 
 const TYPES: TransactionType[] = ["expense", "income", "transfer"];
@@ -38,8 +39,8 @@ export async function PATCH(
   }
 
   const currency: Currency =
-    body.currency === "USD" || body.currency === "UGX"
-      ? body.currency
+    typeof body.currency === "string" && body.currency in CURRENCY_META
+      ? (body.currency as Currency)
       : current.currency;
 
   const accountId =

@@ -22,6 +22,10 @@ import { Icon } from "@/components/huge-icon";
 import { Button } from "@/components/ui/button";
 import { api, useApi } from "@/lib/use-api";
 import {
+  CURRENCY_META,
+  CURRENCY_OPTIONS,
+} from "@/lib/currencies";
+import {
   daysInMonth,
   formatAmount,
   formatNumber,
@@ -205,7 +209,10 @@ function TransactionForm({
     transaction?.currency ?? settings?.defaultCurrency ?? "UGX";
   const [amount, setAmount] = useState(
     transaction
-      ? formatNumericInput(String(transaction.amount), initialCurrency === "USD")
+      ? formatNumericInput(
+          String(transaction.amount),
+          CURRENCY_META[initialCurrency].decimals > 0,
+        )
       : "",
   );
   const [currency, setCurrency] = useState<Currency>(initialCurrency);
@@ -259,6 +266,21 @@ function TransactionForm({
       setCategory(nextCategories[0].id);
     }
     setFee("");
+  }
+
+  function changeCurrency(next: Currency) {
+    if (next === currency) return;
+    const entered = parseNumericInput(amount);
+    const decimals = CURRENCY_META[next].decimals;
+    if (entered > 0) {
+      setAmount(
+        formatNumericInput(
+          decimals > 0 ? entered.toFixed(decimals) : String(Math.round(entered)),
+          decimals > 0,
+        ),
+      );
+    }
+    setCurrency(next);
   }
 
   function scanReceipt(file: File | undefined) {
@@ -385,16 +407,33 @@ function TransactionForm({
         />
       </div>
 
+      {!isTransfer ? (
+        <div className="grid grid-cols-[80px_176px] items-center gap-2">
+          <p className="text-[13px] text-muted-foreground">Currency</p>
+          <DropdownSelect
+            value={currency}
+            onValueChange={(value) => changeCurrency(value as Currency)}
+            ariaLabel="Transaction currency"
+            options={CURRENCY_OPTIONS}
+          />
+        </div>
+      ) : null}
+
       <div className="flex w-56 items-end gap-2 pb-2">
         <span className="pb-1 text-sm font-medium text-muted-foreground">
-          {isTransfer ? "UGX" : currency === "UGX" ? "UGX" : "USD"}
+          {isTransfer ? "UGX" : CURRENCY_META[currency].symbol}
         </span>
         <div className="min-w-0 flex-1 border-b border-border">
           <input
             autoFocus
             value={amount}
             onChange={(event) =>
-              setAmount(formatNumericInput(event.target.value, currency === "USD"))
+              setAmount(
+                formatNumericInput(
+                  event.target.value,
+                  CURRENCY_META[currency].decimals > 0,
+                ),
+              )
             }
             onKeyDown={(event) => event.key === "Enter" && submit()}
             inputMode="decimal"

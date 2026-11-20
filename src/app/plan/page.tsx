@@ -51,6 +51,7 @@ import {
   ymd,
 } from "@/lib/format";
 import { PERIOD_LABELS, PERIOD_OPTIONS } from "@/lib/periods";
+import { CURRENCY_META } from "@/lib/currencies";
 import { useNow } from "@/lib/use-now";
 import type {
   Account,
@@ -73,6 +74,24 @@ type ModalState =
   | { kind: "budget"; item: BudgetProgress | null }
   | { kind: "recurring"; item: RecurringRule | null }
   | null;
+
+type CurrencyDisplay = ReturnType<typeof useCurrency>;
+
+function moneyInputValue(display: CurrencyDisplay, amount: number): string {
+  const decimals = CURRENCY_META[display.currency].decimals;
+  return formatNumericInput(
+    decimals > 0 ? amount.toFixed(decimals) : String(Math.round(amount)),
+    decimals > 0,
+  );
+}
+
+function moneyInputAmount(value: string): number {
+  return Math.round(parseNumericInput(value));
+}
+
+function moneyInputDecimals(display: CurrencyDisplay): boolean {
+  return CURRENCY_META[display.currency].decimals > 0;
+}
 
 type PlanSection =
   | "attention"
@@ -513,13 +532,11 @@ export default function PlanPage() {
     <div className="space-y-8">
       <header className="flex flex-wrap items-end justify-between gap-6">
         <div>
-          <h1 className="font-display text-4xl leading-none md:text-5xl">
+          <h1 className="font-display text-2xl leading-none tracking-[-0.03em] md:text-3xl">
             Give the money a job.
           </h1>
-          <p className="mt-4 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-            Goals, debts, recurring bills and budgets in one place. Actions are
-            mocked, but every balance and history line behaves like the real
-            thing.
+          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+            Goals, debts, recurring bills and budgets in one place.
           </p>
         </div>
         <Combobox
@@ -1479,7 +1496,7 @@ function ContributionForm({
   const [saving, setSaving] = useState(false);
 
   async function submit() {
-    const entered = parseNumericInput(amount);
+    const entered = moneyInputAmount(amount);
     if (!Number.isFinite(entered) || entered <= 0 || saving) return;
     if (mode === "withdraw" && entered > goal.savedUgx) {
       gooeyToast.error("Not enough saved", {
@@ -1536,10 +1553,12 @@ function ContributionForm({
       submitLabel={mode === "withdraw" ? "Withdraw" : "Contribute"}
     >
       <Input
-        label="Amount (UGX)"
+        label={`Amount (${display.unit})`}
         value={amount}
-        onChange={(value) => setAmount(formatNumericInput(value))}
-        placeholder="100000"
+        onChange={(value) =>
+          setAmount(formatNumericInput(value, moneyInputDecimals(display)))
+        }
+        placeholder={moneyInputValue(display, 100_000)}
       />
       <Input
         label="Date"
@@ -1593,7 +1612,7 @@ function PaymentForm({
   const [saving, setSaving] = useState(false);
 
   async function submit() {
-    const amountUgx = parseNumericInput(amount);
+    const amountUgx = moneyInputAmount(amount);
     if (!Number.isFinite(amountUgx) || amountUgx <= 0 || saving) return;
     setSaving(true);
     try {
@@ -1627,10 +1646,12 @@ function PaymentForm({
       submitLabel="Log payment"
     >
       <Input
-        label="Amount (UGX)"
+        label={`Amount (${display.unit})`}
         value={amount}
-        onChange={(value) => setAmount(formatNumericInput(value))}
-        placeholder={String(debt.balanceUgx)}
+        onChange={(value) =>
+          setAmount(formatNumericInput(value, moneyInputDecimals(display)))
+        }
+        placeholder={moneyInputValue(display, debt.balanceUgx)}
       />
       <Input
         label="Date"
@@ -1722,7 +1743,7 @@ function GoalForm({
   const display = useCurrency();
   const [name, setName] = useState(goal?.name ?? "");
   const [target, setTarget] = useState(
-    goal ? formatNumericInput(String(goal.targetUgx)) : "",
+    goal ? moneyInputValue(display, goal.targetUgx) : "",
   );
   const [deadline, setDeadline] = useState(
     goal?.deadline ?? ymd(addDays(new Date(), 90)),
@@ -1731,7 +1752,7 @@ function GoalForm({
   const [saving, setSaving] = useState(false);
 
   async function submit() {
-    const targetUgx = parseNumericInput(target);
+    const targetUgx = moneyInputAmount(target);
     if (!name.trim() || !Number.isFinite(targetUgx) || targetUgx <= 0 || saving) return;
     setSaving(true);
     try {
@@ -1770,10 +1791,12 @@ function GoalForm({
     >
       <Input label="Name" value={name} onChange={setName} placeholder="Emergency fund" />
       <Input
-        label="Target (UGX)"
+        label={`Target (${display.unit})`}
         value={target}
-        onChange={(value) => setTarget(formatNumericInput(value))}
-        placeholder="3000000"
+        onChange={(value) =>
+          setTarget(formatNumericInput(value, moneyInputDecimals(display)))
+        }
+        placeholder={moneyInputValue(display, 3_000_000)}
       />
       <label className="block">
         <span className="mb-1 block text-[13px] text-muted-foreground">Deadline</span>
@@ -1804,14 +1827,14 @@ function DebtForm({
   );
   const [counterparty, setCounterparty] = useState(debt?.counterparty ?? "");
   const [principal, setPrincipal] = useState(
-    debt ? formatNumericInput(String(debt.principalUgx)) : "",
+    debt ? moneyInputValue(display, debt.principalUgx) : "",
   );
   const [dueOn, setDueOn] = useState(debt?.dueOn ?? ymd(addDays(new Date(), 30)));
   const [note, setNote] = useState(debt?.note ?? "");
   const [saving, setSaving] = useState(false);
 
   async function submit() {
-    const principalUgx = parseNumericInput(principal);
+    const principalUgx = moneyInputAmount(principal);
     if (!counterparty.trim() || !Number.isFinite(principalUgx) || principalUgx <= 0 || saving) return;
     setSaving(true);
     try {
@@ -1871,10 +1894,12 @@ function DebtForm({
         placeholder="Mum, Brian, SACCO"
       />
       <Input
-        label="Principal (UGX)"
+        label={`Principal (${display.unit})`}
         value={principal}
-        onChange={(value) => setPrincipal(formatNumericInput(value))}
-        placeholder="500000"
+        onChange={(value) =>
+          setPrincipal(formatNumericInput(value, moneyInputDecimals(display)))
+        }
+        placeholder={moneyInputValue(display, 500_000)}
       />
       <label className="block">
         <span className="mb-1 block text-[13px] text-muted-foreground">Due date</span>
@@ -1903,13 +1928,13 @@ function BudgetForm({
   const [name, setName] = useState(budget?.name ?? "");
   const [categoryId, setCategoryId] = useState(budget?.categoryId ?? "all");
   const [limit, setLimit] = useState(
-    budget ? formatNumericInput(String(budget.limitUgx)) : "",
+    budget ? moneyInputValue(display, budget.limitUgx) : "",
   );
   const [period, setPeriod] = useState<Budget["period"]>(budget?.period ?? "monthly");
   const [saving, setSaving] = useState(false);
 
   async function submit() {
-    const limitUgx = parseNumericInput(limit);
+    const limitUgx = moneyInputAmount(limit);
     if (!name.trim() || !Number.isFinite(limitUgx) || limitUgx <= 0 || saving) return;
     setSaving(true);
     try {
@@ -1956,10 +1981,12 @@ function BudgetForm({
         />
       </div>
       <Input
-        label="Limit (UGX)"
+        label={`Limit (${display.unit})`}
         value={limit}
-        onChange={(value) => setLimit(formatNumericInput(value))}
-        placeholder="800000"
+        onChange={(value) =>
+          setLimit(formatNumericInput(value, moneyInputDecimals(display)))
+        }
+        placeholder={moneyInputValue(display, 800_000)}
       />
       <div className="grid grid-cols-[88px_176px] items-center gap-2">
         <p className="text-[13px] text-muted-foreground">Period</p>
@@ -1995,7 +2022,7 @@ function RecurringForm({
   const [name, setName] = useState(rule?.name ?? "");
   const [type, setType] = useState<TransactionType>(rule?.type ?? "expense");
   const [amount, setAmount] = useState(
-    rule ? formatNumericInput(String(rule.amountUgx)) : "",
+    rule ? moneyInputValue(display, rule.amountUgx) : "",
   );
   const [category, setCategory] = useState(
     rule?.category || categoriesFor(rule?.type === "income" ? "income" : "expense")[0].id,
@@ -2026,7 +2053,7 @@ function RecurringForm({
   }
 
   async function submit() {
-    const amountUgx = parseNumericInput(amount);
+    const amountUgx = moneyInputAmount(amount);
     if (!name.trim() || !Number.isFinite(amountUgx) || amountUgx <= 0 || saving) return;
     setSaving(true);
     try {
@@ -2081,10 +2108,12 @@ function RecurringForm({
       </div>
       <div className="grid grid-cols-2 gap-3">
         <Input
-          label="Amount (UGX)"
+          label={`Amount (${display.unit})`}
           value={amount}
-          onChange={(value) => setAmount(formatNumericInput(value))}
-          placeholder="900000"
+          onChange={(value) =>
+            setAmount(formatNumericInput(value, moneyInputDecimals(display)))
+          }
+          placeholder={moneyInputValue(display, 900_000)}
         />
         <label className="block">
           <span className="mb-1 block text-[13px] text-muted-foreground">Next date</span>

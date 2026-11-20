@@ -1,4 +1,3 @@
-import type { Currency } from "@/lib/types";
 import { useCurrency } from "@/components/currency-provider";
 import { cn } from "@/lib/utils";
 
@@ -18,14 +17,12 @@ export type MoneySize = keyof typeof SIZES;
  */
 export function Money({
   value,
-  currency,
   size = "md",
   tone = "default",
   className,
   amountClassName,
 }: {
   value: number;
-  currency?: Currency;
   size?: MoneySize;
   tone?: "default" | "inverted";
   className?: string;
@@ -34,7 +31,7 @@ export function Money({
   const display = useCurrency();
   const scale = SIZES[size];
   const inverted = tone === "inverted";
-  const unit = currency === "USD" ? "$" : currency === "UGX" ? "UGX" : display.unit;
+  const unit = display.unit;
   return (
     <span className={cn("tnum inline-flex items-baseline gap-1.5", className)}>
       <span

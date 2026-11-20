@@ -320,8 +320,8 @@ export default function ExpensesPage() {
     <div className="space-y-6">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="font-display text-4xl leading-none md:text-5xl">Every shilling.</h1>
-          <p className="mt-2 text-[11px] text-muted-foreground">
+          <h1 className="font-display text-2xl leading-none tracking-[-0.03em] md:text-3xl">Every shilling.</h1>
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
             {formatNumber(transactions.length)}{" "}
             {transactions.length === 1 ? "entry" : "entries"},{" "}
             {display.formatMoney(net)} net

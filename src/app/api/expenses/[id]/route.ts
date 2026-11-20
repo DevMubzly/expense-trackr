@@ -1,7 +1,8 @@
 import type { NextRequest } from "next/server";
 import { categoryExists } from "@/lib/db";
 import { deleteExpense, getExpense, updateExpense } from "@/lib/db";
-import type { NewExpense } from "@/lib/types";
+import { CURRENCY_META } from "@/lib/currencies";
+import type { Currency, NewExpense } from "@/lib/types";
 
 
 const patchable = (body: Record<string, unknown>): Partial<NewExpense> => {
@@ -13,8 +14,13 @@ const patchable = (body: Record<string, unknown>): Partial<NewExpense> => {
     patch.amount = amount;
   }
   if (body.currency !== undefined) {
-    if (body.currency !== "UGX" && body.currency !== "USD") throw new Error("Invalid currency");
-    patch.currency = body.currency;
+    if (
+      typeof body.currency !== "string" ||
+      !(body.currency in CURRENCY_META)
+    ) {
+      throw new Error("Invalid currency");
+    }
+    patch.currency = body.currency as Currency;
   }
   if (body.category !== undefined) {
     if (typeof body.category !== "string" || !categoryExists(body.category)) {

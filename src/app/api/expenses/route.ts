@@ -1,6 +1,7 @@
 import { connection, type NextRequest } from "next/server";
 import { addExpense, listExpenses } from "@/lib/db";
 import { categoryExists } from "@/lib/db";
+import { CURRENCY_META } from "@/lib/currencies";
 import type { Currency } from "@/lib/types";
 
 
@@ -29,7 +30,10 @@ export async function POST(request: NextRequest) {
   }
 
   const amount = Number(body.amount);
-  const currency = body.currency === "USD" ? "USD" : ("UGX" satisfies Currency);
+  const currency: Currency =
+    typeof body.currency === "string" && body.currency in CURRENCY_META
+      ? (body.currency as Currency)
+      : "UGX";
   const category = typeof body.category === "string" ? body.category : "";
   const spentOn = typeof body.spentOn === "string" ? body.spentOn : "";
 

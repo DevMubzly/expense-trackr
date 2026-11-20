@@ -52,6 +52,7 @@ import { useApi } from "@/lib/use-api";
 import { useNow } from "@/lib/use-now";
 import { useCategories } from "@/components/categories-provider";
 import { useCurrency } from "@/components/currency-provider";
+import { CURRENCY_META } from "@/lib/currencies";
 import { daysInMonth, formatNumber, parseYmd, relativeDay, ymd } from "@/lib/format";
 import { PERIOD_LABELS, PERIOD_OPTIONS } from "@/lib/periods";
 import type { StatPeriod, Stats } from "@/lib/types";
@@ -67,15 +68,15 @@ export default function DashboardPage() {
   const { expense: expenseCategories, categoryOf } = useCategories();
   const display = useCurrency();
   const formatDisplay = (value: number) =>
-    display.currency === "USD"
-      ? display.convert(value).toLocaleString("en-US", {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2,
+    display.currency !== "UGX"
+      ? value.toLocaleString("en-US", {
+          minimumFractionDigits: CURRENCY_META[display.currency].decimals,
+          maximumFractionDigits: CURRENCY_META[display.currency].decimals,
         })
       : formatNumber(value);
   const axisValue = (value: number) =>
-    display.currency === "USD"
-      ? `$${display.formatValue(value)}`
+    display.currency !== "UGX"
+      ? `${display.unit}${display.formatValue(value)}`
       : formatNumber(value);
   const [period, setPeriod] = useState<StatPeriod>("30d");
   const { data: stats, loading } = useApi<Stats>(
@@ -142,7 +143,7 @@ export default function DashboardPage() {
               "\u00a0"
             )}
           </p>
-          <h1 className="mt-2 flex items-center gap-3 font-display text-4xl leading-none md:text-5xl">
+          <h1 className="mt-2 flex items-center gap-3 font-display text-2xl leading-none tracking-[-0.03em] md:text-3xl">
             {now ? (
               <>
                 {greeting(now.getHours())}
@@ -165,7 +166,7 @@ export default function DashboardPage() {
                           ? Sun03Icon
                           : Moon02Icon
                     }
-                    className="size-7 md:size-8"
+                    className="size-5 md:size-6"
                   />
                 </span>
               </>
@@ -289,7 +290,7 @@ export default function DashboardPage() {
           />
 
           <div className={cn(SECTION_BODY, "p-4")}>
-            <div className="mt-0 grid grid-cols-2 items-center gap-0 md:grid-cols-[minmax(0,1fr)_340px_minmax(0,1fr)]">
+            <div className="mx-auto mt-0 grid w-full max-w-[720px] grid-cols-2 items-center gap-0 md:grid-cols-[minmax(0,1fr)_340px_minmax(0,1fr)]">
             <div className="order-1 col-span-2 flex justify-center md:order-2 md:col-span-1">
               <Gauge
                 value={pct}
@@ -371,7 +372,7 @@ export default function DashboardPage() {
                 <span className="tnum inline-flex items-baseline gap-1.5 text-foreground">
                   <span className="text-sm font-semibold leading-none tracking-[-0.02em] text-muted-foreground">{display.unit}</span>
                   <AnimatedNumber
-                    value={display.convert(forecast?.safePerDayUgx ?? 0)}
+                    value={forecast?.safePerDayUgx ?? 0}
                     duration={0.6}
                     startOnView={false}
                     format={formatDisplay}
@@ -393,7 +394,7 @@ export default function DashboardPage() {
                 <span className="tnum inline-flex items-baseline gap-1.5 text-foreground">
                   <span className="text-sm font-semibold leading-none tracking-[-0.02em] text-muted-foreground">{display.unit}</span>
                   <AnimatedNumber
-                    value={display.convert(forecast?.projectedBalanceUgx ?? 0)}
+                    value={forecast?.projectedBalanceUgx ?? 0}
                     duration={0.6}
                     startOnView={false}
                     format={formatDisplay}
@@ -414,7 +415,7 @@ export default function DashboardPage() {
                 <span className="tnum inline-flex items-baseline gap-1.5 text-foreground">
                   <span className="text-sm font-semibold leading-none tracking-[-0.02em] text-muted-foreground">{display.unit}</span>
                   <AnimatedNumber
-                    value={display.convert(stats?.momoFees.month ?? 0)}
+                    value={stats?.momoFees.month ?? 0}
                     duration={0.6}
                     startOnView={false}
                     format={formatDisplay}
@@ -634,7 +635,7 @@ export default function DashboardPage() {
                       <div className="text-center">
                         <p className="text-[10px] text-muted-foreground">{display.unit}</p>
                         <AnimatedNumber
-                          value={display.convert(value)}
+                          value={value}
                           duration={0.4}
                           startOnView={false}
                           format={formatDisplay}
