@@ -40,9 +40,6 @@ export function LandingFooter() {
           <div className="flex flex-wrap items-center justify-between gap-4 text-[11px] text-background/55">
             <span className="text-background/70">Expense Trackr</span>
             <nav className="flex items-center gap-5">
-              <Link href="/#features" className="transition-colors hover:text-background">
-                Features
-              </Link>
               <Link href="/pricing" className="transition-colors hover:text-background">
                 Pricing
               </Link>
