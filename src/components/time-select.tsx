@@ -35,7 +35,7 @@ export function TimeSelect({
       <MorphPopoverTrigger>
         <button
           type="button"
-          className="flex h-10 w-32 items-center justify-between gap-2 rounded-full border border-border bg-transparent px-2.5 text-sm text-foreground outline-none transition-colors hover:border-(--color-border-strong) focus-visible:ring-2 focus-visible:ring-ring"
+          className="flex h-10 w-32 items-center justify-between gap-2 rounded-full bg-transparent px-2.5 text-sm text-foreground outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring"
           aria-label="Select time"
         >
           <span className="tnum">{value || "Time"}</span>

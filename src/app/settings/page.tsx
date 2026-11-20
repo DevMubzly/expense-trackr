@@ -573,7 +573,7 @@ function SettingsForm({
               </div>
               <ThemeToggle
                 variant="circle-blur"
-                className="size-10 rounded-xl border border-border"
+                className="size-10 rounded-xl"
                 iconClassName="size-4"
               />
             </div>

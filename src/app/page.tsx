@@ -77,7 +77,7 @@ export default function LandingPage() {
   const primaryHref = user ? "/dashboard" : "/login";
 
   return (
-    <div className="min-h-dvh bg-background text-foreground">
+    <div className="theme-light min-h-dvh bg-background text-foreground">
       <div className="pointer-events-none fixed inset-x-0 top-0 z-40 h-40 bg-gradient-to-b from-background to-transparent" />
 
       <header className="relative z-50 mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-6 lg:px-8">

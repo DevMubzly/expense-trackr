@@ -452,7 +452,7 @@ function TransactionForm({
               key={preset}
               type="button"
               onClick={() => setAmount(formatNumericInput(String(preset)))}
-              className="rounded-full border border-border px-3 py-1 text-xs text-muted-foreground transition-colors hover:border-primary/30 hover:text-foreground"
+              className="rounded-full bg-muted/60 px-3 py-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
             >
               {formatNumber(preset)}
             </button>

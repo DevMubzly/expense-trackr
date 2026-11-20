@@ -207,7 +207,7 @@ export default function DashboardPage() {
           <button
             type="button"
             onClick={() => openTransaction(undefined, "expense")}
-            className="inline-flex h-9 items-center gap-2 rounded-full bg-[var(--chart-positive)] px-3 text-[13px] font-medium text-emerald-950 transition-transform hover:bg-[color-mix(in_oklab,var(--chart-positive),black_8%)] active:scale-[0.98]"
+            className="inline-flex h-9 items-center gap-2 rounded-full bg-foreground px-3 text-[13px] font-medium text-background transition-[background-color,transform] hover:bg-foreground/85 active:scale-[0.98]"
           >
             <Icon icon={PlusSignIcon} className="size-3.5 bg-transparent" /> Log expense
           </button>
