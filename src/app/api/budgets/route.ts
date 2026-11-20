@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
   if (categoryId !== "all" && (!categoryExists(categoryId) || !isCategoryKind(categoryId, "expense"))) {
     return Response.json({ error: "Invalid category" }, { status: 400 });
   }
-  if (!Number.isFinite(limitUgx) || limitUgx <= 0) {
+  if (!Number.isFinite(limitUgx) || limitUgx < 0) {
     return Response.json({ error: "Invalid limit" }, { status: 400 });
   }
 

@@ -494,6 +494,12 @@ export default function DashboardPage() {
                 Manage <Icon icon={ArrowUpRight01Icon} className="size-3" />
               </Link>
             }
+            hint={`${display.formatMoney(
+              (stats?.accounts ?? []).reduce(
+                (total, account) => total + account.balanceUgx,
+                0,
+              ),
+            )} total`}
             className={SECTION_HEADER}
           />
           <div className={cn(SECTION_BODY, "divide-y divide-foreground/5 p-1")}>

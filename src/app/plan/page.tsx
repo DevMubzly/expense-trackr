@@ -23,6 +23,7 @@ import { useCategories } from "@/components/categories-provider";
 import { useCurrency } from "@/components/currency-provider";
 import { DropdownSelect } from "@/components/dropdown-select";
 import { MetricCard } from "@/components/metric-card";
+import { PlanSectionCharts } from "@/components/plan-section-charts";
 import { Checkbox } from "@/components/motion/checkbox";
 import {
   Combobox,
@@ -64,6 +65,7 @@ import type {
   NetWorth,
   PlanActivity,
   RecurringRule,
+  Settings,
   StatPeriod,
   TransactionType,
 } from "@/lib/types";
@@ -251,6 +253,7 @@ export default function PlanPage() {
   const recurringApi = useApi<RecurringRule[]>(`/api/recurring?v=${version}`);
   const netWorthApi = useApi<NetWorth>(`/api/networth?v=${version}`);
   const accountsApi = useApi<Account[]>(`/api/accounts?v=${version}`);
+  const settingsApi = useApi<Settings>(`/api/settings?v=${version}`);
   const [period, setPeriod] = useState<StatPeriod>("30d");
   const activityApi = useApi<PlanActivity[]>(
     `/api/plan/activity?period=${period}&v=${version}`,
@@ -294,6 +297,8 @@ export default function PlanPage() {
   const budgets = budgetsApi.data ?? [];
   const recurring = recurringApi.data ?? [];
   const accounts = accountsApi.data ?? [];
+  const planDefaultAccountId =
+    settingsApi.data?.defaultAccountId ?? accounts[0]?.id ?? "";
   const activity = useMemo(
     () => activityApi.data ?? [],
     [activityApi.data],
@@ -821,6 +826,17 @@ export default function PlanPage() {
         }
         bodyClassName="p-5"
       >
+        {showsSection("goals") ? (
+          <PlanSectionCharts
+            section="goals"
+            goals={goals}
+            debts={debts}
+            recurring={recurring}
+            budgets={budgets}
+            activity={activity}
+            allActivity={activityAll}
+          />
+        ) : null}
         {goals.length === 0 ? (
           <EmptyState
             title="No goals yet"
@@ -991,6 +1007,17 @@ export default function PlanPage() {
         }
         bodyClassName="p-3"
       >
+        {showsSection("debts") ? (
+          <PlanSectionCharts
+            section="debts"
+            goals={goals}
+            debts={debts}
+            recurring={recurring}
+            budgets={budgets}
+            activity={activity}
+            allActivity={activityAll}
+          />
+        ) : null}
         <div className="mb-3 flex w-fit items-center gap-1 rounded-full border border-foreground/10 bg-card/50 p-1">
           {(
             [
@@ -1165,6 +1192,17 @@ export default function PlanPage() {
         }
         bodyClassName="p-3"
       >
+        {showsSection("recurring") ? (
+          <PlanSectionCharts
+            section="recurring"
+            goals={goals}
+            debts={debts}
+            recurring={recurring}
+            budgets={budgets}
+            activity={activity}
+            allActivity={activityAll}
+          />
+        ) : null}
         {recurring.length === 0 ? (
           <EmptyState
             title="Nothing recurring yet"
@@ -1303,6 +1341,17 @@ export default function PlanPage() {
         }
         bodyClassName="p-3"
       >
+        {showsSection("budgets") ? (
+          <PlanSectionCharts
+            section="budgets"
+            goals={goals}
+            debts={debts}
+            recurring={recurring}
+            budgets={budgets}
+            activity={activity}
+            allActivity={activityAll}
+          />
+        ) : null}
         {budgets.length === 0 ? (
           <EmptyState
             title="No budgets yet"
@@ -1359,25 +1408,27 @@ export default function PlanPage() {
                           className="size-3.5"
                         />
                       </button>
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        onClick={() =>
-                          setDeleteTarget({
-                            kind: "budget",
-                            id: budget.id,
-                            label: `Delete ${budget.name}?`,
-                          })
-                        }
-                        loading={removingKey === `budget:${budget.id}`}
-                        aria-label={`Delete ${budget.name}`}
-                        className="text-muted-foreground hover:text-destructive"
-                      >
-                        <Icon
-                          icon={Delete02Icon}
-                          className="size-3.5"
-                        />
-                      </Button>
+                      {budget.categoryId !== "all" ? (
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          onClick={() =>
+                            setDeleteTarget({
+                              kind: "budget",
+                              id: budget.id,
+                              label: `Delete ${budget.name}?`,
+                            })
+                          }
+                          loading={removingKey === `budget:${budget.id}`}
+                          aria-label={`Delete ${budget.name}`}
+                          className="text-muted-foreground hover:text-destructive"
+                        >
+                          <Icon
+                            icon={Delete02Icon}
+                            className="size-3.5"
+                          />
+                        </Button>
+                      ) : null}
                     </span>
                   </div>
                   <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
@@ -1413,6 +1464,17 @@ export default function PlanPage() {
         hint={`${PERIOD_LABELS[period]} · ${formatNumber(activity.length)} entries`}
         bodyClassName="p-3"
       >
+        {showsSection("activity") ? (
+          <PlanSectionCharts
+            section="activity"
+            goals={goals}
+            debts={debts}
+            recurring={recurring}
+            budgets={budgets}
+            activity={activity}
+            allActivity={activityAll}
+          />
+        ) : null}
         <div className="px-2 pb-4">
           <p className="max-w-2xl text-[12px] leading-relaxed text-muted-foreground">
             A timeline of changes made inside Plan. Contributions grow a goal,
@@ -1602,6 +1664,7 @@ export default function PlanPage() {
             key={modal.item?.id ?? "new-recurring"}
             rule={modal.item}
             accounts={accounts}
+            defaultAccountId={planDefaultAccountId}
             onSaved={saved}
             onCancel={() => setModal(null)}
           />
@@ -1625,7 +1688,7 @@ export default function PlanPage() {
             goal={actionModal.goal}
             mode={actionModal.mode}
             accounts={accounts}
-            defaultAccountId={accounts[0]?.id ?? ""}
+            defaultAccountId={planDefaultAccountId}
             onSaved={actionSaved}
             onCancel={() => setActionModal(null)}
           />
@@ -1635,7 +1698,7 @@ export default function PlanPage() {
             key={actionModal.debt.id}
             debt={actionModal.debt}
             accounts={accounts}
-            defaultAccountId={accounts[0]?.id ?? ""}
+            defaultAccountId={planDefaultAccountId}
             onSaved={actionSaved}
             onCancel={() => setActionModal(null)}
           />
@@ -2239,11 +2302,13 @@ function BudgetForm({
 function RecurringForm({
   rule,
   accounts,
+  defaultAccountId,
   onSaved,
   onCancel,
 }: {
   rule: RecurringRule | null;
   accounts: Account[];
+  defaultAccountId: string;
   onSaved: () => void;
   onCancel: () => void;
 }) {
@@ -2258,10 +2323,15 @@ function RecurringForm({
     rule?.category || categoriesFor(rule?.type === "income" ? "income" : "expense")[0].id,
   );
   const [accountId, setAccountId] = useState(
-    rule?.accountId ?? accounts[0]?.id ?? "",
+    rule?.accountId ?? defaultAccountId ?? accounts[0]?.id ?? "",
   );
   const [toAccountId, setToAccountId] = useState(
-    rule?.toAccountId ?? accounts.find((account) => account.id !== (rule?.accountId ?? accounts[0]?.id))?.id ?? "",
+    rule?.toAccountId ??
+      accounts.find(
+        (account) =>
+          account.id !== (rule?.accountId ?? defaultAccountId ?? accounts[0]?.id),
+      )?.id ??
+      "",
   );
   const [frequency, setFrequency] = useState<RecurringRule["frequency"]>(
     rule?.frequency ?? "monthly",

@@ -19,13 +19,6 @@ export async function PATCH(request: NextRequest) {
 
   const patch: Partial<Settings> = {};
 
-  if (body.monthlyBudget !== undefined) {
-    const budget = Number(body.monthlyBudget);
-    if (!Number.isFinite(budget) || budget < 0) {
-      return Response.json({ error: "Invalid budget" }, { status: 400 });
-    }
-    patch.monthlyBudget = Math.round(budget);
-  }
   if (body.usdRate !== undefined) {
     const rate = Number(body.usdRate);
     if (!Number.isFinite(rate) || rate <= 0) {

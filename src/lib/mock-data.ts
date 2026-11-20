@@ -282,7 +282,6 @@ export function createTransactions(): Transaction[] {
 
 export function createSettings(defaultAccountId = "acc_mtn"): Settings {
   return {
-    monthlyBudget: 3_000_000,
     usdRate: USD_RATE,
     defaultCurrency: "UGX",
     defaultAccountId,

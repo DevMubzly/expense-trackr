@@ -4,6 +4,7 @@ import type {
   Debt,
   Goal,
   HouseholdMember,
+  IncomeSource,
   RecurringRule,
 } from "./types";
 
@@ -209,8 +210,54 @@ export function createRecurring(): RecurringRule[] {
   ];
 }
 
-export function createMembers(): HouseholdMember[] {
+export function createIncomeSources(): IncomeSource[] {
+  const createdAt = new Date().toISOString();
   return [
+    {
+      id: "income_0001",
+      name: "Monthly salary",
+      categoryId: "salary",
+      accountId: "acc_bank",
+      expectedMonthlyUgx: 2_800_000,
+      cadence: "fixed",
+      payday: 28,
+      active: true,
+      createdAt,
+    },
+    {
+      id: "income_0002",
+      name: "Freelance work",
+      categoryId: "freelance",
+      accountId: "acc_bank",
+      expectedMonthlyUgx: 400_000,
+      cadence: "irregular",
+      active: true,
+      createdAt,
+    },
+    {
+      id: "income_0003",
+      name: "Forex deals",
+      categoryId: "forex",
+      accountId: "acc_mtn",
+      expectedMonthlyUgx: 200_000,
+      cadence: "irregular",
+      active: true,
+      createdAt,
+    },
+    {
+      id: "income_0004",
+      name: "Side hustle",
+      categoryId: "side-hustle",
+      accountId: "acc_mtn",
+      expectedMonthlyUgx: 100_000,
+      cadence: "irregular",
+      active: true,
+      createdAt,
+    },
+  ];
+}
+
+export function createMembers(): HouseholdMember[] {  return [
     {
       id: "member_0001",
       name: "Mubarak",

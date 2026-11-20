@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { gooeyToast } from "goey-toast";
 import {
   Delete02Icon,
+  Money03Icon,
   PencilEdit01Icon,
   PlusSignIcon,
   Tick02Icon,
@@ -47,7 +48,10 @@ import type {
   Account,
   AccountBalance,
   AccountType,
+  BudgetProgress,
   Currency,
+  FinanceOverview,
+  IncomeSource,
   Settings,
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -58,8 +62,22 @@ export default function SettingsPage() {
   const { data: accountsData, refresh: refreshAccounts } = useApi<
     AccountBalance[]
   >(`/api/accounts?v=${version}`);
+  const { data: budgetsData, refresh: refreshBudgets } = useApi<
+    BudgetProgress[]
+  >(`/api/budgets?v=${version}`);
+  const { data: overview, refresh: refreshOverview } = useApi<FinanceOverview>(
+    `/api/overview?v=${version}`,
+  );
+  const { data: incomeSourcesData, refresh: refreshIncomeSources } = useApi<
+    IncomeSource[]
+  >(`/api/income-sources?v=${version}`);
 
-  if (loading && !data) {
+  if (
+    (loading && !data) ||
+    !budgetsData ||
+    !overview ||
+    !incomeSourcesData
+  ) {
     return <PageLoader variant="helix" size={30} />;
   }
   if (!data) return null;
@@ -68,8 +86,14 @@ export default function SettingsPage() {
     <SettingsForm
       settings={data}
       accounts={accountsData ?? []}
+      budgets={budgetsData}
+      overview={overview}
+      incomeSources={incomeSourcesData}
       onSaved={refresh}
       refreshAccounts={refreshAccounts}
+      refreshBudgets={refreshBudgets}
+      refreshOverview={refreshOverview}
+      refreshIncomeSources={refreshIncomeSources}
       bumpVersion={bumpVersion}
     />
   );
@@ -78,20 +102,36 @@ export default function SettingsPage() {
 function SettingsForm({
   settings,
   accounts,
+  budgets,
+  overview,
+  incomeSources,
   onSaved,
   refreshAccounts,
+  refreshBudgets,
+  refreshOverview,
+  refreshIncomeSources,
   bumpVersion,
 }: {
   settings: Settings;
   accounts: AccountBalance[];
+  budgets: BudgetProgress[];
+  overview: FinanceOverview;
+  incomeSources: IncomeSource[];
   onSaved: () => void;
   refreshAccounts: () => void;
+  refreshBudgets: () => void;
+  refreshOverview: () => void;
+  refreshIncomeSources: () => void;
   bumpVersion: () => void;
 }) {
   const { expense, income, refresh: refreshCategories } = useCategories();
   const display = useCurrency();
   const router = useRouter();
-  const [budget, setBudget] = useState(settings.monthlyBudget);
+  const overallBudget = budgets.find(
+    (entry) => entry.categoryId === "all" && entry.period === "monthly",
+  );
+  const initialBudget = overallBudget?.limitUgx ?? 0;
+  const [budget, setBudget] = useState(initialBudget);
   const [budgetDraft, setBudgetDraft] = useState<string | null>(null);
   const [defaultCurrency, setDefaultCurrency] = useState<Currency>(
     settings.defaultCurrency,
@@ -121,10 +161,18 @@ function SettingsForm({
     null,
   );
   const [accountDeleting, setAccountDeleting] = useState(false);
+  const [incomeModalOpen, setIncomeModalOpen] = useState(false);
+  const [editingIncome, setEditingIncome] = useState<IncomeSource | null>(
+    null,
+  );
+  const [deletingIncome, setDeletingIncome] = useState<IncomeSource | null>(
+    null,
+  );
+  const [incomeDeleting, setIncomeDeleting] = useState(false);
 
   const dirty = useMemo(
     () =>
-      budget !== settings.monthlyBudget ||
+      budget !== initialBudget ||
       defaultCurrency !== settings.defaultCurrency ||
       payday !== settings.payday ||
       defaultAccountId !== settings.defaultAccountId ||
@@ -136,6 +184,7 @@ function SettingsForm({
       budget,
       defaultAccountId,
       defaultCurrency,
+      initialBudget,
       payday,
       profileEmail,
       profileName,
@@ -158,9 +207,23 @@ function SettingsForm({
     8_000_000,
     Math.ceil((budget * 1.5) / 1_000_000) * 1_000_000,
   );
+  const actualBySource = useMemo(
+    () =>
+      new Map(
+        overview.earnings.sources.map((source) => [
+          source.id,
+          source.actualMonthUgx,
+        ]),
+      ),
+    [overview],
+  );
+  const incomeCategoryLabel = (id: string) =>
+    income.find((category) => category.id === id)?.label ?? id;
+  const incomeAccountName = (id: string) =>
+    accounts.find((account) => account.id === id)?.name ?? id;
 
   function discard() {
-    setBudget(settings.monthlyBudget);
+    setBudget(initialBudget);
     setBudgetDraft(null);
     setDefaultCurrency(settings.defaultCurrency);
     setPayday(settings.payday);
@@ -222,8 +285,20 @@ function SettingsForm({
     }
     setSaving(true);
     try {
+      if (overallBudget) {
+        await api.patch(`/api/budgets/${overallBudget.id}`, {
+          limitUgx: budget,
+        });
+      } else {
+        await api.post("/api/budgets", {
+          name: "Overall",
+          categoryId: "all",
+          limitUgx: budget,
+          period: "monthly",
+          color: "oklch(0.56 0.14 152)",
+        });
+      }
       await api.patch("/api/settings", {
-        monthlyBudget: budget,
         defaultCurrency,
         payday,
         defaultAccountId,
@@ -235,6 +310,8 @@ function SettingsForm({
         description: "Your preferences and money defaults are up to date.",
       });
       onSaved();
+      refreshBudgets();
+      refreshOverview();
       bumpVersion();
       display.refresh();
       return true;
@@ -294,6 +371,12 @@ function SettingsForm({
       });
       return;
     }
+    if (incomeSources.some((source) => source.accountId === deletingAccount.id)) {
+      gooeyToast.error("Income source uses this account", {
+        description: "Move those income sources to another account first.",
+      });
+      return;
+    }
     setAccountDeleting(true);
     try {
       await api.delete(`/api/accounts/${deletingAccount.id}`);
@@ -332,8 +415,28 @@ function SettingsForm({
     }
   }
 
-  function readAvatar(file: File | undefined) {
-    if (!file) return;
+  async function removeIncome() {
+    if (!deletingIncome || incomeDeleting) return;
+    setIncomeDeleting(true);
+    try {
+      await api.delete(`/api/income-sources/${deletingIncome.id}`);
+      gooeyToast.success("Income source removed", {
+        description: `${deletingIncome.name} is no longer in expected earnings.`,
+      });
+      refreshIncomeSources();
+      refreshOverview();
+      bumpVersion();
+      setDeletingIncome(null);
+    } catch (error) {
+      gooeyToast.error("Could not remove income source", {
+        description: (error as Error).message,
+      });
+    } finally {
+      setIncomeDeleting(false);
+    }
+  }
+
+  function readAvatar(file: File | undefined) {    if (!file) return;
     if (!file.type.startsWith("image/")) {
       gooeyToast.error("Choose an image file");
       return;
@@ -357,8 +460,8 @@ function SettingsForm({
             Make it yours.
           </h1>
           <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted-foreground">
-            Profile, money defaults, accounts and the categories behind every
-            chart.
+            Profile, earnings, money defaults, accounts and the categories
+            behind every page.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -384,6 +487,55 @@ function SettingsForm({
           </Button>
         </div>
       </header>
+
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="rounded-xl border border-foreground/10 bg-card/60 p-4">
+          <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+            Liquid balance
+          </p>
+          <div className="mt-2">
+            <Money value={overview.totals.liquidUgx} size="md" />
+          </div>
+          <p className="mt-1 text-[10px] text-muted-foreground">
+            Across {formatNumber(accounts.length)} accounts
+          </p>
+        </div>
+        <div className="rounded-xl border border-foreground/10 bg-card/60 p-4">
+          <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+            Net worth
+          </p>
+          <div className="mt-2">
+            <Money value={overview.totals.netWorthUgx} size="md" />
+          </div>
+          <p className="mt-1 text-[10px] text-muted-foreground">
+            Includes goals, lent and borrowed
+          </p>
+        </div>
+        <div className="rounded-xl border border-foreground/10 bg-card/60 p-4">
+          <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+            Expected income
+          </p>
+          <div className="mt-2">
+            <Money value={overview.earnings.expectedMonthlyUgx} size="md" />
+          </div>
+          <p className="mt-1 text-[10px] text-muted-foreground">
+            {display.formatMoney(overview.earnings.actualMonthUgx)} actual this
+            month
+          </p>
+        </div>
+        <div className="rounded-xl border border-foreground/10 bg-card/60 p-4">
+          <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+            Budget left
+          </p>
+          <div className="mt-2">
+            <Money value={overview.budget.remainingUgx} size="md" />
+          </div>
+          <p className="mt-1 text-[10px] text-muted-foreground">
+            {display.formatMoney(overview.budget.spentUgx)} of{" "}
+            {display.formatMoney(overview.budget.limitUgx)} used
+          </p>
+        </div>
+      </div>
 
       <div className="grid grid-cols-12 gap-6">
         <SectionPanel
@@ -482,8 +634,8 @@ function SettingsForm({
 
         <SectionPanel
           title="Money defaults"
-          info="The monthly budget and payday that drive Home and Plan."
-          hint="Budget and payday"
+          info="The monthly budget and payday that drive Home, Stats and Plan."
+          hint="The one budget shared across the app"
           className="col-span-12"
           bodyClassName="p-5"
         >
@@ -534,6 +686,124 @@ function SettingsForm({
               />
             </div>
           </div>
+        </SectionPanel>
+
+        <SectionPanel
+          title="Earnings"
+          info="Expected income sources compared with actual income recorded this month."
+          hint={`${display.formatMoney(overview.earnings.expectedMonthlyUgx)} expected · ${display.formatMoney(overview.earnings.actualMonthUgx)} actual`}
+          className="col-span-12"
+          bodyClassName="p-4"
+          action={
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setEditingIncome(null);
+                setIncomeModalOpen(true);
+              }}
+            >
+              <Icon icon={PlusSignIcon} className="size-4" /> Add source
+            </Button>
+          }
+        >
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="rounded-xl border border-foreground/10 bg-card/40 p-3">
+              <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+                Expected monthly
+              </p>
+              <div className="mt-1.5">
+                <Money value={overview.earnings.expectedMonthlyUgx} size="sm" />
+              </div>
+            </div>
+            <div className="rounded-xl border border-foreground/10 bg-card/40 p-3">
+              <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+                Actual this month
+              </p>
+              <div className="mt-1.5">
+                <Money value={overview.earnings.actualMonthUgx} size="sm" />
+              </div>
+              <p className="mt-1 text-[10px] text-muted-foreground">
+                {display.formatMoney(overview.earnings.actualAllTimeUgx)} all
+                time
+              </p>
+            </div>
+            <div className="rounded-xl border border-foreground/10 bg-card/40 p-3">
+              <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+                Variance
+              </p>
+              <div className="mt-1.5">
+                <Money
+                  value={
+                    overview.earnings.actualMonthUgx -
+                    overview.earnings.expectedMonthlyUgx
+                  }
+                  size="sm"
+                />
+              </div>
+            </div>
+          </div>
+
+          {incomeSources.length === 0 ? (
+            <p className="px-2 py-6 text-center text-sm text-muted-foreground">
+              No income sources yet. Add your salary, freelance work or side
+              hustle to build an expected earnings baseline.
+            </p>
+          ) : (
+            <ul className="mt-4 divide-y divide-border">
+              {incomeSources.map((source) => {
+                const actual = actualBySource.get(source.id) ?? 0;
+                return (
+                  <li
+                    key={source.id}
+                    className="flex flex-wrap items-center gap-3 px-2 py-3"
+                  >
+                    <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                      <Icon icon={Money03Icon} className="size-4" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[13px]">{source.name}</p>
+                      <p className="truncate text-[10px] text-muted-foreground">
+                        {incomeCategoryLabel(source.categoryId)} ·{" "}
+                        {incomeAccountName(source.accountId)} ·{" "}
+                        {source.cadence === "fixed" ? "Fixed" : "Irregular"}
+                        {source.payday ? ` · day ${source.payday}` : ""}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[11px] text-muted-foreground">
+                        {display.formatMoney(actual)} actual
+                      </p>
+                      <p className="text-[12px] font-medium">
+                        {display.formatMoney(source.expectedMonthlyUgx)}{" "}
+                        expected
+                      </p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={() => {
+                        setEditingIncome(source);
+                        setIncomeModalOpen(true);
+                      }}
+                      aria-label={`Edit ${source.name}`}
+                    >
+                      <Icon icon={PencilEdit01Icon} className="size-3.5" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={() => setDeletingIncome(source)}
+                      aria-label={`Delete ${source.name}`}
+                      className="text-muted-foreground hover:text-destructive"
+                    >
+                      <Icon icon={Delete02Icon} className="size-3.5" />
+                    </Button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
         </SectionPanel>
 
         <SectionPanel
@@ -812,12 +1082,249 @@ function SettingsForm({
           </div>
         ) : null}
       </MorphingModal>
+
+      <MorphingModal
+        viewId={incomeModalOpen ? "income-source" : null}
+        onClose={() => {
+          setIncomeModalOpen(false);
+          setEditingIncome(null);
+        }}
+        placement="center"
+        className="max-w-md"
+        ariaLabel={editingIncome ? "Edit income source" : "Add income source"}
+      >
+        {incomeModalOpen ? (
+          <IncomeSourceForm
+            key={editingIncome?.id ?? "new-income-source"}
+            source={editingIncome}
+            categories={income}
+            accounts={accounts}
+            defaultAccountId={settings.defaultAccountId}
+            onSaved={() => {
+              refreshIncomeSources();
+              refreshOverview();
+              bumpVersion();
+              setIncomeModalOpen(false);
+              setEditingIncome(null);
+            }}
+            onCancel={() => {
+              setIncomeModalOpen(false);
+              setEditingIncome(null);
+            }}
+          />
+        ) : null}
+      </MorphingModal>
+
+      <MorphingModal
+        viewId={deletingIncome ? "delete-income-source" : null}
+        onClose={() => {
+          if (!incomeDeleting) setDeletingIncome(null);
+        }}
+        placement="center"
+        className="max-w-sm"
+        ariaLabel="Delete income source"
+      >
+        {deletingIncome ? (
+          <div className="space-y-4">
+            <div>
+              <h2 className="text-lg font-semibold tracking-[-0.02em]">
+                Delete {deletingIncome.name}?
+              </h2>
+              <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">
+                It will be removed from expected earnings. Actual income
+                transactions stay in the ledger.
+              </p>
+            </div>
+            <div className="flex justify-end gap-2 pt-1">
+              <Button
+                variant="ghost"
+                onClick={() => setDeletingIncome(null)}
+                disabled={incomeDeleting}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={removeIncome}
+                loading={incomeDeleting}
+              >
+                <Icon icon={Delete02Icon} className="size-4" /> Delete
+              </Button>
+            </div>
+          </div>
+        ) : null}
+      </MorphingModal>
     </div>
   );
 }
 
-function initials(name: string | undefined) {
-  return (name ?? "")
+function IncomeSourceForm({
+  source,
+  categories,
+  accounts,
+  defaultAccountId,
+  onSaved,
+  onCancel,
+}: {
+  source: IncomeSource | null;
+  categories: ReturnType<typeof useCategories>["income"];
+  accounts: AccountBalance[];
+  defaultAccountId: string;
+  onSaved: () => void;
+  onCancel: () => void;
+}) {
+  const display = useCurrency();
+  const [name, setName] = useState(source?.name ?? "");
+  const [categoryId, setCategoryId] = useState(
+    source?.categoryId ?? categories[0]?.id ?? "",
+  );
+  const [accountId, setAccountId] = useState(
+    source?.accountId ?? defaultAccountId ?? accounts[0]?.id ?? "",
+  );
+  const [expected, setExpected] = useState(
+    source ? formatNumericInput(String(source.expectedMonthlyUgx)) : "",
+  );
+  const [cadence, setCadence] = useState<IncomeSource["cadence"]>(
+    source?.cadence ?? "fixed",
+  );
+  const [payday, setPayday] = useState(
+    source?.payday ? String(source.payday) : "",
+  );
+  const [saving, setSaving] = useState(false);
+
+  async function submit() {
+    const expectedMonthlyUgx = parseNumericInput(expected);
+    if (
+      !name.trim() ||
+      !categoryId ||
+      !accountId ||
+      !Number.isFinite(expectedMonthlyUgx) ||
+      expectedMonthlyUgx < 0 ||
+      saving
+    ) {
+      return;
+    }
+    setSaving(true);
+    try {
+      const payload = {
+        name: name.trim(),
+        categoryId,
+        accountId,
+        expectedMonthlyUgx: Math.round(expectedMonthlyUgx),
+        cadence,
+        payday:
+          cadence === "fixed" && payday
+            ? Math.max(1, Math.min(31, Number(payday)))
+            : null,
+        active: source?.active ?? true,
+      };
+      if (source) {
+        await api.patch(`/api/income-sources/${source.id}`, payload);
+      } else {
+        await api.post("/api/income-sources", payload);
+      }
+      gooeyToast.success(source ? "Income source updated" : "Income source added", {
+        description: `${name.trim()} is included in expected earnings.`,
+      });
+      onSaved();
+    } catch (error) {
+      gooeyToast.error("Could not save income source", {
+        description: (error as Error).message,
+      });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <h2 className="text-lg font-semibold tracking-[-0.02em]">
+          {source ? "Edit income source" : "Add income source"}
+        </h2>
+        <p className="mt-0.5 text-[13px] text-muted-foreground">
+          Expected monthly income, where it lands and how often it arrives.
+        </p>
+      </div>
+
+      <Input
+        label="Name"
+        value={name}
+        onChange={setName}
+        placeholder="Salary, freelance retainer, side hustle"
+      />
+
+      <div className="grid grid-cols-[96px_176px] items-center gap-2">
+        <p className="text-[13px] text-muted-foreground">Category</p>
+        <DropdownSelect
+          value={categoryId}
+          onValueChange={setCategoryId}
+          ariaLabel="Income category"
+          options={categories.map((category) => ({
+            value: category.id,
+            label: category.label,
+          }))}
+        />
+      </div>
+
+      <div className="grid grid-cols-[96px_176px] items-center gap-2">
+        <p className="text-[13px] text-muted-foreground">Lands in</p>
+        <DropdownSelect
+          value={accountId}
+          onValueChange={setAccountId}
+          ariaLabel="Income account"
+          options={accounts.map((account) => ({
+            value: account.id,
+            label: account.name,
+          }))}
+        />
+      </div>
+
+      <Input
+        label={`Expected monthly (${display.unit})`}
+        value={expected}
+        onChange={(value) => setExpected(formatNumericInput(value))}
+        placeholder="0"
+      />
+
+      <div className="grid grid-cols-[96px_176px] items-center gap-2">
+        <p className="text-[13px] text-muted-foreground">Cadence</p>
+        <DropdownSelect
+          value={cadence}
+          onValueChange={(value) =>
+            setCadence(value as IncomeSource["cadence"])
+          }
+          ariaLabel="Income cadence"
+          options={[
+            { value: "fixed", label: "Fixed" },
+            { value: "irregular", label: "Irregular" },
+          ]}
+        />
+      </div>
+
+      {cadence === "fixed" ? (
+        <Input
+          label="Payday (optional)"
+          value={payday}
+          onChange={(value) => setPayday(formatNumericInput(value))}
+          placeholder="28"
+        />
+      ) : null}
+
+      <div className="flex justify-end gap-2 pt-1">
+        <Button variant="ghost" onClick={onCancel} disabled={saving}>
+          Cancel
+        </Button>
+        <Button onClick={submit} loading={saving} disabled={!name.trim()}>
+          <Icon icon={Tick02Icon} className="size-4" />
+          {source ? "Save source" : "Add source"}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function initials(name: string | undefined) {  return (name ?? "")
     .trim()
     .split(/\s+/)
     .slice(0, 2)

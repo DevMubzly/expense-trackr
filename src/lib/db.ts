@@ -10,6 +10,7 @@ import {
   createBudgets,
   createDebts,
   createGoals,
+  createIncomeSources,
   createMembers,
   createRecurring,
 } from "./planning-data";
@@ -22,11 +23,13 @@ import type {
   Debt,
   DebtPayment,
   Expense,
+  FinanceOverview,
   Forecast,
   ForecastPoint,
   Goal,
   GoalContribution,
   HouseholdMember,
+  IncomeSource,
   MonthTotal,
   NetWorth,
   NewAccount,
@@ -56,6 +59,7 @@ type Store = {
   recurringRuns: RecurringRun[];
   members: HouseholdMember[];
   categories: CategoryRecord[];
+  incomeSources: IncomeSource[];
   nextTransactionId: number;
   nextAccountId: number;
   nextGoalId: number;
@@ -66,6 +70,8 @@ type Store = {
   nextGoalContributionId: number;
   nextDebtPaymentId: number;
   nextRecurringRunId: number;
+  nextIncomeSourceId: number;
+  revision: number;
 };
 
 // Mock data lives in memory. Swap this module for Supabase later, the route
@@ -176,6 +182,7 @@ function store(): Store {
       recurringRuns,
       members: createMembers(),
       categories: DEFAULT_CATEGORY_RECORDS.map((category) => ({ ...category })),
+      incomeSources: createIncomeSources(),
       nextTransactionId: transactions.length + 1,
       nextAccountId: 1,
       nextGoalId: 1,
@@ -186,6 +193,8 @@ function store(): Store {
       nextGoalContributionId: goalContributions.length + 1,
       nextDebtPaymentId: debtPayments.length + 1,
       nextRecurringRunId: recurringRuns.length + 1,
+      nextIncomeSourceId: 1,
+      revision: 0,
     };
   }
 
@@ -203,6 +212,8 @@ function store(): Store {
   state.categories ??= DEFAULT_CATEGORY_RECORDS.map((category) => ({
     ...category,
   }));
+  state.incomeSources ??= createIncomeSources();
+  state.revision ??= 0;
   const seededAt = new Date();
   if (!Array.isArray(state.goalContributions)) {
     state.goalContributions = [];
@@ -254,8 +265,16 @@ function store(): Store {
   state.nextBudgetId ??= 1;
   state.nextRecurringId ??= 1;
   state.nextMemberId ??= 1;
+  state.nextIncomeSourceId = Math.max(
+    state.nextIncomeSourceId ?? 1,
+    state.incomeSources.length + 1,
+  );
 
   return state;
+}
+
+function touch(state: Store) {
+  state.revision += 1;
 }
 
 export function listCategories(): CategoryRecord[] {
@@ -308,6 +327,7 @@ export function addCategory(input: {
     iconKey: input.iconKey,
   };
   state.categories.push(category);
+  touch(state);
   return { ...category };
 }
 
@@ -321,6 +341,7 @@ export function updateCategory(
   if (patch.label !== undefined) category.label = patch.label.trim();
   if (patch.color !== undefined) category.color = patch.color;
   if (patch.iconKey !== undefined) category.iconKey = patch.iconKey;
+  touch(state);
   return { ...category };
 }
 
@@ -329,7 +350,8 @@ export function categoryInUse(id: string): boolean {
   return (
     state.transactions.some((transaction) => transaction.category === id) ||
     state.budgets.some((budget) => budget.categoryId === id) ||
-    state.recurring.some((rule) => rule.category === id)
+    state.recurring.some((rule) => rule.category === id) ||
+    state.incomeSources.some((source) => source.categoryId === id)
   );
 }
 
@@ -347,6 +369,7 @@ export function deleteCategory(id: string): {
     return { ok: false, error: "Category is still used by transactions or budgets" };
   }
   state.categories = state.categories.filter((entry) => entry.id !== id);
+  touch(state);
   return { ok: true };
 }
 
@@ -483,6 +506,7 @@ export function addTransaction(input: NewTransaction): Transaction {
 
   state.nextTransactionId += 1;
   state.transactions.unshift(transaction);
+  touch(state);
   return transaction;
 }
 
@@ -529,6 +553,7 @@ export function updateTransaction(
   };
 
   state.transactions[index] = next;
+  touch(state);
   return next;
 }
 
@@ -536,6 +561,7 @@ export function deleteTransaction(id: string): boolean {
   const state = store();
   const before = state.transactions.length;
   state.transactions = state.transactions.filter((transaction) => transaction.id !== id);
+  if (state.transactions.length !== before) touch(state);
   return state.transactions.length !== before;
 }
 
@@ -594,6 +620,7 @@ export function addAccount(input: NewAccount): Account {
   };
   state.nextAccountId += 1;
   state.accounts.push(account);
+  touch(state);
   return account;
 }
 
@@ -606,6 +633,7 @@ export function updateAccount(
   if (index < 0) return undefined;
   const next = { ...state.accounts[index], ...patch };
   state.accounts[index] = next;
+  touch(state);
   return next;
 }
 
@@ -613,7 +641,13 @@ export function archiveAccount(id: string, archived = true): Account | undefined
   return updateAccount(id, { archived });
 }
 
-function accountBalance(account: Account, transactions: Transaction[]): number {
+function accountBalance(
+  account: Account,
+  transactions: Transaction[],
+  goalContributions: GoalContribution[],
+  debtPayments: DebtPayment[],
+  debts: Debt[],
+): number {
   let balance = account.openingBalanceUgx;
 
   for (const transaction of transactions) {
@@ -630,6 +664,26 @@ function accountBalance(account: Account, transactions: Transaction[]): number {
     }
   }
 
+  // Goal contributions and debt payments are bucket transfers, not spending.
+  // They still move cash, so account balances must reflect them.
+  for (const contribution of goalContributions) {
+    if (contribution.accountId === account.id) {
+      balance -= contribution.amountUgx;
+    }
+  }
+
+  const debtDirection = new Map(
+    debts.map((debt) => [debt.id, debt.direction]),
+  );
+  for (const payment of debtPayments) {
+    if (payment.accountId !== account.id) continue;
+    if (debtDirection.get(payment.debtId) === "lent") {
+      balance += payment.amountUgx;
+    } else {
+      balance -= payment.amountUgx;
+    }
+  }
+
   return Math.round(balance);
 }
 
@@ -639,7 +693,13 @@ export function listAccountBalances(includeArchived = false): AccountBalance[] {
     .filter((account) => includeArchived || !account.archived)
     .map((account) => ({
       ...account,
-      balanceUgx: accountBalance(account, state.transactions),
+      balanceUgx: accountBalance(
+        account,
+        state.transactions,
+        state.goalContributions,
+        state.debtPayments,
+        state.debts,
+      ),
     }));
 }
 
@@ -666,7 +726,57 @@ export function getSettings(): Settings {
 export function updateSettings(patch: Partial<Settings>): Settings {
   const state = store();
   state.settings = { ...state.settings, ...patch };
+  touch(state);
   return state.settings;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Income sources                                                             */
+/* -------------------------------------------------------------------------- */
+
+export function listIncomeSources(): IncomeSource[] {
+  return [...store().incomeSources].sort(
+    (a, b) =>
+      Number(b.active) - Number(a.active) ||
+      a.name.localeCompare(b.name),
+  );
+}
+
+export function addIncomeSource(
+  input: Omit<IncomeSource, "id" | "createdAt">,
+): IncomeSource {
+  const state = store();
+  const source: IncomeSource = {
+    id: `income_${String(state.nextIncomeSourceId).padStart(4, "0")}`,
+    ...input,
+    createdAt: new Date().toISOString(),
+  };
+  state.nextIncomeSourceId += 1;
+  state.incomeSources.push(source);
+  touch(state);
+  return source;
+}
+
+export function updateIncomeSource(
+  id: string,
+  patch: Partial<IncomeSource>,
+): IncomeSource | undefined {
+  const state = store();
+  const index = state.incomeSources.findIndex((source) => source.id === id);
+  if (index < 0) return undefined;
+  state.incomeSources[index] = { ...state.incomeSources[index], ...patch };
+  touch(state);
+  return state.incomeSources[index];
+}
+
+export function deleteIncomeSource(id: string): boolean {
+  const state = store();
+  const before = state.incomeSources.length;
+  state.incomeSources = state.incomeSources.filter(
+    (source) => source.id !== id,
+  );
+  if (state.incomeSources.length !== before) touch(state);
+  return state.incomeSources.length !== before;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -943,7 +1053,7 @@ export function computeStats(
   const now = new Date();
   const today = ymd(now);
   const key = month ?? monthKey(today);
-  const budget = state.settings.monthlyBudget;
+  const budget = ensureOverallBudget().limitUgx;
   const expenseCategories = state.categories.filter(
     (category) => category.kind === "expense",
   );
@@ -1152,6 +1262,7 @@ export function addGoal(input: Omit<Goal, "id" | "createdAt">): Goal {
     createdAt: new Date().toISOString(),
   };
   state.goals.push(goal);
+  touch(state);
   return goal;
 }
 
@@ -1160,6 +1271,7 @@ export function updateGoal(id: string, patch: Partial<Goal>): Goal | undefined {
   const index = state.goals.findIndex((goal) => goal.id === id);
   if (index < 0) return undefined;
   state.goals[index] = { ...state.goals[index], ...patch };
+  touch(state);
   return state.goals[index];
 }
 
@@ -1170,6 +1282,7 @@ export function deleteGoal(id: string): boolean {
   state.goalContributions = state.goalContributions.filter(
     (entry) => entry.goalId !== id,
   );
+  if (state.goals.length !== before) touch(state);
   return state.goals.length !== before;
 }
 
@@ -1201,6 +1314,7 @@ export function addGoalContribution(
   state.nextGoalContributionId += 1;
   state.goalContributions.push(contribution);
   goal.savedUgx += amountUgx;
+  touch(state);
   return contribution;
 }
 
@@ -1220,6 +1334,7 @@ export function addDebt(input: Omit<Debt, "id" | "createdAt">): Debt {
     createdAt: new Date().toISOString(),
   };
   state.debts.push(debt);
+  touch(state);
   return debt;
 }
 
@@ -1228,6 +1343,7 @@ export function updateDebt(id: string, patch: Partial<Debt>): Debt | undefined {
   const index = state.debts.findIndex((debt) => debt.id === id);
   if (index < 0) return undefined;
   state.debts[index] = { ...state.debts[index], ...patch };
+  touch(state);
   return state.debts[index];
 }
 
@@ -1238,6 +1354,7 @@ export function deleteDebt(id: string): boolean {
   state.debtPayments = state.debtPayments.filter(
     (entry) => entry.debtId !== id,
   );
+  if (state.debts.length !== before) touch(state);
   return state.debts.length !== before;
 }
 
@@ -1268,6 +1385,7 @@ export function addDebtPayment(
   state.nextDebtPaymentId += 1;
   state.debtPayments.push(payment);
   debt.balanceUgx = Math.max(0, debt.balanceUgx - amountUgx);
+  touch(state);
   return payment;
 }
 
@@ -1276,6 +1394,7 @@ export function addDebtPayment(
 /* -------------------------------------------------------------------------- */
 
 export function listBudgets(month?: string): BudgetProgress[] {
+  ensureOverallBudget();
   const state = store();
   const now = new Date();
   const currentKey = monthKey(now);
@@ -1315,12 +1434,24 @@ export function listBudgets(month?: string): BudgetProgress[] {
 }
 
 export function addBudget(input: Omit<Budget, "id">): Budget {
+  ensureOverallBudget();
   const state = store();
+  if (input.categoryId === "all") {
+    const existing = state.budgets.find(
+      (budget) => budget.categoryId === "all" && budget.period === "monthly",
+    );
+    if (existing) {
+      Object.assign(existing, input);
+      touch(state);
+      return existing;
+    }
+  }
   const budget: Budget = {
     id: `budget_${String(nextSuffix(state.budgets, "budget")).padStart(4, "0")}`,
     ...input,
   };
   state.budgets.push(budget);
+  touch(state);
   return budget;
 }
 
@@ -1329,14 +1460,49 @@ export function updateBudget(id: string, patch: Partial<Budget>): Budget | undef
   const index = state.budgets.findIndex((budget) => budget.id === id);
   if (index < 0) return undefined;
   state.budgets[index] = { ...state.budgets[index], ...patch };
+  touch(state);
   return state.budgets[index];
 }
 
 export function deleteBudget(id: string): boolean {
   const state = store();
+  const target = state.budgets.find((budget) => budget.id === id);
+  if (!target || target.categoryId === "all") return false;
   const before = state.budgets.length;
   state.budgets = state.budgets.filter((budget) => budget.id !== id);
+  if (state.budgets.length !== before) touch(state);
   return state.budgets.length !== before;
+}
+
+export function ensureOverallBudget(): Budget {
+  const state = store();
+  const legacyField = state.settings as Settings & { monthlyBudget?: number };
+  const legacyBudget = Number(legacyField.monthlyBudget ?? 0);
+  if (legacyField.monthlyBudget !== undefined) {
+    delete legacyField.monthlyBudget;
+  }
+  const existing = state.budgets.find(
+    (budget) => budget.categoryId === "all" && budget.period === "monthly",
+  );
+  if (existing) {
+    if (existing.limitUgx === 0 && Number.isFinite(legacyBudget) && legacyBudget > 0) {
+      existing.limitUgx = Math.round(legacyBudget);
+    }
+    return existing;
+  }
+  const overall: Budget = {
+    id: `budget_${String(nextSuffix(state.budgets, "budget")).padStart(4, "0")}`,
+    name: "Overall",
+    categoryId: "all",
+    limitUgx:
+      Number.isFinite(legacyBudget) && legacyBudget > 0
+        ? Math.round(legacyBudget)
+        : 0,
+    period: "monthly",
+    color: "oklch(0.56 0.14 152)",
+  };
+  state.budgets.push(overall);
+  return overall;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -1423,6 +1589,7 @@ export function addRecurring(input: Omit<RecurringRule, "id">): RecurringRule {
     ...input,
   };
   state.recurring.push(rule);
+  touch(state);
   return rule;
 }
 
@@ -1434,6 +1601,7 @@ export function updateRecurring(
   const index = state.recurring.findIndex((rule) => rule.id === id);
   if (index < 0) return undefined;
   state.recurring[index] = { ...state.recurring[index], ...patch };
+  touch(state);
   return state.recurring[index];
 }
 
@@ -1444,6 +1612,7 @@ export function deleteRecurring(id: string): boolean {
   state.recurringRuns = state.recurringRuns.filter(
     (entry) => entry.ruleId !== id,
   );
+  if (state.recurring.length !== before) touch(state);
   return state.recurring.length !== before;
 }
 
@@ -1454,6 +1623,7 @@ export function skipRecurringNext(
   const rule = state.recurring.find((entry) => entry.id === id);
   if (!rule) return undefined;
   rule.nextOn = advanceDate(rule.nextOn, rule.frequency);
+  touch(state);
   return rule;
 }
 
@@ -1560,19 +1730,112 @@ export function computeNetWorth(): NetWorth {
   const borrowed = state.debts
     .filter((debt) => debt.direction === "borrowed")
     .reduce((total, debt) => total + debt.balanceUgx, 0);
+  const goals = state.goals.reduce((total, goal) => total + goal.savedUgx, 0);
   const liquid = accounts.reduce((total, account) => total + account.balanceUgx, 0);
-  const assets = liquid + lent;
+  const assets = liquid + lent + goals;
   const liabilities = borrowed;
   const stats = computeStats();
+
+  const contributions = [...state.goalContributions].sort((a, b) =>
+    a.date.localeCompare(b.date),
+  );
+  const contributed = contributions.reduce(
+    (total, entry) => total + entry.amountUgx,
+    0,
+  );
+  const baseGoals = Math.max(0, goals - contributed);
+  const goalsAt = (date: string) => {
+    let total = baseGoals;
+    for (const entry of contributions) {
+      if (entry.date > date) break;
+      total += entry.amountUgx;
+    }
+    return Math.max(0, total);
+  };
+
   const history = stats.forecast.points
     .filter((point) => !point.projected)
-    .map((point) => ({ date: point.date, value: point.balance + lent - borrowed }));
+    .map((point) => ({
+      date: point.date,
+      value: point.balance + goalsAt(point.date) + lent - borrowed,
+    }));
 
   return {
     assets,
     liabilities,
     total: assets - liabilities,
     history,
+  };
+}
+
+export function computeOverview(): FinanceOverview {
+  const state = store();
+  const settings = getSettings();
+  const accounts = listAccountBalances();
+  const goalsSaved = state.goals.reduce((total, goal) => total + goal.savedUgx, 0);
+  const lent = state.debts
+    .filter((debt) => debt.direction === "lent")
+    .reduce((total, debt) => total + debt.balanceUgx, 0);
+  const borrowed = state.debts
+    .filter((debt) => debt.direction === "borrowed")
+    .reduce((total, debt) => total + debt.balanceUgx, 0);
+  const liquid = accounts.reduce((total, account) => total + account.balanceUgx, 0);
+  const stats = computeStats();
+  const overall = ensureOverallBudget();
+  const month = monthKey(new Date());
+  const monthIncome = state.transactions.filter(
+    (transaction) =>
+      transaction.type === "income" && transaction.spentOn.startsWith(month),
+  );
+  const incomeByCategory = new Map<string, number>();
+  for (const transaction of monthIncome) {
+    incomeByCategory.set(
+      transaction.category,
+      (incomeByCategory.get(transaction.category) ?? 0) + transaction.amountUgx,
+    );
+  }
+  const sources = listIncomeSources().map((source) => ({
+    id: source.id,
+    name: source.name,
+    categoryId: source.categoryId,
+    accountId: source.accountId,
+    expectedMonthlyUgx: source.expectedMonthlyUgx,
+    actualMonthUgx: incomeByCategory.get(source.categoryId) ?? 0,
+    cadence: source.cadence,
+    active: source.active,
+  }));
+
+  return {
+    revision: state.revision,
+    settings,
+    accounts,
+    totals: {
+      liquidUgx: liquid,
+      goalsSavedUgx: goalsSaved,
+      lentUgx: lent,
+      borrowedUgx: borrowed,
+      netWorthUgx: liquid + goalsSaved + lent - borrowed,
+    },
+    budget: {
+      limitUgx: overall.limitUgx,
+      spentUgx: stats.totals.month,
+      remainingUgx: overall.limitUgx - stats.totals.month,
+    },
+    earnings: {
+      expectedMonthlyUgx: sources
+        .filter((source) => source.active)
+        .reduce((total, source) => total + source.expectedMonthlyUgx, 0),
+      actualMonthUgx: monthIncome.reduce(
+        (total, transaction) => total + transaction.amountUgx,
+        0,
+      ),
+      actualAllTimeUgx: state.transactions
+        .filter((transaction) => transaction.type === "income")
+        .reduce((total, transaction) => total + transaction.amountUgx, 0),
+      sources,
+    },
+    payday: settings.payday,
+    daysToPayday: stats.forecast.daysToPayday,
   };
 }
 
@@ -1585,9 +1848,14 @@ export function exportData() {
     accounts: state.accounts,
     settings: state.settings,
     goals: state.goals,
+    goalContributions: state.goalContributions,
     debts: state.debts,
+    debtPayments: state.debtPayments,
     budgets: state.budgets,
     recurring: state.recurring,
+    recurringRuns: state.recurringRuns,
+    incomeSources: state.incomeSources,
+    categories: state.categories,
     members: state.members,
   };
 }
@@ -1597,7 +1865,15 @@ export function importData(input: unknown): { imported: boolean; error?: string 
     return { imported: false, error: "Invalid backup" };
   }
   const data = input as Record<string, unknown>;
-  const arrays = ["transactions", "accounts", "goals", "debts", "budgets", "recurring", "members"] as const;
+  const arrays = [
+    "transactions",
+    "accounts",
+    "goals",
+    "debts",
+    "budgets",
+    "recurring",
+    "members",
+  ] as const;
   for (const key of arrays) {
     if (!Array.isArray(data[key])) {
       return { imported: false, error: `Missing ${key}` };
@@ -1608,9 +1884,24 @@ export function importData(input: unknown): { imported: boolean; error?: string 
   state.transactions = data.transactions as Transaction[];
   state.accounts = data.accounts as Account[];
   state.goals = data.goals as Goal[];
+  state.goalContributions = Array.isArray(data.goalContributions)
+    ? (data.goalContributions as GoalContribution[])
+    : [];
   state.debts = data.debts as Debt[];
+  state.debtPayments = Array.isArray(data.debtPayments)
+    ? (data.debtPayments as DebtPayment[])
+    : [];
   state.budgets = data.budgets as Budget[];
   state.recurring = data.recurring as RecurringRule[];
+  state.recurringRuns = Array.isArray(data.recurringRuns)
+    ? (data.recurringRuns as RecurringRun[])
+    : [];
+  state.incomeSources = Array.isArray(data.incomeSources)
+    ? (data.incomeSources as IncomeSource[])
+    : createIncomeSources();
+  state.categories = Array.isArray(data.categories)
+    ? (data.categories as CategoryRecord[])
+    : DEFAULT_CATEGORY_RECORDS.map((category) => ({ ...category }));
   state.members = data.members as HouseholdMember[];
   state.settings = {
     ...createSettings(),
@@ -1626,6 +1917,23 @@ export function importData(input: unknown): { imported: boolean; error?: string 
   state.nextBudgetId = Math.max(state.nextBudgetId, nextSuffix(state.budgets, "budget"));
   state.nextRecurringId = Math.max(state.nextRecurringId, nextSuffix(state.recurring, "rec"));
   state.nextMemberId = Math.max(state.nextMemberId, nextSuffix(state.members, "member"));
+  state.nextGoalContributionId = Math.max(
+    state.nextGoalContributionId,
+    nextSuffix(state.goalContributions, "gcon"),
+  );
+  state.nextDebtPaymentId = Math.max(
+    state.nextDebtPaymentId,
+    nextSuffix(state.debtPayments, "dpay"),
+  );
+  state.nextRecurringRunId = Math.max(
+    state.nextRecurringRunId,
+    nextSuffix(state.recurringRuns, "rrun"),
+  );
+  state.nextIncomeSourceId = Math.max(
+    state.nextIncomeSourceId,
+    nextSuffix(state.incomeSources, "income"),
+  );
+  touch(state);
   return { imported: true };
 }
 

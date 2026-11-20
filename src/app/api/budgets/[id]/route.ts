@@ -36,7 +36,7 @@ export async function PATCH(
   }
   if (body.limitUgx !== undefined) {
     const value = Number(body.limitUgx);
-    if (!Number.isFinite(value) || value <= 0) {
+    if (!Number.isFinite(value) || value < 0) {
       return Response.json({ error: "Invalid limit" }, { status: 400 });
     }
     patch.limitUgx = Math.round(value);

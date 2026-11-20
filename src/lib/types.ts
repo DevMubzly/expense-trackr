@@ -91,7 +91,6 @@ export type AccountBalance = Account & {
 export type WeekPlan = Record<string, { enabled: boolean; ranges: { id: string; start: string; end: string }[] }>;
 
 export type Settings = {
-  monthlyBudget: number;
   usdRate: number;
   defaultCurrency: Currency;
   defaultAccountId: string;
@@ -101,6 +100,53 @@ export type Settings = {
   profileName: string;
   profileEmail: string;
   avatarDataUrl: string;
+};
+
+export type IncomeSource = {
+  id: string;
+  name: string;
+  categoryId: string;
+  accountId: string;
+  expectedMonthlyUgx: number;
+  cadence: "fixed" | "irregular";
+  payday?: number;
+  active: boolean;
+  createdAt: string;
+};
+
+export type FinanceOverview = {
+  revision: number;
+  settings: Settings;
+  accounts: AccountBalance[];
+  totals: {
+    liquidUgx: number;
+    goalsSavedUgx: number;
+    lentUgx: number;
+    borrowedUgx: number;
+    netWorthUgx: number;
+  };
+  budget: {
+    limitUgx: number;
+    spentUgx: number;
+    remainingUgx: number;
+  };
+  earnings: {
+    expectedMonthlyUgx: number;
+    actualMonthUgx: number;
+    actualAllTimeUgx: number;
+    sources: {
+      id: string;
+      name: string;
+      categoryId: string;
+      accountId: string;
+      expectedMonthlyUgx: number;
+      actualMonthUgx: number;
+      cadence: IncomeSource["cadence"];
+      active: boolean;
+    }[];
+  };
+  payday: number;
+  daysToPayday: number;
 };
 
 export type CategoryTotal = {

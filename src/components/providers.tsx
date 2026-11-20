@@ -11,7 +11,7 @@ function Toaster() {
   const { resolvedTheme } = useTheme();
   return (
     <GooeyToaster
-      position="top-center"
+      position="top-left"
       theme={resolvedTheme === "light" ? "light" : "dark"}
       preset="smooth"
       duration={3600}
