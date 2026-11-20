@@ -37,26 +37,29 @@ export function AuthDialog({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[90] overflow-y-auto bg-background">
+    <div className="fixed inset-0 z-[90] flex items-center justify-center p-4">
       <button
         type="button"
         aria-label="Close sign in"
         onClick={onClose}
-        className="fixed right-5 top-5 z-10 grid size-9 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+        className="absolute inset-0 cursor-default bg-foreground/50"
+      />
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        className="relative z-10 max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto rounded-2xl border border-foreground/10 bg-card p-6 shadow-2xl"
       >
-        <Icon icon={Cancel01Icon} className="size-4" />
-      </button>
-
-      <div className="flex min-h-dvh items-center justify-center px-6 py-14">
-        <div
-          ref={panelRef}
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby={titleId}
-          className="w-full max-w-md"
+        <button
+          type="button"
+          aria-label="Close sign in"
+          onClick={onClose}
+          className="absolute right-3 top-3 grid size-8 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
         >
-          <AuthForm titleId={titleId} onDone={onClose} />
-        </div>
+          <Icon icon={Cancel01Icon} className="size-4" />
+        </button>
+        <AuthForm titleId={titleId} onDone={onClose} />
       </div>
     </div>
   );
@@ -91,7 +94,7 @@ function AuthForm({ titleId, onDone }: { titleId: string; onDone: () => void }) 
           Open Expense Trackr
         </h2>
         <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">
-          Sign in to your workspace. Any email and password works in the demo.
+          Sign in to your workspace. Any email and password works.
         </p>
       </div>
 

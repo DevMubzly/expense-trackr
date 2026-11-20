@@ -68,14 +68,14 @@ export default function LandingPage() {
           <main className="flex flex-1 flex-col items-center px-6 pt-8 lg:px-10 lg:pt-12">
             <div className="max-w-3xl text-center">
               <h1 className="font-display text-4xl leading-[1.02] tracking-[-0.045em] text-white [text-shadow:0_2px_30px_rgba(0,0,0,0.45)] sm:text-5xl lg:text-6xl">
-                Every shilling
-                <span className="block text-white/70">has a job.</span>
+                Know where
+                <span className="block text-white/70">every shilling goes.</span>
               </h1>
 
               <p className="mx-auto mt-7 max-w-xl text-[15px] leading-relaxed text-white/80 [text-shadow:0_1px_18px_rgba(0,0,0,0.55)] sm:text-base">
-                Expenses, income, budgets, goals and debts in one desktop
-                workspace. Set your defaults once and let every page tell the
-                same story.
+                Accounts, spending, budgets, goals and debts in one desktop
+                workspace. Set your defaults once and the month adds up without
+                a spreadsheet.
               </p>
 
               <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
