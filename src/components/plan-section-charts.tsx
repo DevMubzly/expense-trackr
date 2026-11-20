@@ -55,7 +55,7 @@ function ChartCard({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-xl border border-foreground/10 bg-card/40 p-3">
+    <div className="rounded-xl border border-foreground/10 bg-muted/10 p-3">
       <div className="mb-2 flex items-start justify-between gap-3 px-1">
         <p className="text-[13px] font-medium">{title}</p>
         <p className="text-right text-[10px] text-muted-foreground">{hint}</p>
@@ -66,7 +66,7 @@ function ChartCard({
 }
 
 function ChartGrid({ children }: { children: React.ReactNode }) {
-  return <div className="mb-4 grid gap-3 lg:grid-cols-2">{children}</div>;
+  return <div className="grid gap-3 lg:grid-cols-2">{children}</div>;
 }
 
 function ChartEmpty({ children }: { children: React.ReactNode }) {

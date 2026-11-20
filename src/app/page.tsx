@@ -360,7 +360,7 @@ export default function DashboardPage() {
           />
           <div className={cn(SECTION_BODY, "p-4")}>
           <div className="mt-0 grid gap-3 sm:grid-cols-3">
-            <div className="flex flex-col rounded-xl border border-foreground/10 bg-card/30 p-1">
+            <div className="flex flex-col rounded-xl border border-foreground/10 bg-background/40 p-1">
               <div className="flex items-center gap-2 px-2 pb-1 pt-1.5">
                 <Icon
                   icon={Money03Icon}
@@ -368,7 +368,7 @@ export default function DashboardPage() {
                 />
                 <p className="text-sm text-foreground">Safe to spend</p>
               </div>
-              <div className="flex flex-1 flex-col justify-center rounded-lg border border-foreground/10 bg-muted/50 p-2.5">
+              <div className="flex flex-1 flex-col justify-center rounded-lg border border-foreground/10 bg-muted/15 p-2.5">
                 <span className="tnum inline-flex items-baseline gap-1.5 text-foreground">
                   <span className="text-sm font-semibold leading-none tracking-[-0.02em] text-muted-foreground">{display.unit}</span>
                   <AnimatedNumber
@@ -382,7 +382,7 @@ export default function DashboardPage() {
                 </span>
               </div>
             </div>
-            <div className="flex flex-col rounded-xl border border-foreground/10 bg-card/30 p-1">
+            <div className="flex flex-col rounded-xl border border-foreground/10 bg-background/40 p-1">
               <div className="flex items-center gap-2 px-2 pb-1 pt-1.5">
                 <Icon
                   icon={ChartIncreaseIcon}
@@ -390,7 +390,7 @@ export default function DashboardPage() {
                 />
                 <p className="text-sm text-foreground">Projected at payday</p>
               </div>
-              <div className="flex flex-1 flex-col justify-center rounded-lg border border-foreground/10 bg-muted/50 p-2.5">
+              <div className="flex flex-1 flex-col justify-center rounded-lg border border-foreground/10 bg-muted/15 p-2.5">
                 <span className="tnum inline-flex items-baseline gap-1.5 text-foreground">
                   <span className="text-sm font-semibold leading-none tracking-[-0.02em] text-muted-foreground">{display.unit}</span>
                   <AnimatedNumber
@@ -403,7 +403,7 @@ export default function DashboardPage() {
                 </span>
               </div>
             </div>
-            <div className="flex flex-col rounded-xl border border-foreground/10 bg-card/30 p-1">
+            <div className="flex flex-col rounded-xl border border-foreground/10 bg-background/40 p-1">
               <div className="flex items-center gap-2 px-2 pb-1 pt-1.5">
                 <Icon
                   icon={Invoice02Icon}
@@ -411,7 +411,7 @@ export default function DashboardPage() {
                 />
                 <p className="text-sm text-foreground">MoMo fees this month</p>
               </div>
-              <div className="flex flex-1 flex-col justify-center rounded-lg border border-foreground/10 bg-muted/50 p-2.5">
+              <div className="flex flex-1 flex-col justify-center rounded-lg border border-foreground/10 bg-muted/15 p-2.5">
                 <span className="tnum inline-flex items-baseline gap-1.5 text-foreground">
                   <span className="text-sm font-semibold leading-none tracking-[-0.02em] text-muted-foreground">{display.unit}</span>
                   <AnimatedNumber

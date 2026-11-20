@@ -595,6 +595,16 @@ export default function PlanPage() {
   ];
   const showsSection = (section: PlanSection) =>
     activeSection === section;
+  const activeSectionMeta = sectionNav.find(
+    (section) => section.id === activeSection,
+  );
+  const chartHints: Record<string, string> = {
+    goals: "Savings growth and target progress",
+    debts: "Balance mix and net debt trend",
+    recurring: "Monthly load and the next eight weeks",
+    budgets: "Spending against category limits",
+    activity: "Volume and mix across plan activity",
+  };
   const visibleDebts = debts.filter(
     (debt) => debtFilter === "all" || debt.direction === debtFilter,
   );
@@ -765,6 +775,25 @@ export default function PlanPage() {
           transition={{ duration: 0.28, ease: EASE_OUT }}
           className="space-y-8"
         >
+      {activeSection !== "attention" ? (
+        <SectionPanel
+          title={`${activeSectionMeta?.label ?? "Plan"} overview`}
+          info="A visual read of the active plan section."
+          hint={chartHints[activeSection] ?? ""}
+          className="col-span-12"
+          bodyClassName="p-3"
+        >
+          <PlanSectionCharts
+            section={activeSection}
+            goals={goals}
+            debts={debts}
+            recurring={recurring}
+            budgets={budgets}
+            activity={activity}
+            allActivity={activityAll}
+          />
+        </SectionPanel>
+      ) : null}
       <SectionPanel
         title="Needs attention"
         info="Overdue recurring items, debts due soon, overdue goals and over-limit budgets."
@@ -826,17 +855,6 @@ export default function PlanPage() {
         }
         bodyClassName="p-5"
       >
-        {showsSection("goals") ? (
-          <PlanSectionCharts
-            section="goals"
-            goals={goals}
-            debts={debts}
-            recurring={recurring}
-            budgets={budgets}
-            activity={activity}
-            allActivity={activityAll}
-          />
-        ) : null}
         {goals.length === 0 ? (
           <EmptyState
             title="No goals yet"
@@ -866,7 +884,7 @@ export default function PlanPage() {
               return (
                 <div
                   key={goal.id}
-                  className="rounded-xl border border-foreground/10 bg-card/40 p-4"
+                  className="rounded-xl border border-foreground/10 bg-muted/10 p-4"
                 >
                   <div className="flex items-start gap-3">
                     <span
@@ -1007,17 +1025,6 @@ export default function PlanPage() {
         }
         bodyClassName="p-3"
       >
-        {showsSection("debts") ? (
-          <PlanSectionCharts
-            section="debts"
-            goals={goals}
-            debts={debts}
-            recurring={recurring}
-            budgets={budgets}
-            activity={activity}
-            allActivity={activityAll}
-          />
-        ) : null}
         <div className="mb-3 flex w-fit items-center gap-1 rounded-full border border-foreground/10 bg-card/50 p-1">
           {(
             [
@@ -1035,7 +1042,7 @@ export default function PlanPage() {
                 "h-8 rounded-full px-3 text-xs font-medium transition-colors",
                 debtFilter === option.id
                   ? "bg-muted text-foreground"
-                  : "text-muted-foreground hover:bg-muted/50 hover:text-foreground",
+                  : "text-muted-foreground hover:bg-muted/15 hover:text-foreground",
               )}
             >
               {option.label}
@@ -1192,17 +1199,6 @@ export default function PlanPage() {
         }
         bodyClassName="p-3"
       >
-        {showsSection("recurring") ? (
-          <PlanSectionCharts
-            section="recurring"
-            goals={goals}
-            debts={debts}
-            recurring={recurring}
-            budgets={budgets}
-            activity={activity}
-            allActivity={activityAll}
-          />
-        ) : null}
         {recurring.length === 0 ? (
           <EmptyState
             title="Nothing recurring yet"
@@ -1341,17 +1337,6 @@ export default function PlanPage() {
         }
         bodyClassName="p-3"
       >
-        {showsSection("budgets") ? (
-          <PlanSectionCharts
-            section="budgets"
-            goals={goals}
-            debts={debts}
-            recurring={recurring}
-            budgets={budgets}
-            activity={activity}
-            allActivity={activityAll}
-          />
-        ) : null}
         {budgets.length === 0 ? (
           <EmptyState
             title="No budgets yet"
@@ -1464,17 +1449,6 @@ export default function PlanPage() {
         hint={`${PERIOD_LABELS[period]} · ${formatNumber(activity.length)} entries`}
         bodyClassName="p-3"
       >
-        {showsSection("activity") ? (
-          <PlanSectionCharts
-            section="activity"
-            goals={goals}
-            debts={debts}
-            recurring={recurring}
-            budgets={budgets}
-            activity={activity}
-            allActivity={activityAll}
-          />
-        ) : null}
         <div className="px-2 pb-4">
           <p className="max-w-2xl text-[12px] leading-relaxed text-muted-foreground">
             A timeline of changes made inside Plan. Contributions grow a goal,
@@ -1484,7 +1458,7 @@ export default function PlanPage() {
         </div>
 
         <div className="grid gap-2 px-2 pb-4 sm:grid-cols-3">
-          <div className="rounded-xl border border-foreground/10 bg-card/40 p-3">
+          <div className="rounded-xl border border-foreground/10 bg-muted/10 p-3">
             <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
               Goal savings
             </p>
@@ -1496,7 +1470,7 @@ export default function PlanPage() {
               {activitySummary.goals.count === 1 ? "change" : "changes"}
             </p>
           </div>
-          <div className="rounded-xl border border-foreground/10 bg-card/40 p-3">
+          <div className="rounded-xl border border-foreground/10 bg-muted/10 p-3">
             <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
               Debt payments
             </p>
@@ -1508,7 +1482,7 @@ export default function PlanPage() {
               {activitySummary.debts.count === 1 ? "payment" : "payments"}
             </p>
           </div>
-          <div className="rounded-xl border border-foreground/10 bg-card/40 p-3">
+          <div className="rounded-xl border border-foreground/10 bg-muted/10 p-3">
             <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
               Recurring runs
             </p>

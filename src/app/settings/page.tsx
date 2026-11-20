@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { gooeyToast } from "goey-toast";
 import {
+  ChartIncreaseIcon,
   Delete02Icon,
   Money03Icon,
   PencilEdit01Icon,
@@ -15,13 +16,13 @@ import { accountIcon } from "@/components/account-select";
 import { useCategories } from "@/components/categories-provider";
 import { useCurrency } from "@/components/currency-provider";
 import { DropdownSelect } from "@/components/dropdown-select";
-import { InlineSlider } from "@/components/motion/range-slider-inline";
 import { Input } from "@/components/motion/input";
 import { ThemeToggle } from "@/components/motion/theme-toggle";
 import { WheelPicker } from "@/components/motion/wheel-picker";
 import { MorphingModal } from "@/components/motion/morphing-modal";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/huge-icon";
+import { MetricCard } from "@/components/metric-card";
 import { Money } from "@/components/money";
 import { SectionPanel } from "@/components/panel";
 import { PageLoader } from "@/components/page-loader";
@@ -202,10 +203,6 @@ function SettingsForm({
   const budgetPlaceholder = formatNumericInput(
     budgetMeta.decimals > 0 ? (3_000_000).toFixed(budgetMeta.decimals) : "3000000",
     budgetMeta.decimals > 0,
-  );
-  const budgetSliderMax = Math.max(
-    8_000_000,
-    Math.ceil((budget * 1.5) / 1_000_000) * 1_000_000,
   );
   const actualBySource = useMemo(
     () =>
@@ -488,55 +485,6 @@ function SettingsForm({
         </div>
       </header>
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <div className="rounded-xl border border-foreground/10 bg-card/60 p-4">
-          <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
-            Liquid balance
-          </p>
-          <div className="mt-2">
-            <Money value={overview.totals.liquidUgx} size="md" />
-          </div>
-          <p className="mt-1 text-[10px] text-muted-foreground">
-            Across {formatNumber(accounts.length)} accounts
-          </p>
-        </div>
-        <div className="rounded-xl border border-foreground/10 bg-card/60 p-4">
-          <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
-            Net worth
-          </p>
-          <div className="mt-2">
-            <Money value={overview.totals.netWorthUgx} size="md" />
-          </div>
-          <p className="mt-1 text-[10px] text-muted-foreground">
-            Includes goals, lent and borrowed
-          </p>
-        </div>
-        <div className="rounded-xl border border-foreground/10 bg-card/60 p-4">
-          <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
-            Expected income
-          </p>
-          <div className="mt-2">
-            <Money value={overview.earnings.expectedMonthlyUgx} size="md" />
-          </div>
-          <p className="mt-1 text-[10px] text-muted-foreground">
-            {display.formatMoney(overview.earnings.actualMonthUgx)} actual this
-            month
-          </p>
-        </div>
-        <div className="rounded-xl border border-foreground/10 bg-card/60 p-4">
-          <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
-            Budget left
-          </p>
-          <div className="mt-2">
-            <Money value={overview.budget.remainingUgx} size="md" />
-          </div>
-          <p className="mt-1 text-[10px] text-muted-foreground">
-            {display.formatMoney(overview.budget.spentUgx)} of{" "}
-            {display.formatMoney(overview.budget.limitUgx)} used
-          </p>
-        </div>
-      </div>
-
       <div className="grid grid-cols-12 gap-6">
         <SectionPanel
           title="Profile"
@@ -639,7 +587,7 @@ function SettingsForm({
           className="col-span-12"
           bodyClassName="p-5"
         >
-          <div className="grid gap-7 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
+          <div className="grid gap-7 lg:grid-cols-[minmax(0,1fr)_16rem] lg:items-start">
             <div className="space-y-5">
               <Input
                 label={`Monthly budget (${display.unit})`}
@@ -654,22 +602,9 @@ function SettingsForm({
                 inputMode="numeric"
                 placeholder={budgetPlaceholder}
               />
-              <InlineSlider
-                label="Monthly budget"
-                value={budget}
-                onValueChange={(value) => {
-                  setBudget(value);
-                  setBudgetDraft(null);
-                }}
-                min={0}
-                max={budgetSliderMax}
-                step={50_000}
-                format={(value) => display.formatMoney(value)}
-                aria-label="Monthly budget"
-              />
             </div>
 
-            <div className="flex flex-col gap-1.5 lg:w-28 lg:justify-self-end">
+            <div className="flex flex-col gap-1.5 lg:w-64 lg:justify-self-end">
               <p className="px-1 text-sm font-medium text-foreground">
                 Payday of the month
               </p>
@@ -681,7 +616,7 @@ function SettingsForm({
                 onValueChange={(value) => setPayday(Number(value))}
                 visibleCount={3}
                 itemHeight={34}
-                className="w-28 border-x-0"
+                className="w-full border-x-0"
                 aria-label="Payday of the month"
               />
             </div>
@@ -707,41 +642,43 @@ function SettingsForm({
             </Button>
           }
         >
-          <div className="grid gap-3 sm:grid-cols-3">
-            <div className="rounded-xl border border-foreground/10 bg-card/40 p-3">
-              <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
-                Expected monthly
-              </p>
-              <div className="mt-1.5">
-                <Money value={overview.earnings.expectedMonthlyUgx} size="sm" />
-              </div>
-            </div>
-            <div className="rounded-xl border border-foreground/10 bg-card/40 p-3">
-              <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
-                Actual this month
-              </p>
-              <div className="mt-1.5">
-                <Money value={overview.earnings.actualMonthUgx} size="sm" />
-              </div>
-              <p className="mt-1 text-[10px] text-muted-foreground">
-                {display.formatMoney(overview.earnings.actualAllTimeUgx)} all
-                time
-              </p>
-            </div>
-            <div className="rounded-xl border border-foreground/10 bg-card/40 p-3">
-              <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
-                Variance
-              </p>
-              <div className="mt-1.5">
-                <Money
-                  value={
-                    overview.earnings.actualMonthUgx -
-                    overview.earnings.expectedMonthlyUgx
-                  }
-                  size="sm"
-                />
-              </div>
-            </div>
+          <div className="grid gap-4 md:grid-cols-3">
+            <MetricCard
+              compact
+              label="Expected monthly"
+              info="Expected income from all active sources."
+              value={overview.earnings.expectedMonthlyUgx}
+              foot="From active income sources"
+              icon={Money03Icon}
+              tone="emerald"
+            />
+            <MetricCard
+              compact
+              label="Actual this month"
+              info="Income recorded in the current month."
+              value={overview.earnings.actualMonthUgx}
+              foot={`${display.formatMoney(overview.earnings.actualAllTimeUgx)} all time`}
+              icon={Tick02Icon}
+              tone="sky"
+            />
+            <MetricCard
+              compact
+              label="Variance"
+              info="Actual income minus expected monthly income."
+              value={
+                overview.earnings.actualMonthUgx -
+                overview.earnings.expectedMonthlyUgx
+              }
+              foot="Actual minus expected"
+              icon={ChartIncreaseIcon}
+              tone={
+                overview.earnings.actualMonthUgx -
+                  overview.earnings.expectedMonthlyUgx <
+                0
+                  ? "rose"
+                  : "emerald"
+              }
+            />
           </div>
 
           {incomeSources.length === 0 ? (
