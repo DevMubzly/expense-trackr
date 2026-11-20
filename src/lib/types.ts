@@ -235,6 +235,7 @@ export type PlanActivity = {
   amountUgx: number;
   title: string;
   detail: string;
+  accountName?: string;
   refId: string;
 };
 

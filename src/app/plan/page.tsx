@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
+import { EASE_OUT, SPRING_LAYOUT } from "@/lib/ease";
 import { gooeyToast } from "goey-toast";
 import {
   ArrowDown02Icon,
@@ -48,6 +49,7 @@ import {
   monthLabel,
   parseNumericInput,
   parseYmd,
+  relativeDay,
   ymd,
 } from "@/lib/format";
 import { PERIOD_LABELS, PERIOD_OPTIONS } from "@/lib/periods";
@@ -100,6 +102,15 @@ type PlanSection =
   | "recurring"
   | "budgets"
   | "activity";
+
+const PLAN_SECTION_ORDER: PlanSection[] = [
+  "attention",
+  "goals",
+  "debts",
+  "recurring",
+  "budgets",
+  "activity",
+];
 
 function isPlanSection(value: string | null): value is PlanSection {
   return (
@@ -168,9 +179,14 @@ function contributionSpark(
   const entries = activity
     .filter((entry) => entry.kind === "goal-contribution")
     .sort((a, b) => a.date.localeCompare(b.date));
-  if (entries.length === 0) return [];
-
   const current = goals.reduce((total, goal) => total + goal.savedUgx, 0);
+  if (entries.length === 0) {
+    return [
+      { label: "Start", value: current },
+      { label: "Now", value: current },
+    ];
+  }
+
   const contributed = entries.reduce(
     (total, entry) => total + entry.amountUgx,
     0,
@@ -193,17 +209,22 @@ function balanceSpark(
       .filter((debt) => debt.direction === direction)
       .map((debt) => debt.id),
   );
+  const current = debts
+    .filter((debt) => debtIds.has(debt.id))
+    .reduce((total, debt) => total + debt.balanceUgx, 0);
   const entries = activity
     .filter(
       (entry) =>
         entry.kind === "debt-payment" && debtIds.has(entry.refId),
     )
     .sort((a, b) => a.date.localeCompare(b.date));
-  if (entries.length === 0) return [];
+  if (entries.length === 0) {
+    return [
+      { label: "Start", value: current },
+      { label: "Now", value: current },
+    ];
+  }
 
-  const current = debts
-    .filter((debt) => debtIds.has(debt.id))
-    .reduce((total, debt) => total + debt.balanceUgx, 0);
   let running =
     current + entries.reduce((total, entry) => total + entry.amountUgx, 0);
   const points = entries.map((entry) => {
@@ -244,8 +265,12 @@ export default function PlanPage() {
   const [removingKey, setRemovingKey] = useState<string | null>(null);
   const [activeSection, setActiveSection] =
     useState<PlanSection>("goals");
+  const [sectionDirection, setSectionDirection] = useState(1);
   const [debtFilter, setDebtFilter] = useState<
     "all" | Debt["direction"]
+  >("all");
+  const [activityFilter, setActivityFilter] = useState<
+    "all" | "goals" | "debts" | "recurring"
   >("all");
   const [deleteTarget, setDeleteTarget] = useState<{
     kind: ModalKind;
@@ -312,6 +337,51 @@ export default function PlanPage() {
     [goals, sparkActivity],
   );
 
+  const activitySummary = useMemo(() => {
+    const sum = (entries: PlanActivity[]) =>
+      entries.reduce((total, entry) => total + entry.amountUgx, 0);
+    const goalEntries = activity.filter(
+      (entry) => entry.kind === "goal-contribution",
+    );
+    const debtEntries = activity.filter(
+      (entry) => entry.kind === "debt-payment",
+    );
+    const recurringEntries = activity.filter(
+      (entry) => entry.kind === "recurring-run",
+    );
+    return {
+      goals: { count: goalEntries.length, total: sum(goalEntries) },
+      debts: { count: debtEntries.length, total: sum(debtEntries) },
+      recurring: {
+        count: recurringEntries.length,
+        total: sum(recurringEntries),
+      },
+    };
+  }, [activity]);
+
+  const filteredActivity = useMemo(
+    () =>
+      activity.filter((entry) => {
+        if (activityFilter === "all") return true;
+        if (activityFilter === "goals") {
+          return entry.kind === "goal-contribution";
+        }
+        if (activityFilter === "debts") return entry.kind === "debt-payment";
+        return entry.kind === "recurring-run";
+      }),
+    [activity, activityFilter],
+  );
+
+  const groupedActivity = useMemo(() => {
+    const groups = new Map<string, PlanActivity[]>();
+    for (const entry of filteredActivity) {
+      const list = groups.get(entry.date) ?? [];
+      list.push(entry);
+      groups.set(entry.date, list);
+    }
+    return Array.from(groups.entries());
+  }, [filteredActivity]);
+
   const ready =
     goalsApi.data && debtsApi.data && budgetsApi.data && recurringApi.data;
 
@@ -343,6 +413,9 @@ export default function PlanPage() {
   }
 
   function selectSection(section: PlanSection) {
+    const currentIndex = PLAN_SECTION_ORDER.indexOf(activeSection);
+    const nextIndex = PLAN_SECTION_ORDER.indexOf(section);
+    setSectionDirection(nextIndex >= currentIndex ? 1 : -1);
     setActiveSection(section);
     const url = new URL(window.location.href);
     url.searchParams.set("section", section);
@@ -579,6 +652,7 @@ export default function PlanPage() {
           spark={netWorthSpark}
           sparkKey="value"
           sparkLabelKey={(point) => point.label}
+          sparkColor="oklch(0.62 0.19 259)"
           icon={Wallet02Icon}
           tone="sky"
         />
@@ -591,6 +665,7 @@ export default function PlanPage() {
           spark={borrowedSpark}
           sparkKey="value"
           sparkLabelKey={(point) => point.label}
+          sparkColor="oklch(0.645 0.246 16)"
           icon={ArrowUp02Icon}
           tone="rose"
         />
@@ -603,6 +678,7 @@ export default function PlanPage() {
           spark={lentSpark}
           sparkKey="value"
           sparkLabelKey={(point) => point.label}
+          sparkColor="oklch(0.696 0.17 162)"
           icon={ArrowDown02Icon}
           tone="emerald"
         />
@@ -615,6 +691,7 @@ export default function PlanPage() {
           spark={goalsSpark}
           sparkKey="value"
           sparkLabelKey={(point) => point.label}
+          sparkColor="oklch(0.606 0.25 292)"
           icon={Target01Icon}
           tone="violet"
         />
@@ -634,30 +711,53 @@ export default function PlanPage() {
               aria-pressed={active}
               onClick={() => selectSection(section.id)}
               className={cn(
-                "inline-flex h-8 items-center rounded-full px-3 text-xs font-medium transition-colors",
+                "relative inline-flex h-8 items-center rounded-full px-3 text-xs font-medium transition-colors",
                 active
-                  ? "bg-white/[0.16] text-white"
+                  ? "text-white"
                   : "text-white/55 hover:bg-white/[0.08] hover:text-white",
               )}
             >
-              {section.label}
-              {count !== null ? (
-                <span className="ml-1.5 text-[10px] text-white/40">
-                  {count}
-                </span>
+              {active ? (
+                <motion.span
+                  layoutId="plan-section-active"
+                  className="absolute inset-0 rounded-full bg-white/[0.16]"
+                  transition={SPRING_LAYOUT}
+                />
               ) : null}
+              <span className="relative z-10 inline-flex items-center">
+                {section.label}
+                {count !== null ? (
+                  <span className="ml-1.5 text-[10px] text-white/40">
+                    {count}
+                  </span>
+                ) : null}
+              </span>
             </button>
           );
         })}
       </nav>
 
-      <AnimatePresence mode="wait" initial={false}>
+      <AnimatePresence mode="wait" initial={false} custom={sectionDirection}>
         <motion.div
           key={activeSection}
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -6 }}
-          transition={{ duration: 0.18, ease: "easeOut" }}
+          custom={sectionDirection}
+          variants={{
+            enter: (direction: number) => ({
+              opacity: 0,
+              y: direction > 0 ? 16 : -16,
+              filter: "blur(6px)",
+            }),
+            center: { opacity: 1, y: 0, filter: "blur(0px)" },
+            exit: (direction: number) => ({
+              opacity: 0,
+              y: direction > 0 ? -10 : 10,
+              filter: "blur(4px)",
+            }),
+          }}
+          initial="enter"
+          animate="center"
+          exit="exit"
+          transition={{ duration: 0.28, ease: EASE_OUT }}
           className="space-y-8"
         >
       <SectionPanel
@@ -825,8 +925,8 @@ export default function PlanPage() {
                     </span>
                   </div>
 
-                  <div className="mt-3 flex items-center justify-between gap-3">
-                    <p className="min-w-0 truncate text-[10px] text-muted-foreground">
+                  <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+                    <p className="min-w-0 flex-1 truncate text-[10px] text-muted-foreground">
                       {last
                         ? `Last · ${shortDateLabel(last.date)} · ${display.formatMoney(last.amountUgx)}`
                         : "No contributions yet"}
@@ -855,6 +955,7 @@ export default function PlanPage() {
                       <Button
                         variant="ghost"
                         size="sm"
+                        title="Take money out of this goal and lower its saved balance"
                         onClick={() =>
                           setActionModal({
                             kind: "contribution",
@@ -863,7 +964,7 @@ export default function PlanPage() {
                           })
                         }
                       >
-                        Withdraw
+                        Withdraw savings
                       </Button>
                     ) : null}
                   </div>
@@ -1307,44 +1408,159 @@ export default function PlanPage() {
 
       <SectionPanel
         title="Plan activity"
-        info="Contributions, debt payments and recurring runs in the selected range."
+        info="Contributions, debt payments and recurring runs in the selected range. This history is separate from day-to-day expenses."
         className={showsSection("activity") ? undefined : "hidden"}
-        hint={`${PERIOD_LABELS[period]} · contributions, payments and recurring runs`}
+        hint={`${PERIOD_LABELS[period]} · ${formatNumber(activity.length)} entries`}
         bodyClassName="p-3"
       >
-        {activity.length === 0 ? (
+        <div className="px-2 pb-4">
+          <p className="max-w-2xl text-[12px] leading-relaxed text-muted-foreground">
+            A timeline of changes made inside Plan. Contributions grow a goal,
+            withdrawals shrink it, debt payments reduce a balance, and recurring
+            runs record a bill or income being applied.
+          </p>
+        </div>
+
+        <div className="grid gap-2 px-2 pb-4 sm:grid-cols-3">
+          <div className="rounded-xl border border-foreground/10 bg-card/40 p-3">
+            <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+              Goal savings
+            </p>
+            <div className="mt-1.5">
+              <Money value={activitySummary.goals.total} size="sm" />
+            </div>
+            <p className="mt-1 text-[10px] text-muted-foreground">
+              {formatNumber(activitySummary.goals.count)}{" "}
+              {activitySummary.goals.count === 1 ? "change" : "changes"}
+            </p>
+          </div>
+          <div className="rounded-xl border border-foreground/10 bg-card/40 p-3">
+            <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+              Debt payments
+            </p>
+            <div className="mt-1.5">
+              <Money value={activitySummary.debts.total} size="sm" />
+            </div>
+            <p className="mt-1 text-[10px] text-muted-foreground">
+              {formatNumber(activitySummary.debts.count)}{" "}
+              {activitySummary.debts.count === 1 ? "payment" : "payments"}
+            </p>
+          </div>
+          <div className="rounded-xl border border-foreground/10 bg-card/40 p-3">
+            <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+              Recurring runs
+            </p>
+            <div className="mt-1.5">
+              <Money value={activitySummary.recurring.total} size="sm" />
+            </div>
+            <p className="mt-1 text-[10px] text-muted-foreground">
+              {formatNumber(activitySummary.recurring.count)}{" "}
+              {activitySummary.recurring.count === 1 ? "run" : "runs"}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between gap-3 px-2 pb-3">
+          <p className="text-[11px] text-muted-foreground">Newest first</p>
+          <DropdownSelect
+            value={activityFilter}
+            onValueChange={(value) =>
+              setActivityFilter(
+                value as "all" | "goals" | "debts" | "recurring",
+              )
+            }
+            ariaLabel="Activity type"
+            options={[
+              { value: "all", label: "All activity" },
+              { value: "goals", label: "Goals" },
+              { value: "debts", label: "Debts" },
+              { value: "recurring", label: "Recurring" },
+            ]}
+            className="w-40"
+          />
+        </div>
+
+        {filteredActivity.length === 0 ? (
           <p className="px-2 py-6 text-center text-sm text-muted-foreground">
-            No plan activity in this range yet.
+            No {activityFilter === "all" ? "" : `${activityFilter} `}activity
+            in this range yet.
           </p>
         ) : (
-          <ul className="divide-y divide-foreground/5">
-            {activity.slice(0, 10).map((entry) => (
-              <li
-                key={entry.id}
-                className="flex items-center gap-3 px-2 py-2.5"
-              >
-                <span
-                  className={cn(
-                    "size-2 shrink-0 rounded-full",
-                    entry.kind === "goal-contribution"
-                      ? "bg-violet-500"
-                      : entry.kind === "debt-payment"
-                        ? "bg-sky-500"
-                        : "bg-emerald-500",
-                  )}
-                />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-[13px]">
-                    {entry.title}
+          <div className="space-y-4">
+            {groupedActivity.map(([date, entries]) => (
+              <div key={date}>
+                <div className="flex items-center gap-3 px-2 pb-1.5">
+                  <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+                    {relativeDay(date, today)}
                   </p>
-                  <p className="truncate text-[10px] text-muted-foreground">
-                    {entry.detail} · {shortDateLabel(entry.date)}
-                  </p>
+                  <span className="h-px flex-1 bg-foreground/10" />
                 </div>
-                <Money value={entry.amountUgx} size="sm" />
-              </li>
+                <ul className="divide-y divide-foreground/5">
+                  {entries.map((entry) => {
+                    const withdrawal =
+                      entry.kind === "goal-contribution" &&
+                      entry.amountUgx < 0;
+                    const label =
+                      entry.kind === "goal-contribution"
+                        ? withdrawal
+                          ? "Goal withdrawal"
+                          : "Goal contribution"
+                        : entry.kind === "debt-payment"
+                          ? "Debt payment"
+                          : "Recurring run";
+                    return (
+                      <li
+                        key={entry.id}
+                        className="flex items-center gap-3 px-2 py-3"
+                      >
+                        <span
+                          className={cn(
+                            "grid size-7 shrink-0 place-items-center rounded-lg",
+                            entry.kind === "goal-contribution"
+                              ? withdrawal
+                                ? "bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                                : "bg-violet-500/10 text-violet-600 dark:text-violet-400"
+                              : entry.kind === "debt-payment"
+                                ? "bg-sky-500/10 text-sky-600 dark:text-sky-400"
+                                : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+                          )}
+                        >
+                          <Icon
+                            icon={
+                              entry.kind === "goal-contribution"
+                                ? withdrawal
+                                  ? ArrowUp02Icon
+                                  : Target01Icon
+                                : entry.kind === "debt-payment"
+                                  ? Tick02Icon
+                                  : Wallet02Icon
+                            }
+                            className="size-3.5"
+                          />
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-[13px]">
+                            <span className="font-medium">{label}</span>
+                            <span className="text-muted-foreground">
+                              {" "}
+                              · {entry.title}
+                            </span>
+                          </p>
+                          <p className="truncate text-[10px] text-muted-foreground">
+                            {entry.detail}
+                            {entry.accountName
+                              ? ` · ${entry.accountName}`
+                              : ""}
+                          </p>
+                        </div>
+                        <Money value={entry.amountUgx} size="sm" />
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
             ))}
-          </ul>
+          </div>
         )}
       </SectionPanel>
         </motion.div>
@@ -1489,9 +1705,20 @@ function ContributionForm({
   onCancel: () => void;
 }) {
   const display = useCurrency();
+  const cashAccount = accounts.find((account) => account.type === "cash");
+  const sourceOptions = [
+    ...(cashAccount
+      ? [{ value: "cash", label: "Cash" }]
+      : []),
+    ...accounts
+      .filter((account) => account.type !== "cash")
+      .map((account) => ({ value: account.id, label: account.name })),
+  ];
   const [amount, setAmount] = useState("");
   const [date, setDate] = useState(ymd(new Date()));
-  const [accountId, setAccountId] = useState(defaultAccountId);
+  const [source, setSource] = useState(
+    cashAccount ? "cash" : defaultAccountId,
+  );
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -1512,7 +1739,7 @@ function ContributionForm({
             ? -Math.round(entered)
             : Math.round(entered),
         date,
-        accountId,
+        accountId: source === "cash" ? cashAccount?.id : source,
         note,
       });
       gooeyToast.success(
@@ -1568,16 +1795,19 @@ function ContributionForm({
       />
       <div className="grid grid-cols-[88px_176px] items-center gap-2">
         <p className="text-[13px] text-muted-foreground">
-          {mode === "withdraw" ? "To" : "From"}
+          {mode === "withdraw" ? "Put back in" : "Source"}
         </p>
-        <AccountSelect
-          label={mode === "withdraw" ? "To" : "From"}
-          value={accountId}
-          accounts={accounts}
-          onValueChange={setAccountId}
-          compact
-          hideLabel
+        <DropdownSelect
+          value={source}
+          onValueChange={setSource}
+          ariaLabel={mode === "withdraw" ? "Withdrawal destination" : "Contribution source"}
+          options={sourceOptions}
         />
+      </div>
+      <div className="rounded-xl border border-foreground/10 bg-muted/40 p-3 text-[11px] leading-relaxed text-muted-foreground">
+        {mode === "withdraw"
+          ? "A withdrawal takes money back out of this goal and records it in Plan activity. It does not create a spending entry."
+          : "A contribution adds to this goal's saved balance. Choose Cash for physical cash, or a bank/mobile money account for a transfer."}
       </div>
       <Input
         label="Note"

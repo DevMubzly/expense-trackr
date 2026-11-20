@@ -188,7 +188,74 @@ function store(): Store {
       nextRecurringRunId: recurringRuns.length + 1,
     };
   }
-  return globalStore.__ledgerStore;
+
+  // The mock store lives on globalThis and can outlive a hot reload. Fill in
+  // collections added after it was first created so long-running dev servers
+  // do not crash on missing arrays.
+  const state = globalStore.__ledgerStore;
+  state.goals ??= createGoals();
+  state.debts ??= createDebts();
+  state.recurring ??= createRecurring();
+  state.accounts ??= ACCOUNTS.map((account) => ({ ...account }));
+  state.transactions ??= [];
+  state.budgets ??= createBudgets();
+  state.members ??= createMembers();
+  state.categories ??= DEFAULT_CATEGORY_RECORDS.map((category) => ({
+    ...category,
+  }));
+  const seededAt = new Date();
+  if (!Array.isArray(state.goalContributions)) {
+    state.goalContributions = [];
+  }
+  if (
+    state.goalContributions.length === 0 &&
+    state.goals.some((goal) => goal.savedUgx > 0)
+  ) {
+    state.goalContributions = seedGoalContributions(state.goals, seededAt);
+  }
+  if (!Array.isArray(state.debtPayments)) {
+    state.debtPayments = [];
+  }
+  if (
+    state.debtPayments.length === 0 &&
+    state.debts.some((debt) => debt.balanceUgx > 0)
+  ) {
+    state.debtPayments = seedDebtPayments(state.debts, seededAt);
+  }
+  if (!Array.isArray(state.recurringRuns)) {
+    state.recurringRuns = [];
+  }
+  if (state.recurringRuns.length === 0 && state.recurring.length > 0) {
+    state.recurringRuns = seedRecurringRuns(state.recurring, seededAt);
+  }
+  state.settings = {
+    ...createSettings(state.settings?.defaultAccountId ?? "acc_mtn"),
+    ...state.settings,
+  };
+  state.nextGoalContributionId = Math.max(
+    state.nextGoalContributionId ?? 1,
+    state.goalContributions.length + 1,
+  );
+  state.nextDebtPaymentId = Math.max(
+    state.nextDebtPaymentId ?? 1,
+    state.debtPayments.length + 1,
+  );
+  state.nextRecurringRunId = Math.max(
+    state.nextRecurringRunId ?? 1,
+    state.recurringRuns.length + 1,
+  );
+  state.nextTransactionId = Math.max(
+    state.nextTransactionId ?? 1,
+    state.transactions.length + 1,
+  );
+  state.nextAccountId ??= 1;
+  state.nextGoalId ??= 1;
+  state.nextDebtId ??= 1;
+  state.nextBudgetId ??= 1;
+  state.nextRecurringId ??= 1;
+  state.nextMemberId ??= 1;
+
+  return state;
 }
 
 export function listCategories(): CategoryRecord[] {
@@ -1291,6 +1358,7 @@ export function listPlanActivity(
   const goalById = new Map(state.goals.map((goal) => [goal.id, goal]));
   const debtById = new Map(state.debts.map((debt) => [debt.id, debt]));
   const ruleById = new Map(state.recurring.map((rule) => [rule.id, rule]));
+  const accountById = new Map(state.accounts.map((account) => [account.id, account]));
 
   const activity: PlanActivity[] = [
     ...state.goalContributions.map((entry) => {
@@ -1302,6 +1370,9 @@ export function listPlanActivity(
         amountUgx: entry.amountUgx,
         title: goal?.name ?? "Goal",
         detail: entry.note || (entry.amountUgx < 0 ? "Withdrawal" : "Contribution"),
+        accountName: entry.accountId
+          ? accountById.get(entry.accountId)?.name
+          : undefined,
         refId: entry.goalId,
       };
     }),
@@ -1317,6 +1388,9 @@ export function listPlanActivity(
           debt?.direction === "lent"
             ? "Payment received"
             : entry.note || "Debt payment",
+        accountName: entry.accountId
+          ? accountById.get(entry.accountId)?.name
+          : undefined,
         refId: entry.debtId,
       };
     }),
@@ -1329,6 +1403,9 @@ export function listPlanActivity(
         amountUgx: entry.amountUgx,
         title: rule?.name ?? "Recurring rule",
         detail: rule ? `Recurring · ${rule.frequency}` : "Recurring run",
+        accountName: rule?.accountId
+          ? accountById.get(rule.accountId)?.name
+          : undefined,
         refId: entry.ruleId,
       };
     }),
