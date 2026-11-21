@@ -2,16 +2,13 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  ArrowRight01Icon,
-  Cancel01Icon,
-  GoogleIcon,
-  Wallet02Icon,
-} from "@hugeicons/core-free-icons";
+import { Cancel01Icon, GoogleIcon, Tick02Icon } from "@hugeicons/core-free-icons";
 import { useAuth } from "@/components/auth-provider";
 import { Input } from "@/components/motion/input";
 import { Icon } from "@/components/huge-icon";
 import { Button } from "@/components/ui/button";
+
+type Mode = "signin" | "register" | "forgot";
 
 export function AuthDialog({
   open,
@@ -53,102 +50,204 @@ export function AuthDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="dark relative z-10 text-foreground max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto rounded-2xl border border-foreground/10 bg-card p-1 shadow-2xl"
+        className="dark relative z-10 max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto rounded-2xl border border-foreground/10 bg-card p-5 text-foreground shadow-2xl"
       >
-        <div className="flex items-center gap-2 px-3.5 pb-2 pt-2">
-          <Icon icon={Wallet02Icon} className="size-3.5 shrink-0 text-muted-foreground" />
-          <p id={titleId} className="truncate text-[15px]">
-            Open Expense Trackr
-          </p>
-          <button
-            type="button"
-            aria-label="Close sign in"
-            onClick={onClose}
-            className="ml-auto grid size-7 shrink-0 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-          >
-            <Icon icon={Cancel01Icon} className="size-4" />
-          </button>
-        </div>
+        <button
+          type="button"
+          aria-label="Close"
+          onClick={onClose}
+          className="absolute right-3 top-3 grid size-7 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+        >
+          <Icon icon={Cancel01Icon} className="size-4" />
+        </button>
 
-        <AuthForm onDone={onClose} />
+        <h2 id={titleId} className="text-center text-base font-semibold tracking-[-0.02em]">
+          Expense Trackr
+        </h2>
+
+        <AuthBody onDone={onClose} />
       </div>
     </div>
   );
 }
 
-function AuthForm({ onDone }: { onDone: () => void }) {
+function AuthBody({ onDone }: { onDone: () => void }) {
   const { login } = useAuth();
   const router = useRouter();
+  const [mode, setMode] = useState<Mode>("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
   const [error, setError] = useState<string | undefined>();
+  const [sent, setSent] = useState(false);
 
   function enter(nextEmail = email, nextPassword = password) {
-    if (!nextEmail.trim()) {
-      setError("Enter an email address.");
-      return;
-    }
-    if (!nextPassword.trim()) {
-      setError("Enter a password.");
-      return;
-    }
-    setError(undefined);
     login(nextEmail, nextPassword);
     onDone();
     router.push("/dashboard");
   }
 
-  return (
-    <>
-      <div className="rounded-xl border border-foreground/10 bg-muted/15 p-3.5 px-4">
-        <p className="text-[11px] leading-relaxed text-muted-foreground">
-          Sign in to your workspace. Any email and password works.
+  function submit() {
+    if (!email.trim()) {
+      setError("Enter your email address.");
+      return;
+    }
+
+    if (mode === "forgot") {
+      setError(undefined);
+      setSent(true);
+      return;
+    }
+
+    if (!password.trim()) {
+      setError("Enter a password.");
+      return;
+    }
+
+    if (mode === "register" && password !== confirm) {
+      setError("Passwords do not match.");
+      return;
+    }
+
+    setError(undefined);
+    enter();
+  }
+
+  function switchMode(next: Mode) {
+    setMode(next);
+    setError(undefined);
+    setSent(false);
+    setPassword("");
+    setConfirm("");
+  }
+
+  if (mode === "forgot" && sent) {
+    return (
+      <div className="mt-6 text-center">
+        <span className="mx-auto grid size-10 place-items-center rounded-full bg-muted text-foreground">
+          <Icon icon={Tick02Icon} className="size-5" />
+        </span>
+        <p className="mt-4 text-sm font-medium">Check your inbox</p>
+        <p className="mt-1.5 text-[13px] leading-relaxed text-muted-foreground">
+          A reset link was sent to {email}. It expires in 30 minutes.
         </p>
-        <div className="mt-3 space-y-3">
-          <Input
-            label="Email"
-            type="email"
-            value={email}
-            onChange={setEmail}
-            placeholder="you@example.com"
-            autoComplete="email"
-          />
+        <Button className="mt-5 w-full" onClick={() => switchMode("signin")}>
+          Back to sign in
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-5 space-y-4">
+      {mode !== "forgot" ? (
+        <>
+          <Button
+            variant="outline"
+            className="w-full bg-muted/50"
+            onClick={() => enter("demo@expense.app", "google")}
+          >
+            <Icon icon={GoogleIcon} className="size-4" />
+            Continue with Google
+          </Button>
+
+          <div className="flex items-center gap-3">
+            <span className="h-px flex-1 bg-border" />
+            <span className="text-[11px] text-muted-foreground">or</span>
+            <span className="h-px flex-1 bg-border" />
+          </div>
+        </>
+      ) : null}
+
+      <div className="space-y-3">
+        <Input
+          label="Email"
+          type="email"
+          value={email}
+          onChange={setEmail}
+          placeholder="you@example.com"
+          autoComplete="email"
+        />
+
+        {mode !== "forgot" ? (
           <Input
             label="Password"
             type="password"
             value={password}
             onChange={setPassword}
-            placeholder="Anything you like"
-            autoComplete="current-password"
-            error={error}
+            placeholder="At least 6 characters"
+            autoComplete={mode === "register" ? "new-password" : "current-password"}
             onKeyDown={(event) => {
-              if (event.key === "Enter") enter();
+              if (event.key === "Enter") submit();
             }}
           />
-        </div>
+        ) : null}
+
+        {mode === "register" ? (
+          <Input
+            label="Confirm password"
+            type="password"
+            value={confirm}
+            onChange={setConfirm}
+            placeholder="Repeat your password"
+            autoComplete="new-password"
+            onKeyDown={(event) => {
+              if (event.key === "Enter") submit();
+            }}
+          />
+        ) : null}
       </div>
 
-      <div className="mt-1 rounded-xl border border-foreground/10 bg-muted/15 p-3 px-4">
-        <Button onClick={() => enter()} className="w-full">
-          Open App
-          <Icon icon={ArrowRight01Icon} className="size-4" />
-        </Button>
+      {error ? <p className="text-[12px] text-destructive">{error}</p> : null}
 
-        <div className="my-3 flex items-center gap-3">
-          <span className="h-px flex-1 bg-border" />
-          <span className="text-[11px] text-muted-foreground">or</span>
-          <span className="h-px flex-1 bg-border" />
-        </div>
+      <Button onClick={submit} className="w-full">
+        {mode === "register"
+          ? "Create account"
+          : mode === "forgot"
+            ? "Send reset link"
+            : "Sign in"}
+      </Button>
 
-        <Button
-          variant="outline"
-          className="w-full bg-muted/50"
-          onClick={() => enter("demo@expense.app", "google")}
-        >
-          <Icon icon={GoogleIcon} className="size-4" />
-          Continue with Google
-        </Button>
+      <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-[12px] text-muted-foreground">
+        {mode === "signin" ? (
+          <>
+            <button
+              type="button"
+              onClick={() => switchMode("register")}
+              className="transition-colors hover:text-foreground"
+            >
+              Create account
+            </button>
+            <button
+              type="button"
+              onClick={() => switchMode("forgot")}
+              className="transition-colors hover:text-foreground"
+            >
+              Forgot password?
+            </button>
+          </>
+        ) : null}
+
+        {mode === "register" ? (
+          <button
+            type="button"
+            onClick={() => switchMode("signin")}
+            className="transition-colors hover:text-foreground"
+          >
+            Already have an account? Sign in
+          </button>
+        ) : null}
+
+        {mode === "forgot" ? (
+          <button
+            type="button"
+            onClick={() => switchMode("signin")}
+            className="transition-colors hover:text-foreground"
+          >
+            Back to sign in
+          </button>
+        ) : null}
       </div>
-    </>
+    </div>
   );
 }

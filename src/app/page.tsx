@@ -96,8 +96,8 @@ export default function LandingPage() {
           </section>
 
           <aside className="flex min-h-0 flex-col overflow-y-auto rounded-[32px] border border-white/10 bg-white/[0.035] p-6 lg:p-8">
-            <p className="text-[13px] text-white/50">Pricing</p>
-            <h2 className="mt-2 font-display text-2xl leading-tight tracking-[-0.03em] text-white">
+            <div className="mx-auto flex h-full w-full max-w-sm flex-col text-left">
+            <h2 className="font-display text-2xl leading-tight tracking-[-0.03em] text-white">
               One plan. Everything in.
             </h2>
 
@@ -129,17 +129,19 @@ export default function LandingPage() {
               ))}
             </div>
 
-            <div className="mt-auto flex items-center gap-3 pt-6">
+            <div className="mt-auto flex flex-wrap items-center gap-2 pt-6 text-[11px] text-white/45">
+              <span>Expense Trackr is a product of</span>
               <Image
                 src="/salastores-logo.svg"
-                alt="SalaStores"
-                width={28}
-                height={26}
+                alt=""
+                width={18}
+                height={17}
                 className="opacity-60"
               />
-              <span className="font-syncopate text-[9px] leading-relaxed tracking-[0.06em] text-white/45">
-                A product by SalaStores
+              <span className="font-syncopate text-[11px] tracking-[0.02em] text-white/70">
+                <span className="text-purple-400">Sala</span>Stores
               </span>
+            </div>
             </div>
           </aside>
         </div>
