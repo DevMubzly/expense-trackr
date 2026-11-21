@@ -23,31 +23,12 @@ export default function LandingPage() {
 
   return (
     <div className="theme-light flex h-dvh flex-col overflow-hidden bg-[oklch(0.165_0.008_285)] text-foreground">
-      <header className="mx-auto flex w-full max-w-[1500px] items-center justify-between px-4 py-5 sm:px-6">
+      <header className="mx-auto flex w-full max-w-[1500px] items-center justify-center px-4 py-5 sm:px-6">
         <Link href="/" className="text-sm font-semibold tracking-[-0.02em] text-white">
           Expense Trackr
         </Link>
 
-        <nav className="flex items-center gap-6">
-          <button
-            type="button"
-            onClick={() => setPricingOpen(true)}
-            className="text-[13px] text-white/75 transition-colors hover:text-white"
-          >
-            Pricing
-          </button>
-          <button
-            type="button"
-            onClick={() => setAuthOpen(true)}
-            className={buttonVariants({
-              size: "sm",
-              className: "bg-white text-black hover:bg-white/90",
-            })}
-          >
-            Open App
-            <Icon icon={ArrowRight01Icon} className="size-3.5" />
-          </button>
-        </nav>
+        
       </header>
 
       <main className="min-h-0 flex-1 px-4 pb-4 sm:px-6">
