@@ -70,7 +70,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
-  const publicRoute = pathname === "/";
+  const publicRoute = pathname === "/" || pathname.startsWith("/onboarding");
   const { version, openTransaction } = useTransactionDialog();
   const display = useCurrency();
   const { data: stats, loading: statsLoading } = useApi<Stats>(

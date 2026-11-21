@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { useRouter } from "next/navigation";
 import { Cancel01Icon, GoogleIcon, Tick02Icon } from "@hugeicons/core-free-icons";
 import { useAuth } from "@/components/auth-provider";
+import { isOnboarded } from "@/lib/onboarding";
 import { Input } from "@/components/motion/input";
 import { Icon } from "@/components/huge-icon";
 import { Button } from "@/components/ui/button";
@@ -106,7 +107,7 @@ function AuthBody({ onDone }: { onDone: () => void }) {
     window.setTimeout(() => {
       login(nextEmail, nextPassword);
       onDone();
-      router.push("/dashboard");
+      router.push(isOnboarded() ? "/dashboard" : "/onboarding?step=welcome");
     }, 420);
   }
 

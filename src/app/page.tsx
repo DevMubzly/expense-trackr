@@ -24,7 +24,7 @@ export default function LandingPage() {
     <div className="theme-light flex h-dvh flex-col overflow-hidden bg-[oklch(0.165_0.008_285)] text-foreground">
 
 
-      <main className="min-h-0 flex-1 px-4 pb-4 sm:px-6">
+      <main className="min-h-0 flex-1 px-4 pb-4 pt-4 sm:px-6 sm:pt-6">
         <div className="mx-auto grid h-full w-full max-w-[1500px] gap-4 lg:grid-cols-[1.55fr_1fr]">
           <motion.section
             initial={{ opacity: 0, y: 16 }}
