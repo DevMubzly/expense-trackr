@@ -3,25 +3,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { ArrowRight01Icon, Tick02Icon } from "@hugeicons/core-free-icons";
+import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import { AuthDialog } from "@/components/auth-dialog";
 import { Icon } from "@/components/huge-icon";
 import { buttonVariants } from "@/components/ui/button";
-
-const GROUPS = [
-  {
-    title: "Money",
-    items: ["Accounts and wallets", "Expenses, income and transfers", "UGX, USD, KES, RWF and TZS"],
-  },
-  {
-    title: "Planning",
-    items: ["Budgets with category splits", "Goals with deadlines", "Debts and recurring entries"],
-  },
-  {
-    title: "Insight",
-    items: ["Heatmaps, trends and daily flow", "Household sharing", "Export and import"],
-  },
-];
 
 export default function LandingPage() {
   const [authOpen, setAuthOpen] = useState(false);
@@ -61,7 +46,7 @@ export default function LandingPage() {
                   <span className="block text-white/70">every shilling goes.</span>
                 </h1>
 
-                <p className="mt-3 max-w-md text-[13px] leading-relaxed text-white/70 [text-shadow:0_1px_14px_rgba(0,0,0,0.5)]">
+                <p className="mt-3 max-w-md text-[15px] leading-relaxed text-white/70 [text-shadow:0_1px_14px_rgba(0,0,0,0.5)]">
                   Accounts, spending, budgets, goals and debts in one workspace,
                   so the month adds up without a spreadsheet.
                 </p>
@@ -97,45 +82,32 @@ export default function LandingPage() {
 
           <aside className="flex min-h-0 flex-col overflow-y-auto rounded-[32px] border border-white/10 bg-white/[0.035] p-6 lg:p-8">
             <div className="mx-auto flex h-full w-full max-w-sm flex-col text-left">
+            <div className="flex flex-1 flex-col justify-center">
             <h2 className="font-display text-2xl leading-tight tracking-[-0.03em] text-white">
               One plan. Everything in.
             </h2>
 
             <div className="mt-6 flex items-baseline gap-2 text-white">
-              <span className="text-base font-medium text-white/60">UGX</span>
+              <span className="text-lg font-medium text-white/60">UGX</span>
               <span className="font-display text-5xl leading-none tracking-[-0.04em]">
                 4,000
               </span>
-              <span className="text-[12px] text-white/50">per month</span>
+              <span className="text-sm text-white/50">per month</span>
             </div>
-            <p className="mt-3 text-[12px] leading-relaxed text-white/50">
+            <p className="mt-3 text-sm leading-relaxed text-white/50">
               Billed monthly in Ugandan shillings. Cancel whenever, the ledger
               stays exportable either way.
             </p>
 
-            <div className="mt-6 space-y-5">
-              {GROUPS.map((group) => (
-                <div key={group.title}>
-                  <p className="text-[11px] text-white/40">{group.title}</p>
-                  <ul className="mt-2 space-y-2">
-                    {group.items.map((item) => (
-                      <li key={item} className="flex items-start gap-2.5 text-[13px] text-white/85">
-                        <Icon icon={Tick02Icon} className="mt-0.5 size-3.5 shrink-0 text-white/45" />
-                        <span>{item}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
             </div>
 
-            <div className="mt-auto flex flex-wrap items-center gap-2 pt-6 text-[11px] text-white/45">
+            <div className="mt-auto flex flex-wrap items-center gap-2.5 pt-6 text-[13px] text-white/45">
               <span>Expense Trackr is a product of</span>
               <Image
                 src="/salastores-logo.svg"
                 alt=""
-                width={18}
-                height={17}
+                width={30}
+                height={28}
                 className="opacity-60"
               />
               <span className="font-syncopate text-[11px] tracking-[0.02em] text-white/70">
