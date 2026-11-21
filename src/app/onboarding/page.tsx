@@ -170,10 +170,7 @@ function OnboardingFlow() {
             transition={{ duration: 0.32, ease: EASE }}
           >
             {step === "welcome" ? (
-              <Welcome onStart={() => go("name")} onSkip={() => {
-                markOnboarded();
-                router.replace("/dashboard");
-              }} />
+              <Welcome onStart={() => go("name")} />
             ) : null}
 
             {step === "name" ? (
@@ -237,7 +234,6 @@ function OnboardingFlow() {
                   update({ budget });
                   go("payday");
                 }}
-                onSkip={() => go("payday")}
               />
             ) : null}
 
@@ -249,7 +245,6 @@ function OnboardingFlow() {
                 saving={saving}
                 error={error}
                 onFinish={(payday) => finish({ payday })}
-                onSkip={() => finish({ payday: "" })}
               />
             ) : null}
 
@@ -271,7 +266,7 @@ function OnboardingFlow() {
 /* Steps                                                                      */
 /* -------------------------------------------------------------------------- */
 
-function Welcome({ onStart, onSkip }: { onStart: () => void; onSkip: () => void }) {
+function Welcome({ onStart }: { onStart: () => void }) {
   return (
     <div className="max-w-[460px]">
       <p className="font-syncopate text-[11px] tracking-[0.16em] text-muted-foreground">
@@ -284,17 +279,10 @@ function Welcome({ onStart, onSkip }: { onStart: () => void; onSkip: () => void 
         A couple of questions so the first screen makes sense. Takes about two
         minutes, and you can change everything later.
       </p>
-      <div className="mt-8 flex items-center gap-4">
+      <div className="mt-8">
         <AccentButton accent={STEP_META.welcome.accent} onClick={onStart}>
           Let&apos;s go
         </AccentButton>
-        <button
-          type="button"
-          onClick={onSkip}
-          className="text-[13px] text-muted-foreground transition-colors hover:text-foreground"
-        >
-          Skip for now
-        </button>
       </div>
     </div>
   );
@@ -506,14 +494,12 @@ function BudgetStep({
   currency,
   initial,
   onNext,
-  onSkip,
 }: {
   number: string;
   accent: string;
   currency: Currency;
   initial: string;
   onNext: (value: string) => void;
-  onSkip: () => void;
 }) {
   const [value, setValue] = useState(initial);
 
@@ -545,17 +531,10 @@ function BudgetStep({
         />
       </div>
 
-      <div className="mt-6 flex items-center gap-4">
+      <div className="mt-6">
         <AccentButton accent={accent} onClick={() => onNext(value)}>
           Set budget
         </AccentButton>
-        <button
-          type="button"
-          onClick={onSkip}
-          className="text-[13px] text-muted-foreground transition-colors hover:text-foreground"
-        >
-          Skip
-        </button>
       </div>
     </div>
   );
@@ -568,7 +547,6 @@ function PaydayStep({
   saving,
   error,
   onFinish,
-  onSkip,
 }: {
   number: string;
   accent: string;
@@ -576,7 +554,6 @@ function PaydayStep({
   saving: boolean;
   error?: string;
   onFinish: (value: string) => void;
-  onSkip: () => void;
 }) {
   const [value, setValue] = useState(initial);
 
@@ -610,18 +587,10 @@ function PaydayStep({
 
       {error ? <p className="mt-2 text-[12px] text-destructive">{error}</p> : null}
 
-      <div className="mt-6 flex items-center gap-4">
+      <div className="mt-6">
         <AccentButton accent={accent} onClick={() => onFinish(value)} disabled={saving}>
           {saving ? "Setting up" : "Finish"}
         </AccentButton>
-        <button
-          type="button"
-          onClick={onSkip}
-          disabled={saving}
-          className="text-[13px] text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50"
-        >
-          Skip
-        </button>
       </div>
     </div>
   );
