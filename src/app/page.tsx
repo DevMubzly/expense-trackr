@@ -22,16 +22,7 @@ export default function LandingPage() {
 
   return (
     <div className="theme-light flex h-dvh flex-col overflow-hidden bg-[oklch(0.165_0.008_285)] text-foreground">
-      <motion.header
-        initial={{ opacity: 0, y: -6 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.35, ease: [0.23, 1, 0.32, 1] }}
-        className="mx-auto flex w-full max-w-[1500px] items-center justify-center px-4 py-5 sm:px-6"
-      >
-        <Link href="/" className="font-syncopate text-[11px] font-bold tracking-[0.04em] text-white">
-          Expense Trackr
-        </Link>
-      </motion.header>
+
 
       <main className="min-h-0 flex-1 px-4 pb-4 sm:px-6">
         <div className="mx-auto grid h-full w-full max-w-[1500px] gap-4 lg:grid-cols-[1.55fr_1fr]">
@@ -50,7 +41,13 @@ export default function LandingPage() {
               className="-z-10 object-cover object-center"
             />
 
-            <div className="relative flex h-full flex-col px-6 pt-10 sm:px-10 lg:px-12">
+            <div className="relative flex h-full flex-col px-6 pt-8 sm:px-10 lg:px-12">
+              <div className="flex justify-center">
+                <Link href="/" className="font-syncopate text-[11px] font-bold tracking-[0.04em] text-white/90">
+                  Expense Trackr
+                </Link>
+              </div>
+
               <div className="mx-auto mt-auto max-w-2xl pb-4 text-center">
                 <h1 className="font-display text-2xl leading-tight tracking-[-0.03em] text-white [text-shadow:0_2px_20px_rgba(0,0,0,0.45)] sm:text-3xl">
                   Know where
@@ -110,6 +107,10 @@ export default function LandingPage() {
               </span>
               <span className="text-sm text-white/50">per month</span>
             </div>
+            <p className="mt-3 text-sm leading-relaxed text-white/50">
+              Every feature in one workspace, billed monthly in Ugandan
+              shillings.
+            </p>
             </div>
 
             <div className="mt-auto flex flex-wrap items-center justify-center gap-3 pt-6">
