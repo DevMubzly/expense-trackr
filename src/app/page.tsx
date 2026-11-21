@@ -22,63 +22,59 @@ export default function LandingPage() {
   }, []);
 
   return (
-    <div className="theme-light h-dvh bg-black text-foreground">
-      <div className="relative isolate h-dvh overflow-hidden">
-        <Image
-          src="/bg-hero.jpg"
-          alt=""
-          fill
-          priority
-          sizes="100vw"
-          className="-z-10 object-cover object-center"
-        />
-        <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-32 bg-gradient-to-b from-black/35 to-transparent" />
+    <div className="theme-light flex h-dvh flex-col overflow-hidden bg-[oklch(0.165_0.008_285)] text-foreground">
+      <header className="mx-auto flex w-full max-w-[1500px] items-center justify-between px-4 py-5 sm:px-6">
+        <Link href="/" className="text-sm font-semibold tracking-[-0.02em] text-white">
+          Expense Trackr
+        </Link>
 
-        <div className="relative flex h-dvh flex-col">
-          <header className="flex items-center justify-between px-6 py-6 lg:px-10">
-            <Link
-              href="/"
-              className="text-sm font-semibold tracking-[-0.02em] text-white"
-            >
-              Expense Trackr
-            </Link>
+        <nav className="flex items-center gap-6">
+          <button
+            type="button"
+            onClick={() => setPricingOpen(true)}
+            className="text-[13px] text-white/75 transition-colors hover:text-white"
+          >
+            Pricing
+          </button>
+          <button
+            type="button"
+            onClick={() => setAuthOpen(true)}
+            className={buttonVariants({
+              size: "sm",
+              className: "bg-white text-black hover:bg-white/90",
+            })}
+          >
+            Open App
+            <Icon icon={ArrowRight01Icon} className="size-3.5" />
+          </button>
+        </nav>
+      </header>
 
-            <nav className="flex items-center gap-6">
-              <button
-                type="button"
-                onClick={() => setPricingOpen(true)}
-                className="text-[13px] text-white/75 transition-colors hover:text-white"
-              >
-                Pricing
-              </button>
-              <button
-                type="button"
-                onClick={() => setAuthOpen(true)}
-                className={buttonVariants({
-                  size: "sm",
-                  className: "bg-white text-black hover:bg-white/90",
-                })}
-              >
-                Open App
-                <Icon icon={ArrowRight01Icon} className="size-3.5" />
-              </button>
-            </nav>
-          </header>
+      <main className="min-h-0 flex-1 px-4 pb-4 sm:px-6">
+        <section className="relative isolate mx-auto h-full w-full max-w-[1500px] overflow-hidden rounded-[32px] bg-black">
+          <Image
+            src="/bg-hero.jpg"
+            alt=""
+            fill
+            priority
+            sizes="100vw"
+            className="-z-10 object-cover object-center"
+          />
 
-          <main className="flex flex-1 flex-col items-center px-6 pt-8 lg:px-10 lg:pt-12">
-            <div className="max-w-3xl text-center">
+          <div className="relative flex h-full flex-col px-6 pt-10 sm:px-10 lg:px-14 lg:pt-14">
+            <div className="max-w-3xl text-center md:mx-auto">
               <h1 className="font-display text-4xl leading-[1.02] tracking-[-0.045em] text-white [text-shadow:0_2px_30px_rgba(0,0,0,0.45)] sm:text-5xl lg:text-6xl">
                 Know where
                 <span className="block text-white/70">every shilling goes.</span>
               </h1>
 
-              <p className="mx-auto mt-7 max-w-xl text-[15px] leading-relaxed text-white/80 [text-shadow:0_1px_18px_rgba(0,0,0,0.55)] sm:text-base">
+              <p className="mx-auto mt-6 max-w-xl text-[15px] leading-relaxed text-white/80 [text-shadow:0_1px_18px_rgba(0,0,0,0.55)] sm:text-base">
                 Accounts, spending, budgets, goals and debts in one desktop
                 workspace. Set your defaults once and the month adds up without
                 a spreadsheet.
               </p>
 
-              <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
+              <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
                 <button
                   type="button"
                   onClick={() => setAuthOpen(true)}
@@ -100,19 +96,19 @@ export default function LandingPage() {
               </div>
             </div>
 
-            <div className="mt-8 min-h-0 w-full max-w-[1500px] flex-1 overflow-hidden">
-                <Image
-                  src="/dash.png"
-                  alt="Expense Trackr dashboard"
-                  width={1920}
-                  height={956}
-                  priority
-                  className="w-full rounded-2xl border-[5px] border-white/45 shadow-2xl shadow-black/40"
-                />
+            <div className="mt-10 flex min-h-0 flex-1 justify-center overflow-hidden">
+              <Image
+                src="/dash.png"
+                alt="Expense Trackr dashboard"
+                width={1920}
+                height={956}
+                priority
+                className="h-auto w-[86%] max-w-4xl self-start rounded-2xl border-[5px] border-white/45 shadow-2xl shadow-black/40"
+              />
             </div>
-          </main>
-        </div>
-      </div>
+          </div>
+        </section>
+      </main>
 
       <AuthDialog open={authOpen} onClose={() => setAuthOpen(false)} />
       <PricingDialog open={pricingOpen} onClose={() => setPricingOpen(false)} />
