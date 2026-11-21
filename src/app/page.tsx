@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { motion } from "motion/react";
 import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import { AuthDialog } from "@/components/auth-dialog";
 import { Icon } from "@/components/huge-icon";
@@ -21,15 +22,25 @@ export default function LandingPage() {
 
   return (
     <div className="theme-light flex h-dvh flex-col overflow-hidden bg-[oklch(0.165_0.008_285)] text-foreground">
-      <header className="mx-auto flex w-full max-w-[1500px] items-center px-4 py-5 sm:px-6">
+      <motion.header
+        initial={{ opacity: 0, y: -6 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35, ease: [0.23, 1, 0.32, 1] }}
+        className="mx-auto flex w-full max-w-[1500px] items-center justify-center px-4 py-5 sm:px-6"
+      >
         <Link href="/" className="font-syncopate text-[11px] font-bold tracking-[0.04em] text-white">
           Expense Trackr
         </Link>
-      </header>
+      </motion.header>
 
       <main className="min-h-0 flex-1 px-4 pb-4 sm:px-6">
         <div className="mx-auto grid h-full w-full max-w-[1500px] gap-4 lg:grid-cols-[1.55fr_1fr]">
-          <section className="relative isolate overflow-hidden rounded-[32px] bg-black">
+          <motion.section
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.55, ease: [0.23, 1, 0.32, 1] }}
+            className="relative isolate overflow-hidden rounded-[32px] bg-black"
+          >
             <Image
               src="/bg-hero.jpg"
               alt=""
@@ -78,16 +89,21 @@ export default function LandingPage() {
                 />
               </div>
             </div>
-          </section>
+          </motion.section>
 
-          <aside className="flex min-h-0 flex-col overflow-y-auto rounded-[32px] border border-white/10 bg-white/[0.035] p-6 lg:p-8">
+          <motion.aside
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.55, delay: 0.08, ease: [0.23, 1, 0.32, 1] }}
+            className="flex min-h-0 flex-col overflow-y-auto rounded-[32px] border border-white/10 bg-white/[0.035] p-6 transition-colors hover:border-white/20 lg:p-8"
+          >
             <div className="mx-auto flex h-full w-full max-w-sm flex-col text-center">
             <div className="flex flex-1 flex-col justify-center">
             <h2 className="font-display text-2xl leading-tight tracking-[-0.03em] text-white">
               One plan. Everything in.
             </h2>
 
-            <div className="mt-6 flex items-baseline gap-2 text-white">
+            <div className="mt-6 flex items-baseline justify-center gap-2 text-white">
               <span className="text-lg font-medium text-white/60">UGX</span>
               <span className="font-display text-5xl leading-none tracking-[-0.04em]">
                 4,000
@@ -113,7 +129,7 @@ export default function LandingPage() {
               </span>
             </div>
             </div>
-          </aside>
+          </motion.aside>
         </div>
       </main>
 

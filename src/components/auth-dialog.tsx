@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
 import { useRouter } from "next/navigation";
 import { Cancel01Icon, GoogleIcon, Tick02Icon } from "@hugeicons/core-free-icons";
 import { useAuth } from "@/components/auth-provider";
@@ -36,38 +37,54 @@ export function AuthDialog({
     };
   }, [open, onClose]);
 
-  if (!open) return null;
-
   return (
-    <div className="fixed inset-0 z-[90] flex items-center justify-center p-4">
-      <div
-        aria-hidden="true"
-        onClick={onClose}
-        className="absolute inset-0 bg-black/50"
-      />
-      <div
-        ref={panelRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        className="dark relative z-10 max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto rounded-2xl border border-foreground/10 bg-card p-5 text-foreground shadow-2xl"
-      >
-        <button
-          type="button"
-          aria-label="Close"
-          onClick={onClose}
-          className="absolute right-3 top-3 grid size-7 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+    <AnimatePresence>
+      {open ? (
+        <motion.div
+          className="fixed inset-0 z-[90] flex items-center justify-center p-4"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.18 }}
         >
-          <Icon icon={Cancel01Icon} className="size-4" />
-        </button>
+          <motion.div
+            aria-hidden="true"
+            onClick={onClose}
+            className="absolute inset-0 bg-black/50"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+          />
+          <motion.div
+            ref={panelRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={titleId}
+            initial={{ opacity: 0, y: 14, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 8, scale: 0.98, transition: { duration: 0.16 } }}
+            transition={{ type: "spring", duration: 0.4, bounce: 0.12 }}
+            className="dark relative z-10 max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto rounded-2xl border border-foreground/10 bg-card p-5 text-foreground shadow-2xl"
+          >
+            <button
+              type="button"
+              aria-label="Close"
+              onClick={onClose}
+              className="absolute right-3 top-3 grid size-7 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              <Icon icon={Cancel01Icon} className="size-4" />
+            </button>
 
-        <h2 id={titleId} className="text-center text-base font-semibold tracking-[-0.02em]">
-          Expense Trackr
-        </h2>
+            <h2 id={titleId} className="text-center text-base font-semibold tracking-[-0.02em]">
+              Expense Trackr
+            </h2>
 
-        <AuthBody onDone={onClose} />
-      </div>
-    </div>
+            <AuthBody onDone={onClose} />
+          </motion.div>
+        </motion.div>
+      ) : null}
+    </AnimatePresence>
   );
 }
 
@@ -80,11 +97,17 @@ function AuthBody({ onDone }: { onDone: () => void }) {
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState<string | undefined>();
   const [sent, setSent] = useState(false);
+  const [pending, setPending] = useState(false);
 
   function enter(nextEmail = email, nextPassword = password) {
-    login(nextEmail, nextPassword);
-    onDone();
-    router.push("/dashboard");
+    if (pending) return;
+    setPending(true);
+    // Brief pending state so the sign-in reads as an action, not a jump.
+    window.setTimeout(() => {
+      login(nextEmail, nextPassword);
+      onDone();
+      router.push("/dashboard");
+    }, 420);
   }
 
   function submit() {
@@ -145,6 +168,8 @@ function AuthBody({ onDone }: { onDone: () => void }) {
           <Button
             variant="outline"
             className="w-full bg-muted/50"
+            loading={pending}
+            disabled={pending}
             onClick={() => enter("demo@expense.app", "google")}
           >
             <Icon icon={GoogleIcon} className="size-4" />
@@ -200,7 +225,7 @@ function AuthBody({ onDone }: { onDone: () => void }) {
 
       {error ? <p className="text-[12px] text-destructive">{error}</p> : null}
 
-      <Button onClick={submit} className="w-full">
+      <Button onClick={submit} className="w-full" loading={pending} disabled={pending}>
         {mode === "register"
           ? "Create account"
           : mode === "forgot"
