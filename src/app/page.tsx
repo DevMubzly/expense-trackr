@@ -8,13 +8,19 @@ import { AuthDialog } from "@/components/auth-dialog";
 import { Icon } from "@/components/huge-icon";
 import { buttonVariants } from "@/components/ui/button";
 
-const FEATURES = [
-  "Accounts and wallets",
-  "Expenses and income",
-  "Budgets and category splits",
-  "Goals and debts",
-  "Recurring entries",
-  "Heatmaps and trends",
+const GROUPS = [
+  {
+    title: "Money",
+    items: ["Accounts and wallets", "Expenses, income and transfers", "UGX, USD, KES, RWF and TZS"],
+  },
+  {
+    title: "Planning",
+    items: ["Budgets with category splits", "Goals with deadlines", "Debts and recurring entries"],
+  },
+  {
+    title: "Insight",
+    items: ["Heatmaps, trends and daily flow", "Household sharing", "Export and import"],
+  },
 ];
 
 export default function LandingPage() {
@@ -30,7 +36,7 @@ export default function LandingPage() {
 
   return (
     <div className="theme-light flex h-dvh flex-col overflow-hidden bg-[oklch(0.165_0.008_285)] text-foreground">
-      <header className="mx-auto flex w-full max-w-[1500px] items-center justify-center px-4 py-5 sm:px-6">
+      <header className="mx-auto flex w-full max-w-[1500px] items-center px-4 py-5 sm:px-6">
         <Link href="/" className="text-sm font-semibold tracking-[-0.02em] text-white">
           Expense Trackr
         </Link>
@@ -49,13 +55,13 @@ export default function LandingPage() {
             />
 
             <div className="relative flex h-full flex-col px-6 pt-10 sm:px-10 lg:px-12">
-              <div className="mt-auto max-w-2xl pb-4 text-center md:mx-auto">
+              <div className="mt-auto max-w-2xl pb-4 text-left">
                 <h1 className="font-display text-2xl leading-tight tracking-[-0.03em] text-white [text-shadow:0_2px_20px_rgba(0,0,0,0.45)] sm:text-3xl">
                   Know where
                   <span className="block text-white/70">every shilling goes.</span>
                 </h1>
 
-                <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+                <div className="mt-6 flex flex-wrap items-center justify-start gap-3">
                   <button
                     type="button"
                     onClick={() => setAuthOpen(true)}
@@ -91,23 +97,32 @@ export default function LandingPage() {
             </h2>
 
             <div className="mt-6 flex items-baseline gap-2 text-white">
-              <span className="text-base font-medium text-white/60">$</span>
-              <span className="font-display text-5xl leading-none tracking-[-0.04em]">6</span>
+              <span className="text-base font-medium text-white/60">UGX</span>
+              <span className="font-display text-5xl leading-none tracking-[-0.04em]">
+                25,000
+              </span>
               <span className="text-[12px] text-white/50">per month</span>
             </div>
             <p className="mt-3 text-[12px] leading-relaxed text-white/50">
-              Billed monthly. Cancel whenever. Your ledger stays exportable
-              either way.
+              Billed monthly in Ugandan shillings. Cancel whenever, the ledger
+              stays exportable either way.
             </p>
 
-            <ul className="mt-6 space-y-2.5">
-              {FEATURES.map((feature) => (
-                <li key={feature} className="flex items-start gap-2.5 text-[13px] text-white/85">
-                  <Icon icon={Tick02Icon} className="mt-0.5 size-3.5 shrink-0 text-white/45" />
-                  <span>{feature}</span>
-                </li>
+            <div className="mt-6 space-y-5">
+              {GROUPS.map((group) => (
+                <div key={group.title}>
+                  <p className="text-[11px] text-white/40">{group.title}</p>
+                  <ul className="mt-2 space-y-2">
+                    {group.items.map((item) => (
+                      <li key={item} className="flex items-start gap-2.5 text-[13px] text-white/85">
+                        <Icon icon={Tick02Icon} className="mt-0.5 size-3.5 shrink-0 text-white/45" />
+                        <span>{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               ))}
-            </ul>
+            </div>
 
             <p className="mt-auto pt-6 text-[11px] text-white/40">
               No tiers, no feature gates, no seat maths.
