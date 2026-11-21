@@ -62,7 +62,7 @@ export default function LandingPage() {
           />
 
           <div className="relative flex h-full flex-col px-6 pt-10 sm:px-10 lg:px-14 lg:pt-14">
-            <div className="max-w-3xl text-center md:mx-auto">
+            <div className="mt-auto max-w-3xl pb-4 text-center md:mx-auto">
               <h1 className="font-display text-2xl leading-tight tracking-[-0.03em] text-white [text-shadow:0_2px_20px_rgba(0,0,0,0.45)] sm:text-3xl">
                 Know where
                 <span className="block text-white/70">every shilling goes.</span>
@@ -74,7 +74,7 @@ export default function LandingPage() {
                   onClick={() => setAuthOpen(true)}
                   className={buttonVariants({
                     size: "lg",
-                    className: "h-9 bg-white px-4 text-black hover:bg-white/90",
+                    className: "h-9 w-40 justify-center bg-white px-4 text-black hover:bg-white/90",
                   })}
                 >
                   Open App
@@ -83,21 +83,21 @@ export default function LandingPage() {
                 <button
                   type="button"
                   onClick={() => setPricingOpen(true)}
-                  className="inline-flex h-9 items-center gap-2 rounded-full bg-white/10 px-4 text-[13px] font-medium text-white/90 backdrop-blur-sm transition-colors hover:bg-white/20 hover:text-white"
+                  className="inline-flex h-9 w-40 items-center justify-center gap-2 rounded-full bg-white/10 px-4 text-[13px] font-medium text-white/90 backdrop-blur-sm transition-colors hover:bg-white/20 hover:text-white"
                 >
                   View pricing
                 </button>
               </div>
             </div>
 
-            <div className="mt-3 flex min-h-0 flex-1 justify-center overflow-hidden">
+            <div className="flex justify-center overflow-hidden">
               <Image
                 src="/dash.png"
                 alt="Expense Trackr dashboard"
                 width={1920}
                 height={956}
                 priority
-                className="h-auto w-full max-w-6xl self-start rounded-t-2xl border-x-[5px] border-t-[5px] border-white/45 shadow-2xl shadow-black/40"
+                className="h-auto w-full max-w-6xl rounded-t-2xl border-x-[5px] border-t-[5px] border-white/45 shadow-2xl shadow-black/40"
               />
             </div>
           </div>
