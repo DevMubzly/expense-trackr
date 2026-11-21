@@ -61,7 +61,12 @@ export default function LandingPage() {
                   <span className="block text-white/70">every shilling goes.</span>
                 </h1>
 
-                <div className="mt-6 flex flex-wrap items-center justify-start gap-3">
+                <p className="mt-3 max-w-md text-[13px] leading-relaxed text-white/70 [text-shadow:0_1px_14px_rgba(0,0,0,0.5)]">
+                  Accounts, spending, budgets, goals and debts in one workspace,
+                  so the month adds up without a spreadsheet.
+                </p>
+
+                <div className="mt-5 flex flex-wrap items-center justify-start gap-3">
                   <button
                     type="button"
                     onClick={() => setAuthOpen(true)}
@@ -99,7 +104,7 @@ export default function LandingPage() {
             <div className="mt-6 flex items-baseline gap-2 text-white">
               <span className="text-base font-medium text-white/60">UGX</span>
               <span className="font-display text-5xl leading-none tracking-[-0.04em]">
-                25,000
+                4,000
               </span>
               <span className="text-[12px] text-white/50">per month</span>
             </div>
@@ -124,9 +129,18 @@ export default function LandingPage() {
               ))}
             </div>
 
-            <p className="mt-auto pt-6 text-[11px] text-white/40">
-              No tiers, no feature gates, no seat maths.
-            </p>
+            <div className="mt-auto flex items-center gap-3 pt-6">
+              <Image
+                src="/salastores-logo.svg"
+                alt="SalaStores"
+                width={28}
+                height={26}
+                className="opacity-60"
+              />
+              <span className="font-syncopate text-[9px] leading-relaxed tracking-[0.06em] text-white/45">
+                A product by SalaStores
+              </span>
+            </div>
           </aside>
         </div>
       </main>

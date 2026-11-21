@@ -364,6 +364,12 @@
     font-variant-numeric: tabular-nums;
     font-feature-settings: "tnum" 1;
   }
+  .font-syncopate {
+    font-family: var(--font-syncopate), system-ui, sans-serif;
+  }
+  .font-inter-tight {
+    font-family: var(--font-inter-tight), system-ui, sans-serif;
+  }
 }
 
 @layer utilities {
