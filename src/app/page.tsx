@@ -63,24 +63,18 @@ export default function LandingPage() {
 
           <div className="relative flex h-full flex-col px-6 pt-10 sm:px-10 lg:px-14 lg:pt-14">
             <div className="max-w-3xl text-center md:mx-auto">
-              <h1 className="font-display text-4xl leading-[1.02] tracking-[-0.045em] text-white [text-shadow:0_2px_30px_rgba(0,0,0,0.45)] sm:text-5xl lg:text-6xl">
+              <h1 className="font-display text-2xl leading-tight tracking-[-0.03em] text-white [text-shadow:0_2px_20px_rgba(0,0,0,0.45)] sm:text-3xl">
                 Know where
                 <span className="block text-white/70">every shilling goes.</span>
               </h1>
 
-              <p className="mx-auto mt-6 max-w-xl text-[15px] leading-relaxed text-white/80 [text-shadow:0_1px_18px_rgba(0,0,0,0.55)] sm:text-base">
-                Accounts, spending, budgets, goals and debts in one desktop
-                workspace. Set your defaults once and the month adds up without
-                a spreadsheet.
-              </p>
-
-              <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+              <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
                 <button
                   type="button"
                   onClick={() => setAuthOpen(true)}
                   className={buttonVariants({
                     size: "lg",
-                    className: "h-11 bg-white px-5 text-black hover:bg-white/90",
+                    className: "h-9 bg-white px-4 text-black hover:bg-white/90",
                   })}
                 >
                   Open App
@@ -89,21 +83,21 @@ export default function LandingPage() {
                 <button
                   type="button"
                   onClick={() => setPricingOpen(true)}
-                  className="inline-flex h-11 items-center gap-2 rounded-full px-4 text-[13px] font-medium text-white/85 transition-colors hover:bg-white/10 hover:text-white"
+                  className="inline-flex h-9 items-center gap-2 rounded-full bg-white/10 px-4 text-[13px] font-medium text-white/90 backdrop-blur-sm transition-colors hover:bg-white/20 hover:text-white"
                 >
                   View pricing
                 </button>
               </div>
             </div>
 
-            <div className="mt-10 flex min-h-0 flex-1 justify-center overflow-hidden">
+            <div className="mt-6 flex min-h-0 flex-1 justify-center overflow-hidden">
               <Image
                 src="/dash.png"
                 alt="Expense Trackr dashboard"
                 width={1920}
                 height={956}
                 priority
-                className="h-auto w-[86%] max-w-4xl self-start rounded-2xl border-[5px] border-white/45 shadow-2xl shadow-black/40"
+                className="h-auto w-full max-w-6xl self-end rounded-t-2xl border-x-[5px] border-t-[5px] border-white/45 shadow-2xl shadow-black/40"
               />
             </div>
           </div>
