@@ -90,14 +90,14 @@ export default function LandingPage() {
               </div>
             </div>
 
-            <div className="mt-6 flex min-h-0 flex-1 justify-center overflow-hidden">
+            <div className="mt-3 flex min-h-0 flex-1 justify-center overflow-hidden">
               <Image
                 src="/dash.png"
                 alt="Expense Trackr dashboard"
                 width={1920}
                 height={956}
                 priority
-                className="h-auto w-full max-w-6xl self-end rounded-t-2xl border-x-[5px] border-t-[5px] border-white/45 shadow-2xl shadow-black/40"
+                className="h-auto w-full max-w-6xl self-start rounded-t-2xl border-x-[5px] border-t-[5px] border-white/45 shadow-2xl shadow-black/40"
               />
             </div>
           </div>
