@@ -22,7 +22,7 @@ export default function LandingPage() {
   return (
     <div className="theme-light flex h-dvh flex-col overflow-hidden bg-[oklch(0.165_0.008_285)] text-foreground">
       <header className="mx-auto flex w-full max-w-[1500px] items-center px-4 py-5 sm:px-6">
-        <Link href="/" className="text-sm font-semibold tracking-[-0.02em] text-white">
+        <Link href="/" className="font-syncopate text-[11px] font-bold tracking-[0.04em] text-white">
           Expense Trackr
         </Link>
       </header>
@@ -40,7 +40,7 @@ export default function LandingPage() {
             />
 
             <div className="relative flex h-full flex-col px-6 pt-10 sm:px-10 lg:px-12">
-              <div className="mt-auto max-w-2xl pb-4 text-left">
+              <div className="mx-auto mt-auto max-w-2xl pb-4 text-center">
                 <h1 className="font-display text-2xl leading-tight tracking-[-0.03em] text-white [text-shadow:0_2px_20px_rgba(0,0,0,0.45)] sm:text-3xl">
                   Know where
                   <span className="block text-white/70">every shilling goes.</span>
@@ -51,7 +51,7 @@ export default function LandingPage() {
                   so the month adds up without a spreadsheet.
                 </p>
 
-                <div className="mt-5 flex flex-wrap items-center justify-start gap-3">
+                <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
                   <button
                     type="button"
                     onClick={() => setAuthOpen(true)}
@@ -81,7 +81,7 @@ export default function LandingPage() {
           </section>
 
           <aside className="flex min-h-0 flex-col overflow-y-auto rounded-[32px] border border-white/10 bg-white/[0.035] p-6 lg:p-8">
-            <div className="mx-auto flex h-full w-full max-w-sm flex-col text-left">
+            <div className="mx-auto flex h-full w-full max-w-sm flex-col text-center">
             <div className="flex flex-1 flex-col justify-center">
             <h2 className="font-display text-2xl leading-tight tracking-[-0.03em] text-white">
               One plan. Everything in.
@@ -96,7 +96,7 @@ export default function LandingPage() {
             </div>
             </div>
 
-            <div className="mt-auto flex flex-wrap items-center gap-3 pt-6">
+            <div className="mt-auto flex flex-wrap items-center justify-center gap-3 pt-6">
               <span className="font-syncopate text-[11px] tracking-[0.02em] text-white/70">
                 Expense Trackr
               </span>
