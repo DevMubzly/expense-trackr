@@ -94,15 +94,13 @@ export default function LandingPage() {
               </span>
               <span className="text-sm text-white/50">per month</span>
             </div>
-            <p className="mt-3 text-sm leading-relaxed text-white/50">
-              Billed monthly in Ugandan shillings. Cancel whenever, the ledger
-              stays exportable either way.
-            </p>
-
             </div>
 
-            <div className="mt-auto flex flex-wrap items-center gap-2.5 pt-6 text-[13px] text-white/45">
-              <span>Expense Trackr is a product of</span>
+            <div className="mt-auto flex flex-wrap items-center gap-3 pt-6">
+              <span className="font-syncopate text-[11px] tracking-[0.02em] text-white/70">
+                Expense Trackr
+              </span>
+              <span className="h-4 w-px bg-white/15" />
               <Image
                 src="/salastores-logo.svg"
                 alt=""
