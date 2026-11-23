@@ -118,7 +118,7 @@ export function SkeletonChartShape({
   }
   if (variant === "area") {
     return (
-      <div className="relative flex h-44 items-end overflow-hidden rounded-lg border border-foreground/5 bg-muted/10 p-3">
+      <div className="relative flex h-44 items-end overflow-hidden rounded-lg border border-foreground/5 bg-muted/25 p-3">
         <Skeleton className="absolute inset-x-3 bottom-3 h-24 rounded-t-[50%] opacity-50" />
         <Skeleton className="absolute inset-x-3 bottom-3 h-px" />
         <div className="relative flex h-full w-full items-end justify-between gap-2">
@@ -130,7 +130,7 @@ export function SkeletonChartShape({
     );
   }
   return (
-    <div className="flex h-44 items-end gap-2 rounded-lg border border-foreground/5 bg-muted/10 p-3">
+    <div className="flex h-44 items-end gap-2 rounded-lg border border-foreground/5 bg-muted/25 p-3">
       {[34, 60, 44, 78, 52, 88, 66, 47, 72, 58].map((height, index) => (
         <Skeleton key={index} className="flex-1 rounded-t" style={{ height: `${height}%` }} />
       ))}
@@ -158,7 +158,7 @@ function SkeletonChartPanel({
         </div>
         <Skeleton className="h-6 w-20 rounded-full" />
       </div>
-      <div className="rounded-xl border border-foreground/5 bg-muted/10 p-3">
+      <div className="rounded-xl border border-foreground/5 bg-muted/60 p-3">
         <SkeletonChartShape variant={variant} />
       </div>
     </Panel>
@@ -204,7 +204,7 @@ function SkeletonSectionPanel({
         </div>
         <Skeleton className="h-7 w-20 rounded-full" />
       </div>
-      <div className="rounded-xl border border-foreground/5 bg-muted/10 p-3">
+      <div className="rounded-xl border border-foreground/5 bg-muted/60 p-3">
         {children ?? <SkeletonRows rows={rows} />}
       </div>
     </Panel>
@@ -227,7 +227,7 @@ export function HomePageSkeleton() {
             <SkeletonLine className="w-24" />
             <SkeletonLine className="h-2 w-36" />
           </div>
-          <div className="rounded-xl border border-foreground/5 bg-muted/10 p-4">
+          <div className="rounded-xl border border-foreground/5 bg-muted/60 p-4">
             <div className="mx-auto grid w-full max-w-[720px] grid-cols-2 items-center gap-0 md:grid-cols-[minmax(0,1fr)_340px_minmax(0,1fr)]">
               <div className="order-1 col-span-2 flex justify-center md:order-2 md:col-span-1">
                 <Skeleton className="size-52 rounded-full md:size-60" />
@@ -255,10 +255,10 @@ export function HomePageSkeleton() {
             </div>
             <Skeleton className="h-6 w-28 rounded-full" />
           </div>
-          <div className="rounded-xl border border-foreground/5 bg-muted/10 p-4">
+          <div className="rounded-xl border border-foreground/5 bg-muted/60 p-4">
             <div className="grid gap-3 sm:grid-cols-3">
               {Array.from({ length: 3 }, (_, index) => (
-                <div key={index} className="rounded-xl border border-foreground/10 bg-muted/10 p-2">
+                <div key={index} className="rounded-xl border border-foreground/10 bg-muted/45 p-2">
                   <SkeletonLine className="w-24" />
                   <Skeleton className="mt-2 h-8 w-full rounded-lg" />
                 </div>
@@ -278,7 +278,7 @@ export function HomePageSkeleton() {
             </div>
             <Skeleton className="h-6 w-16 rounded-full" />
           </div>
-          <div className="rounded-xl border border-foreground/5 bg-muted/10 p-1">
+          <div className="rounded-xl border border-foreground/5 bg-muted/60 p-1">
             <SkeletonRows rows={4} />
           </div>
         </Panel>
@@ -291,7 +291,7 @@ export function HomePageSkeleton() {
             </div>
             <Skeleton className="h-6 w-20 rounded-full" />
           </div>
-          <div className="rounded-xl border border-foreground/5 bg-muted/10 p-1">
+          <div className="rounded-xl border border-foreground/5 bg-muted/60 p-1">
             <SkeletonRows rows={5} />
           </div>
         </Panel>
@@ -340,15 +340,15 @@ export function PlanPageSkeleton() {
           </div>
           <Skeleton className="h-6 w-24 rounded-full" />
         </div>
-        <div className="rounded-xl border border-foreground/5 bg-muted/10 p-3">
+        <div className="rounded-xl border border-foreground/5 bg-muted/60 p-3">
           <div className="grid gap-3 lg:grid-cols-2">
-            <div className="rounded-xl border border-foreground/10 bg-muted/10 p-3">
+            <div className="rounded-xl border border-foreground/10 bg-muted/45 p-3">
               <SkeletonLine className="w-32" />
               <div className="mt-3">
                 <SkeletonChartShape variant="area" />
               </div>
             </div>
-            <div className="rounded-xl border border-foreground/10 bg-muted/10 p-3">
+            <div className="rounded-xl border border-foreground/10 bg-muted/45 p-3">
               <SkeletonLine className="w-32" />
               <div className="mt-3">
                 <SkeletonChartShape variant="bars" />
@@ -375,7 +375,7 @@ export function SettingsPageSkeleton() {
             </div>
             <Skeleton className="h-7 w-20 rounded-full" />
           </div>
-          <div className="rounded-xl border border-foreground/5 bg-muted/10 p-5">
+          <div className="rounded-xl border border-foreground/5 bg-muted/60 p-5">
             <div className="flex gap-5">
               <Skeleton className="size-20 shrink-0 rounded-full" />
               <div className="flex-1 space-y-4">
@@ -392,7 +392,7 @@ export function SettingsPageSkeleton() {
             <SkeletonLine className="w-24" />
             <SkeletonLine className="h-2 w-40" />
           </div>
-          <div className="rounded-xl border border-foreground/5 bg-muted/10 p-5">
+          <div className="rounded-xl border border-foreground/5 bg-muted/60 p-5">
             <div className="space-y-5">
               <div className="flex items-center justify-between gap-4">
                 <SkeletonLine className="w-20" />
@@ -410,7 +410,7 @@ export function SettingsPageSkeleton() {
             <SkeletonLine className="w-28" />
             <SkeletonLine className="h-2 w-52" />
           </div>
-          <div className="rounded-xl border border-foreground/5 bg-muted/10 p-5">
+          <div className="rounded-xl border border-foreground/5 bg-muted/60 p-5">
             <div className="grid gap-7 lg:grid-cols-[minmax(0,1fr)_16rem] lg:items-start">
               <div className="space-y-4">
                 <SkeletonLine className="w-24" />
@@ -431,7 +431,7 @@ export function SettingsPageSkeleton() {
             </div>
             <Skeleton className="h-7 w-24 rounded-full" />
           </div>
-          <div className="rounded-xl border border-foreground/5 bg-muted/10 p-4">
+          <div className="rounded-xl border border-foreground/5 bg-muted/60 p-4">
             <div className="grid gap-4 md:grid-cols-3">
               {Array.from({ length: 3 }, (_, index) => (
                 <SkeletonMetricCard key={index} />
@@ -450,7 +450,7 @@ export function SettingsPageSkeleton() {
             </div>
             <Skeleton className="h-7 w-24 rounded-full" />
           </div>
-          <div className="rounded-xl border border-foreground/5 bg-muted/10 p-1">
+          <div className="rounded-xl border border-foreground/5 bg-muted/60 p-1">
             <SkeletonRows rows={4} />
           </div>
         </Panel>
@@ -462,7 +462,7 @@ export function SettingsPageSkeleton() {
             </div>
             <Skeleton className="h-7 w-24 rounded-full" />
           </div>
-          <div className="rounded-xl border border-foreground/5 bg-muted/10 p-4">
+          <div className="rounded-xl border border-foreground/5 bg-muted/60 p-4">
             <div className="grid gap-5 md:grid-cols-2">
               <div>
                 <SkeletonLine className="mb-3 w-20" />
@@ -486,7 +486,7 @@ export function ExpensesTableSkeleton() {
       <div className="overflow-hidden p-0">
         <div className="overflow-x-auto">
           <div className="min-w-[992px]">
-            <div className="flex items-center gap-4 border-b border-border/70 bg-muted/20 px-4 py-3">
+            <div className="flex items-center gap-4 border-b border-border/70 bg-muted/80 px-4 py-3">
               <Skeleton className="size-4 rounded-sm" />
               <SkeletonLine className="w-16" />
               <SkeletonLine className="w-40" />

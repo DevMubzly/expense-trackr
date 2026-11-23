@@ -1262,7 +1262,7 @@ function OtpDeleteDialog({
         </p>
       </div>
 
-      <div className="rounded-xl border border-border bg-muted/30 p-3 text-[11px] leading-relaxed text-muted-foreground">
+      <div className="rounded-xl border border-border bg-muted/50 p-3 text-[11px] leading-relaxed text-muted-foreground">
         A verification code was sent to{" "}
         <span className="font-medium text-foreground">{email}</span>.
       </div>

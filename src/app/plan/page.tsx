@@ -798,7 +798,7 @@ export default function PlanPage() {
               return (
                 <div
                   key={goal.id}
-                  className="rounded-xl border border-foreground/10 bg-muted/20 p-4"
+                  className="rounded-xl border border-foreground/10 bg-muted/45 p-4"
                 >
                   <div className="flex items-start gap-3">
                     <span
@@ -1781,7 +1781,7 @@ function ContributionForm({
           options={sourceOptions}
         />
       </div>
-      <div className="rounded-xl border border-foreground/10 bg-muted/40 p-3 text-[11px] leading-relaxed text-muted-foreground">
+      <div className="rounded-xl border border-foreground/10 bg-muted/50 p-3 text-[11px] leading-relaxed text-muted-foreground">
         {mode === "withdraw"
           ? "A withdrawal takes money back out of this goal and records it in Plan activity. It does not create a spending entry."
           : "A contribution adds to this goal's saved balance. Choose Cash for physical cash, or a bank/mobile money account for a transfer."}

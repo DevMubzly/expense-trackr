@@ -62,7 +62,7 @@ import { cn } from "@/lib/utils";
 const SECTION_CARD = "flex flex-col border border-foreground/10 p-1";
 const SECTION_HEADER = "px-3 pb-2 pt-2";
 const SECTION_BODY =
-  "flex-1 rounded-xl border border-foreground/5 bg-muted/25";
+  "flex-1 rounded-xl border border-foreground/5 bg-muted/60";
 
 export default function DashboardPage() {
   const { version, openTransaction } = useTransactionDialog();
@@ -367,7 +367,7 @@ export default function DashboardPage() {
           />
           <div className={cn(SECTION_BODY, "p-4")}>
           <div className="mt-0 grid gap-3 sm:grid-cols-3">
-            <div className="flex flex-col rounded-xl border border-foreground/10 bg-background/40 p-1">
+            <div className="flex flex-col rounded-xl border border-foreground/10 bg-background/60 p-1">
               <div className="flex items-center gap-2 px-2 pb-1 pt-1.5">
                 <Icon
                   icon={Money03Icon}
@@ -375,7 +375,7 @@ export default function DashboardPage() {
                 />
                 <p className="text-sm text-foreground">Safe to spend</p>
               </div>
-              <div className="flex flex-1 flex-col justify-center rounded-lg border border-foreground/10 bg-muted/45 p-2.5">
+              <div className="flex flex-1 flex-col justify-center rounded-lg border border-foreground/10 bg-muted/60 p-2.5">
                 <span className="tnum inline-flex items-baseline gap-1.5 text-foreground">
                   <span className="text-sm font-semibold leading-none tracking-[-0.02em] text-muted-foreground">{display.unit}</span>
                   <AnimatedNumber
@@ -392,7 +392,7 @@ export default function DashboardPage() {
                 </p>
               </div>
             </div>
-            <div className="flex flex-col rounded-xl border border-foreground/10 bg-background/40 p-1">
+            <div className="flex flex-col rounded-xl border border-foreground/10 bg-background/60 p-1">
               <div className="flex items-center gap-2 px-2 pb-1 pt-1.5">
                 <Icon
                   icon={ChartIncreaseIcon}
@@ -400,7 +400,7 @@ export default function DashboardPage() {
                 />
                 <p className="text-sm text-foreground">Projected at payday</p>
               </div>
-              <div className="flex flex-1 flex-col justify-center rounded-lg border border-foreground/10 bg-muted/45 p-2.5">
+              <div className="flex flex-1 flex-col justify-center rounded-lg border border-foreground/10 bg-muted/60 p-2.5">
                 <span className="tnum inline-flex items-baseline gap-1.5 text-foreground">
                   <span className="text-sm font-semibold leading-none tracking-[-0.02em] text-muted-foreground">{display.unit}</span>
                   <AnimatedNumber
@@ -416,7 +416,7 @@ export default function DashboardPage() {
                 </p>
               </div>
             </div>
-            <div className="flex flex-col rounded-xl border border-foreground/10 bg-background/40 p-1">
+            <div className="flex flex-col rounded-xl border border-foreground/10 bg-background/60 p-1">
               <div className="flex items-center gap-2 px-2 pb-1 pt-1.5">
                 <Icon
                   icon={Invoice02Icon}
@@ -424,7 +424,7 @@ export default function DashboardPage() {
                 />
                 <p className="text-sm text-foreground">MoMo fees this month</p>
               </div>
-              <div className="flex flex-1 flex-col justify-center rounded-lg border border-foreground/10 bg-muted/45 p-2.5">
+              <div className="flex flex-1 flex-col justify-center rounded-lg border border-foreground/10 bg-muted/60 p-2.5">
                 <span className="tnum inline-flex items-baseline gap-1.5 text-foreground">
                   <span className="text-sm font-semibold leading-none tracking-[-0.02em] text-muted-foreground">{display.unit}</span>
                   <AnimatedNumber
@@ -574,7 +574,7 @@ export default function DashboardPage() {
                   <button
                     type="button"
                     onClick={() => openTransaction(transaction)}
-                    className="flex w-full items-center gap-3 px-2 py-2.5 text-left transition-colors hover:bg-muted/40"
+                    className="flex w-full items-center gap-3 px-2 py-2.5 text-left transition-colors hover:bg-muted/80"
                   >
                     <span
                       className="grid size-8 shrink-0 place-items-center"

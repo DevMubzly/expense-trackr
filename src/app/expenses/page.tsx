@@ -566,7 +566,7 @@ export default function ExpensesPage() {
                   <col className="w-20" />
                 </colgroup>
                 <thead>
-                  <tr className="border-b border-border/70 bg-muted/20">
+                  <tr className="border-b border-border/70 bg-muted/80">
                     <th scope="col" className="w-12 px-4 py-3">
                       <Checkbox
                         checked={allPageSelected}
@@ -619,7 +619,7 @@ export default function ExpensesPage() {
                       <tr
                         key={row.id}
                         onClick={() => openTransaction(row)}
-                        className="cursor-pointer transition-colors hover:bg-muted/40"
+                        className="cursor-pointer transition-colors hover:bg-muted/80"
                       >
                         <td
                           className="px-4 py-3"

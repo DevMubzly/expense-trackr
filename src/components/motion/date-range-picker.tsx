@@ -172,7 +172,7 @@ export function DateRangePickerSummary({
     <div
       {...props}
       className={cn(
-        "mb-2.5 grid grid-cols-[1fr_auto_1fr] items-center gap-2 rounded-lg border border-border bg-muted/30 px-3 py-2",
+        "mb-2.5 grid grid-cols-[1fr_auto_1fr] items-center gap-2 rounded-lg border border-border bg-muted/50 px-3 py-2",
         className,
       )}
     >
