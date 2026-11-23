@@ -105,14 +105,82 @@ export default function LandingPage() {
                   Accounts, spending, budgets, goals and debts in one workspace,
                   so the month adds up without a spreadsheet.
                 </p>
+
+                <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setAuthOpen(true)}
+                    className={buttonVariants({
+                      className:
+                        "justify-center bg-gradient-to-r from-lime-200 via-emerald-300 to-green-400 [background-size:200%_100%] [background-position:0%_50%] px-3 text-black shadow-lg shadow-emerald-500/20 transition-[background-position,filter] duration-500 hover:[background-position:100%_50%] hover:brightness-105",
+                    })}
+                  >
+                    <span className="inline-flex items-center gap-2">
+                      Open App
+                      <Icon icon={ArrowRight01Icon} className="size-4" />
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPricingOpen((open) => !open)}
+                    aria-expanded={pricingOpen}
+                    aria-controls="landing-pricing"
+                    className={buttonVariants({
+                      variant: "outline",
+                      className:
+                        "justify-center border-white/25 bg-white/5 px-3 text-white hover:bg-white/10",
+                    })}
+                  >
+                    {pricingOpen ? "Hide pricing" : "View pricing"}
+                  </button>
+                </div>
               </div>
             </div>
+
+            <motion.div
+              initial={false}
+              animate={{ opacity: pricingOpen ? 0 : 1, y: pricingOpen ? 12 : 0 }}
+              transition={{ duration: 0.28, ease: EASE_OUT }}
+              aria-hidden={pricingOpen || undefined}
+              className="pointer-events-none absolute inset-x-0 bottom-5 flex flex-wrap items-center justify-center gap-3"
+            >
+              <span
+                style={{ fontFamily: "var(--font-syncopate), system-ui, sans-serif" }}
+                className="font-syncopate text-[11px] tracking-[0.02em] text-white/70"
+              >
+                Expense Trackr
+              </span>
+              <span className="h-4 w-px bg-white/15" />
+              <a
+                href="https://salastores.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="SalaStores"
+                className={cn(
+                  "group inline-flex items-center gap-3",
+                  pricingOpen ? "pointer-events-none" : "pointer-events-auto",
+                )}
+              >
+                <Image
+                  src="/salastores-logo.svg"
+                  alt=""
+                  width={30}
+                  height={28}
+                  className="opacity-60 pb-1 transition-opacity group-hover:opacity-100"
+                />
+                <span
+                  style={{ fontFamily: "var(--font-syncopate), system-ui, sans-serif" }}
+                  className="font-syncopate text-[11px] tracking-[0.02em] text-white/70 transition-colors group-hover:text-white"
+                >
+                  <span className="text-purple-400">Sala</span>Stores
+                </span>
+              </a>
+            </motion.div>
           </motion.section>
 
           {pricingOpen ? (
-            <button
-              type="button"
-              aria-label="Close pricing"
+            <div
+              aria-hidden="true"
               onClick={() => setPricingOpen(false)}
               className="fixed inset-0 z-40 bg-black/55 backdrop-blur-sm lg:hidden"
             />
@@ -124,7 +192,7 @@ export default function LandingPage() {
             className={cn(
               "min-h-0 shrink-0 overflow-hidden transition-[width,opacity] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)]",
               pricingOpen
-                ? "fixed inset-x-0 bottom-0 top-4 z-50 h-auto w-full opacity-100 lg:static lg:inset-auto lg:h-auto lg:w-[34%]"
+                ? "fixed inset-0 z-50 flex w-full items-center justify-center p-4 opacity-100 lg:static lg:block lg:h-auto lg:w-[34%] lg:p-0"
                 : "pointer-events-none h-0 w-0 opacity-0",
             )}
           >
@@ -132,7 +200,7 @@ export default function LandingPage() {
             initial={false}
             animate={{ x: pricingOpen ? 0 : 48, opacity: pricingOpen ? 1 : 0 }}
             transition={{ duration: 0.8, ease: EASE_OUT }}
-            className="relative flex h-full min-h-0 w-full flex-col overflow-y-auto rounded-t-2xl border-0 bg-[oklch(0.165_0.008_285)] p-6 lg:rounded-[32px] lg:border lg:border-white/10 lg:bg-white/[0.035] lg:p-8 lg:hover:border-white/20"
+            className="relative flex h-auto max-h-[calc(100dvh-2rem)] w-full max-w-md flex-col overflow-y-auto rounded-2xl border-0 bg-[oklch(0.165_0.008_285)] p-6 lg:h-full lg:max-w-none lg:rounded-[32px] lg:bg-white/[0.035] lg:p-8"
           >
             <button
               type="button"
