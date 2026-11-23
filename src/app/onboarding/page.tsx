@@ -8,7 +8,7 @@ import {
 } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { ArrowRight01Icon, Tick02Icon } from "@hugeicons/core-free-icons";
+import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import { BrandStrip } from "@/components/brand-strip";
 import { DropdownSelect } from "@/components/dropdown-select";
 import { Icon } from "@/components/huge-icon";
@@ -581,46 +581,72 @@ function Done({
   draft: OnboardingDraft;
   onOpen: () => void;
 }) {
-  const rows = [
-    { label: "Name", value: draft.name ?? "" },
-    { label: "Currency", value: draft.currency ?? "UGX" },
-    { label: "Account", value: draft.accountName ?? "" },
-    {
-      label: "Monthly budget",
-      value: draft.budget ? `${draft.currency ?? "UGX"} ${draft.budget}` : "Not set",
-    },
-    { label: "Payday", value: draft.payday ? `Day ${draft.payday}` : "Not set" },
+  const features = [
+    "Your accounts are ready.",
+    "Your budget and payday are saved.",
+    "Goals, debts and recurring rules are waiting.",
+    "Everything can change later in Settings.",
   ];
+  const [featureIndex, setFeatureIndex] = useState(0);
+
+  useEffect(() => {
+    if (featureIndex >= features.length) return;
+    const timer = window.setTimeout(() => {
+      setFeatureIndex((index) => index + 1);
+    }, 1000);
+    return () => window.clearTimeout(timer);
+  }, [featureIndex, features.length]);
+
+  const finished = featureIndex >= features.length;
 
   return (
-    <div className="max-w-[460px]">
-      <span
-        className="grid size-11 place-items-center rounded-full text-black"
-        style={{ background: accent }}
+    <div className="mx-auto flex w-full max-w-[460px] flex-col items-center text-center">
+      <motion.div
+        aria-hidden="true"
+        initial={{ scale: 0, rotate: -18 }}
+        animate={{ scale: 1, rotate: 0 }}
+        transition={{ type: "spring", stiffness: 280, damping: 16, delay: 0.05 }}
+        className="text-5xl"
       >
-        <Icon icon={Tick02Icon} className="size-5" />
-      </span>
-      <h1 className="mt-6 font-display text-3xl leading-tight tracking-[-0.04em]">
-        You&apos;re set.
+        🎉
+      </motion.div>
+
+      <h1 className="mt-5 font-display text-3xl leading-tight tracking-[-0.04em]">
+        Alright {draft.name || "there"},<br />
+        <span className="text-muted-foreground">you&apos;re all set.</span>
       </h1>
-      <p className="mt-3 text-[15px] leading-relaxed text-muted-foreground">
-        Your workspace is ready. Everything here can be changed in settings.
-      </p>
 
-      <dl className="mt-7 divide-y divide-border rounded-2xl border border-border px-4">
-        {rows.map((row) => (
-          <div key={row.label} className="flex items-center justify-between py-3 text-sm">
-            <dt className="text-muted-foreground">{row.label}</dt>
-            <dd className="font-medium">{row.value}</dd>
-          </div>
-        ))}
-      </dl>
-
-      <div className="mt-7">
-        <AccentButton accent={accent} onClick={onOpen}>
-          Open dashboard
-        </AccentButton>
+      <div className="relative mt-8 flex h-12 w-full items-center justify-center">
+        <AnimatePresence mode="wait">
+          {!finished ? (
+            <motion.p
+              key={featureIndex}
+              initial={{ opacity: 0, y: 10, filter: "blur(4px)" }}
+              animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+              exit={{ opacity: 0, y: -10, filter: "blur(4px)" }}
+              transition={{ duration: 0.28, ease: EASE }}
+              className="text-sm leading-relaxed text-muted-foreground"
+            >
+              {features[featureIndex]}
+            </motion.p>
+          ) : null}
+        </AnimatePresence>
       </div>
+
+      <AnimatePresence>
+        {finished ? (
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35, ease: EASE }}
+            className="mt-2"
+          >
+            <AccentButton accent={accent} onClick={onOpen}>
+              Open dashboard
+            </AccentButton>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
     </div>
   );
 }
