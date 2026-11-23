@@ -50,10 +50,20 @@ export default function LandingPage() {
             />
 
             <div className="relative flex h-full flex-col px-6 pt-8 sm:px-10 lg:px-12">
-              <div className="flex justify-center">
-                <Link href="/" className="font-syncopate text-[11px] font-bold tracking-[0.04em] text-white/90">
-                  Expense Trackr
-                </Link>
+              <div className="relative h-4">
+                <motion.div
+                  initial={false}
+                  animate={{
+                    left: pricingOpen ? "50%" : "0%",
+                    x: pricingOpen ? "-50%" : "0%",
+                  }}
+                  transition={{ duration: 0.7, ease: EASE_OUT }}
+                  className="absolute top-0 whitespace-nowrap"
+                >
+                  <Link href="/" className="font-syncopate text-[11px] font-bold tracking-[0.04em] text-white/90">
+                    Expense Trackr
+                  </Link>
+                </motion.div>
               </div>
 
               <div className="mx-auto mt-auto max-w-2xl pb-4 text-center">
@@ -70,6 +80,18 @@ export default function LandingPage() {
                 <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
                   <button
                     type="button"
+                    onClick={() => setAuthOpen(true)}
+                    className={buttonVariants({
+                      size: "lg",
+                      className:
+                        "h-8 w-36 justify-center bg-white px-3 text-black hover:bg-white/90",
+                    })}
+                  >
+                    Open App
+                    <Icon icon={ArrowRight01Icon} className="size-4" />
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => setPricingOpen((open) => !open)}
                     aria-expanded={pricingOpen}
                     aria-controls="landing-pricing"
@@ -77,22 +99,10 @@ export default function LandingPage() {
                       variant: "outline",
                       size: "lg",
                       className:
-                        "h-9 w-40 justify-center border-white/25 bg-white/5 px-4 text-white hover:bg-white/10",
+                        "h-8 w-36 justify-center border-white/25 bg-white/5 px-3 text-white hover:bg-white/10",
                     })}
                   >
                     {pricingOpen ? "Hide pricing" : "View pricing"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setAuthOpen(true)}
-                    className={buttonVariants({
-                      size: "lg",
-                      className:
-                        "h-9 w-40 justify-center bg-white px-4 text-black hover:bg-white/90",
-                    })}
-                  >
-                    Open App
-                    <Icon icon={ArrowRight01Icon} className="size-4" />
                   </button>
                 </div>
               </div>
