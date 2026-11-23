@@ -8,13 +8,10 @@ export function BrandStrip({ className }: { className?: string }) {
         className,
       )}
     >
-      <span
-        style={{ fontFamily: "var(--font-syncopate), system-ui, sans-serif" }}
-        className="font-syncopate text-[11px] tracking-[0.02em] text-muted-foreground"
-      >
+      <span className="text-[11px] leading-none tracking-[0.02em] text-muted-foreground">
         Expense Trackr
       </span>
-      <span className="h-4 w-px bg-border" />
+      <span className="h-4 w-px self-center bg-border" />
       <a
         href="https://bmubarak.xyz"
         target="_blank"
@@ -22,7 +19,7 @@ export function BrandStrip({ className }: { className?: string }) {
         aria-label="By Mubarak"
         className="group inline-flex items-center gap-1.5"
       >
-        <span className="text-[11px] text-muted-foreground transition-colors group-hover:text-foreground">
+        <span className="text-[11px] leading-none text-muted-foreground transition-colors group-hover:text-foreground">
           By Mubarak <span aria-hidden="true">☁️</span>
         </span>
       </a>

@@ -289,7 +289,7 @@ function Welcome({ onStart }: { onStart: () => void }) {
       </p>
       <div className="mt-8 flex justify-center">
         <AccentButton
-          accent="linear-gradient(90deg, #d9f99d 0%, #6ee7b7 50%, #4ade80 100%)"
+          accent="#4ade80"
           onClick={onStart}
         >
           Let&apos;s go

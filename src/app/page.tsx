@@ -71,7 +71,7 @@ export default function LandingPage() {
                     onClick={() => setAuthOpen(true)}
                     className={buttonVariants({
                       className:
-                        "justify-center bg-gradient-to-r from-lime-200 via-emerald-300 to-green-400 [background-size:200%_100%] [background-position:0%_50%] px-3 text-black shadow-lg shadow-emerald-500/20 transition-[background-position,filter] duration-500 hover:[background-position:100%_50%] hover:brightness-105",
+                        "justify-center bg-green-400 px-3 text-black shadow-lg shadow-emerald-500/20 transition-colors hover:bg-green-300",
                     })}
                   >
                     <span className="inline-flex items-center gap-2">
@@ -111,7 +111,7 @@ export default function LandingPage() {
                     onClick={() => setAuthOpen(true)}
                     className={buttonVariants({
                       className:
-                        "justify-center bg-gradient-to-r from-lime-200 via-emerald-300 to-green-400 [background-size:200%_100%] [background-position:0%_50%] px-3 text-black shadow-lg shadow-emerald-500/20 transition-[background-position,filter] duration-500 hover:[background-position:100%_50%] hover:brightness-105",
+                        "justify-center bg-green-400 px-3 text-black shadow-lg shadow-emerald-500/20 transition-colors hover:bg-green-300",
                     })}
                   >
                     <span className="inline-flex items-center gap-2">
@@ -143,10 +143,7 @@ export default function LandingPage() {
               aria-hidden={pricingOpen || undefined}
               className="pointer-events-none absolute inset-x-0 bottom-5 flex flex-wrap items-center justify-center gap-3"
             >
-              <span
-                style={{ fontFamily: "var(--font-syncopate), system-ui, sans-serif" }}
-                className="font-syncopate text-[11px] tracking-[0.02em] text-white/70"
-              >
+              <span className="text-[11px] leading-none tracking-[0.02em] text-white/70">
                 Expense Trackr
               </span>
               <span className="h-4 w-px bg-white/15" />
@@ -216,15 +213,7 @@ export default function LandingPage() {
                 delay: pricingOpen ? 0.1 : 0,
                 ease: EASE_OUT,
               }}
-              className="mt-4 inline-block font-display text-5xl leading-[0.85] tracking-[-0.06em] sm:text-5xl"
-              style={{
-                backgroundImage:
-                  "linear-gradient(90deg, #d9f99d 0%, #6ee7b7 50%, #4ade80 100%)",
-                WebkitBackgroundClip: "text",
-                backgroundClip: "text",
-                color: "transparent",
-                WebkitTextFillColor: "transparent",
-              }}
+              className="mt-4 inline-block font-display text-5xl leading-[0.85] tracking-[-0.06em] text-green-400 sm:text-5xl"
             >
               Free
             </motion.h2>
@@ -269,7 +258,7 @@ export default function LandingPage() {
                 onClick={() => setAuthOpen(true)}
                 className={buttonVariants({
                   className:
-                    "mx-auto cursor-pointer justify-center px-3",
+                    "mx-auto cursor-pointer justify-center bg-green-400 px-3 text-black hover:bg-green-300",
                 })}
               >
                 <span className="relative inline-flex items-center">
@@ -283,7 +272,7 @@ export default function LandingPage() {
                       delay: pricingOpen ? 0.35 : 0,
                       ease: EASE_OUT,
                     }}
-                    className="absolute -bottom-1 left-0 h-px w-full origin-left bg-current"
+                    className="absolute -bottom-1 left-0 hidden h-px w-full origin-left bg-current lg:block"
                   />
                 </span>
               </button>
@@ -291,10 +280,7 @@ export default function LandingPage() {
             </div>
 
             <div className="mt-auto flex flex-wrap items-center justify-center gap-3 pt-6">
-              <span
-                style={{ fontFamily: "var(--font-syncopate), system-ui, sans-serif" }}
-                className="font-syncopate text-[11px] tracking-[0.02em] text-white/70"
-              >
+              <span className="text-[11px] leading-none tracking-[0.02em] text-white/70">
                 Expense Trackr
               </span>
               <span className="h-4 w-px bg-white/15" />
