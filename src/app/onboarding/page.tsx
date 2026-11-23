@@ -12,6 +12,8 @@ import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import { BrandStrip } from "@/components/brand-strip";
 import { DropdownSelect } from "@/components/dropdown-select";
 import { Icon } from "@/components/huge-icon";
+import { useMutation } from "convex/react";
+import { api as convexApi } from "../../../convex/_generated/api";
 import { api } from "@/lib/use-api";
 import { CURRENCY_OPTIONS } from "@/lib/currencies";
 import type { AccountType, Currency } from "@/lib/types";
@@ -57,6 +59,7 @@ function OnboardingFlow() {
   const [ready, setReady] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | undefined>();
+  const completeOnboarding = useMutation(convexApi.onboarding.complete);
 
   useEffect(() => {
     const stored = readDraft();
@@ -103,6 +106,14 @@ function OnboardingFlow() {
     setSaving(true);
     setError(undefined);
     try {
+      await completeOnboarding({
+        name: merged.name,
+        currency: merged.currency,
+        accountName: merged.accountName,
+        accountType: merged.accountType,
+        budget: Number(merged.budget ?? 0),
+        payday: merged.payday ? Number(merged.payday) : undefined,
+      });
       await api.post("/api/onboarding", {
         name: merged.name,
         currency: merged.currency,

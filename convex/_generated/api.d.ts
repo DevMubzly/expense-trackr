@@ -13,6 +13,7 @@ import type * as auth from "../auth.js";
 import type * as finance from "../finance.js";
 import type * as http from "../http.js";
 import type * as mcp from "../mcp.js";
+import type * as onboarding from "../onboarding.js";
 import type * as users from "../users.js";
 
 import type {
@@ -27,6 +28,7 @@ declare const fullApi: ApiFromModules<{
   finance: typeof finance;
   http: typeof http;
   mcp: typeof mcp;
+  onboarding: typeof onboarding;
   users: typeof users;
 }>;
 
