@@ -288,7 +288,10 @@ function Welcome({ onStart }: { onStart: () => void }) {
         minutes, and you can change everything later.
       </p>
       <div className="mt-8 flex justify-center">
-        <AccentButton accent={STEP_META.welcome.accent} onClick={onStart}>
+        <AccentButton
+          accent="linear-gradient(90deg, #d9f99d 0%, #6ee7b7 50%, #4ade80 100%)"
+          onClick={onStart}
+        >
           Let&apos;s go
         </AccentButton>
       </div>

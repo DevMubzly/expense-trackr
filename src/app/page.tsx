@@ -230,7 +230,7 @@ export default function LandingPage() {
               className="mt-4 inline-block font-display text-5xl leading-[0.85] tracking-[-0.06em] sm:text-5xl"
               style={{
                 backgroundImage:
-                  "linear-gradient(100deg, #d9f99d 0%, #4ade80 45%, #22c55e 100%)",
+                  "linear-gradient(90deg, #d9f99d 0%, #6ee7b7 50%, #4ade80 100%)",
                 WebkitBackgroundClip: "text",
                 backgroundClip: "text",
                 color: "transparent",
