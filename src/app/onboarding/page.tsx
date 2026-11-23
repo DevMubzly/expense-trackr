@@ -380,32 +380,57 @@ function CurrencyStep({
         You can still log other currencies later.
       </p>
 
-      <div className="mt-8 flex flex-wrap gap-2">
+      <div className="mt-8 grid gap-2 sm:grid-cols-2">
         {CURRENCIES.map((currency) => {
           const active = currency === selected;
+          const meta = CURRENCY_META[currency];
           return (
-            <button
+            <motion.button
               key={currency}
               type="button"
+              aria-pressed={active}
+              whileTap={{ scale: 0.985 }}
               onClick={() => setSelected(currency)}
               className={cn(
-                "rounded-full border px-4 py-2 text-sm transition-colors",
-                active ? "text-foreground" : "border-border text-muted-foreground hover:text-foreground",
+                "flex items-center gap-3 rounded-2xl border p-3.5 text-left transition-colors",
+                active
+                  ? "text-foreground"
+                  : "border-border bg-muted/10 text-muted-foreground hover:border-foreground/20 hover:text-foreground",
               )}
               style={
                 active
                   ? {
                       borderColor: accent,
-                      background: `color-mix(in oklab, ${accent} 16%, transparent)`,
+                      background: `color-mix(in oklab, ${accent} 12%, transparent)`,
                     }
                   : undefined
               }
             >
-              {currency}
-              <span className="ml-2 text-[11px] text-muted-foreground">
-                {CURRENCY_META[currency].label}
+              <span className="grid size-10 shrink-0 place-items-center rounded-xl border border-border/60 bg-background/50 text-[13px] font-semibold text-foreground">
+                {meta.symbol}
               </span>
-            </button>
+              <span className="min-w-0 flex-1">
+                <span className="flex items-center gap-2 text-sm font-medium">
+                  {currency}
+                </span>
+                <span className="block truncate text-[11px] text-muted-foreground">
+                  {meta.label}
+                </span>
+              </span>
+              <span
+                className={cn(
+                  "grid size-5 shrink-0 place-items-center rounded-full border",
+                  active
+                    ? "border-transparent text-black"
+                    : "border-border",
+                )}
+                style={active ? { background: accent } : undefined}
+              >
+                {active ? (
+                  <Icon icon={Tick02Icon} className="size-3" />
+                ) : null}
+              </span>
+            </motion.button>
           );
         })}
       </div>
