@@ -36,7 +36,7 @@ export default function LandingPage() {
     <div className="theme-light flex min-h-dvh flex-col overflow-x-hidden bg-[oklch(0.165_0.008_285)] text-foreground lg:h-dvh lg:overflow-hidden">
 
 
-      <main className="min-h-0 flex-1 px-4 pb-0 pt-0 sm:px-6 sm:pb-4 sm:pt-0">
+      <main className="min-h-0 flex-1 px-4 pb-0 pt-4 sm:px-6 sm:pb-4 sm:pt-4">
         <div
           className={cn(
             "mx-auto flex w-full max-w-[1500px] flex-col gap-4 transition-[gap] duration-700 lg:h-full lg:flex-row",
@@ -192,7 +192,7 @@ export default function LandingPage() {
             className={cn(
               "min-h-0 shrink-0 overflow-hidden transition-[width,opacity] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)]",
               pricingOpen
-                ? "fixed inset-0 z-50 flex w-full items-center justify-center p-4 opacity-100 lg:static lg:block lg:h-auto lg:w-[34%] lg:p-0"
+                ? "fixed inset-0 z-50 flex w-full items-center justify-center p-4 opacity-100 lg:static lg:mt-4 lg:block lg:h-auto lg:w-[34%] lg:p-0"
                 : "pointer-events-none h-0 w-0 opacity-0",
             )}
           >
@@ -215,7 +215,18 @@ export default function LandingPage() {
             {/*<p className="text-[10px] font-medium uppercase tracking-[0.28em] text-white/35">
               Simple pricing
             </p>*/}
-            <h2
+            <motion.h2
+              initial={false}
+              animate={
+                pricingOpen
+                  ? { opacity: 1, y: 0 }
+                  : { opacity: 0, y: 18 }
+              }
+              transition={{
+                duration: 0.4,
+                delay: pricingOpen ? 0.1 : 0,
+                ease: EASE_OUT,
+              }}
               className="mt-4 inline-block font-display text-5xl leading-[0.85] tracking-[-0.06em] sm:text-5xl"
               style={{
                 backgroundImage:
@@ -227,39 +238,67 @@ export default function LandingPage() {
               }}
             >
               Free
-            </h2>
-            <p className="mx-auto mt-5 max-w-[18rem] text-sm leading-relaxed text-white/55">
+            </motion.h2>
+            <motion.p
+              initial={false}
+              animate={
+                pricingOpen
+                  ? { opacity: 1, y: 0 }
+                  : { opacity: 0, y: 18 }
+              }
+              transition={{
+                duration: 0.4,
+                delay: pricingOpen ? 0.22 : 0,
+                ease: EASE_OUT,
+              }}
+              className="mx-auto mt-5 max-w-[18rem] text-sm leading-relaxed text-white/55"
+            >
               Every feature, every account, every currency. One workspace with
               nothing to unlock.
-            </p>
+            </motion.p>
             {/*<div className="mx-auto mt-7 flex w-full max-w-[16rem] items-center gap-3 text-[10px] uppercase tracking-[0.16em] text-white/40">
               <span className="h-px flex-1 bg-white/10" />
               Everything included
               <span className="h-px flex-1 bg-white/10" />
             </div>*/}
-            <button
-              type="button"
-              onClick={() => setAuthOpen(true)}
-              className={buttonVariants({
-                className:
-                  "mx-auto mt-8 cursor-pointer justify-center px-3",
-              })}
+            <motion.div
+              initial={false}
+              animate={
+                pricingOpen
+                  ? { opacity: 1, y: 0 }
+                  : { opacity: 0, y: 18 }
+              }
+              transition={{
+                duration: 0.4,
+                delay: pricingOpen ? 0.34 : 0,
+                ease: EASE_OUT,
+              }}
+              className="mt-8"
             >
-              <span className="relative inline-flex items-center">
-                Open the App
-                <motion.span
-                  aria-hidden="true"
-                  initial={false}
-                  animate={{ scaleX: pricingOpen ? 1 : 0 }}
-                  transition={{
-                    duration: 0.65,
-                    delay: pricingOpen ? 0.35 : 0,
-                    ease: EASE_OUT,
-                  }}
-                  className="absolute -bottom-1 left-0 h-px w-full origin-left bg-current"
-                />
-              </span>
-            </button>
+              <button
+                type="button"
+                onClick={() => setAuthOpen(true)}
+                className={buttonVariants({
+                  className:
+                    "mx-auto cursor-pointer justify-center px-3",
+                })}
+              >
+                <span className="relative inline-flex items-center">
+                  Open the App
+                  <motion.span
+                    aria-hidden="true"
+                    initial={false}
+                    animate={{ scaleX: pricingOpen ? 1 : 0 }}
+                    transition={{
+                      duration: 0.65,
+                      delay: pricingOpen ? 0.35 : 0,
+                      ease: EASE_OUT,
+                    }}
+                    className="absolute -bottom-1 left-0 h-px w-full origin-left bg-current"
+                  />
+                </span>
+              </button>
+            </motion.div>
             </div>
 
             <div className="mt-auto flex flex-wrap items-center justify-center gap-3 pt-6">
