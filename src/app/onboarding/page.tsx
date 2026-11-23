@@ -31,10 +31,10 @@ import { cn } from "@/lib/utils";
 
 const QUESTIONS = ["name", "currency", "account", "budget", "payday"] as const;
 const CURRENCIES: Currency[] = ["UGX", "USD", "KES", "RWF", "TZS"];
-const ACCOUNT_TYPES: { value: AccountType; label: string }[] = [
-  { value: "cash", label: "Cash" },
-  { value: "bank", label: "Bank" },
-  { value: "momo", label: "Mobile money" },
+const ACCOUNT_TYPES: { value: AccountType; label: string; hint: string }[] = [
+  { value: "cash", label: "Cash", hint: "Physical cash" },
+  { value: "bank", label: "Bank", hint: "Bank account" },
+  { value: "momo", label: "Mobile money", hint: "MTN, Airtel" },
 ];
 
 const EASE = [0.23, 1, 0.32, 1] as const;
@@ -493,41 +493,42 @@ function AccountStep({
               whileTap={{ scale: 0.985 }}
               onClick={() => setType(option.value)}
               className={cn(
-                "relative flex flex-col items-start gap-3 rounded-2xl p-4 text-left transition-colors",
+                "flex items-center gap-3 rounded-xl p-3 text-left transition-colors",
                 active
                   ? "text-foreground"
-                  : "bg-muted/25 text-muted-foreground hover:bg-muted/40 hover:text-foreground",
+                  : "bg-muted/30 text-muted-foreground hover:bg-muted/45 hover:text-foreground",
               )}
               style={
                 active
                   ? {
-                      background: `color-mix(in oklab, ${accent} 16%, transparent)`,
+                      background: `color-mix(in oklab, ${accent} 14%, transparent)`,
                     }
                   : undefined
               }
             >
               <span
                 className={cn(
-                  "grid size-9 place-items-center rounded-xl",
+                  "grid size-9 shrink-0 place-items-center rounded-lg",
                   active
                     ? "bg-background/40 text-foreground"
-                    : "bg-muted/40 text-muted-foreground",
+                    : "bg-muted/50 text-muted-foreground",
                 )}
               >
                 <Icon icon={accountIcon(option.value)} className="size-4" />
               </span>
-              <span className="pr-6 text-sm font-medium">{option.label}</span>
-              <span
-                className={cn(
-                  "absolute right-3 top-3 grid size-5 place-items-center rounded-full",
-                  active ? "text-black" : "bg-muted/60",
-                )}
-                style={active ? { background: accent } : undefined}
-              >
-                {active ? (
-                  <Icon icon={Tick02Icon} className="size-3" />
-                ) : null}
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-medium">
+                  {option.label}
+                </span>
+                <span className="block truncate text-[10px] text-muted-foreground">
+                  {option.hint}
+                </span>
               </span>
+              {active ? (
+                <span className="shrink-0" style={{ color: accent }}>
+                  <Icon icon={Tick02Icon} className="size-4" />
+                </span>
+              ) : null}
             </motion.button>
           );
         })}
