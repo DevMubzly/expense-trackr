@@ -1635,7 +1635,7 @@ export default function PlanPage() {
                 {deleteTarget.label}
               </h2>
               <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">
-                This removes the item and its related mock history.
+                This removes the item and its related history.
               </p>
             </div>
             <div className="flex justify-end gap-2 pt-1">

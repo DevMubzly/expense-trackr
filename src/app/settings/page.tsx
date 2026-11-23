@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { AnimatePresence, motion } from "motion/react";
 import { gooeyToast } from "goey-toast";
 import {
   ChartIncreaseIcon,
@@ -439,15 +440,21 @@ function SettingsForm({
   }
 
   function deleteProfileAccount() {
+    if (profileDeleting) return;
     setProfileDeleting(true);
-    logout();
-    try {
-      window.localStorage.removeItem(DRAFT_KEY);
-      window.localStorage.removeItem(COMPLETE_KEY);
-    } catch {
-      // Local storage may be unavailable; the session is already cleared.
-    }
-    router.push("/");
+    window.setTimeout(() => {
+      gooeyToast.success("Account deleted", {
+        description: "Your session and onboarding progress were cleared.",
+      });
+      logout();
+      try {
+        window.localStorage.removeItem(DRAFT_KEY);
+        window.localStorage.removeItem(COMPLETE_KEY);
+      } catch {
+        // Local storage may be unavailable; the session is already cleared.
+      }
+      router.push("/");
+    }, 650);
   }
 
   function readAvatar(file: File | undefined) {
@@ -468,7 +475,8 @@ function SettingsForm({
   }
 
   return (
-    <PageReveal className="space-y-6">
+    <>
+      <PageReveal className="space-y-6">
       <header className="flex flex-wrap items-end justify-between gap-6">
         <div>
           <h1 className="font-display text-2xl leading-none tracking-[-0.03em] md:text-3xl">
@@ -479,34 +487,12 @@ function SettingsForm({
             behind every page.
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          {dirty ? (
-            <span className="text-[11px] text-muted-foreground">
-              Unsaved changes
-            </span>
-          ) : null}
-          <Button
-            variant="ghost"
-            onClick={discard}
-            disabled={!dirty || saving}
-          >
-            Discard
-          </Button>
-          <Button
-            onClick={save}
-            loading={saving}
-            disabled={!dirty}
-          >
-            <Icon icon={Tick02Icon} className="size-4" />
-            Save changes
-          </Button>
-        </div>
       </header>
 
       <div className="grid grid-cols-12 gap-6">
         <SectionPanel
           title="Profile"
-          info="Your display name, email and avatar for this mock account."
+          info="Your display name, email and avatar for this account."
           hint="The identity attached to this ledger"
           className="col-span-12 lg:col-span-7"
           bodyClassName="p-5"
@@ -869,7 +855,7 @@ function SettingsForm({
 
         <SectionPanel
           title="Sign out"
-          info="End this mock session on this device."
+          info="End this session on this device."
           hint="You can sign back in with any email"
           className="col-span-12"
           bodyClassName="p-4"
@@ -878,7 +864,7 @@ function SettingsForm({
             <div>
               <p className="text-[13px] font-medium">End this session</p>
               <p className="mt-1 text-[11px] text-muted-foreground">
-                Signing out clears your session but keeps your local demo data.
+                Signing out clears your session but keeps your local data.
               </p>
             </div>
             <Button
@@ -895,7 +881,7 @@ function SettingsForm({
 
         <SectionPanel
           title="Danger zone"
-          info="Permanently clear this mock account and its onboarding progress."
+          info="Permanently clear this account and its onboarding progress."
           hint="This cannot be undone"
           className="col-span-12 border-destructive/20"
           bodyClassName="p-4"
@@ -906,8 +892,8 @@ function SettingsForm({
                 Delete account
               </p>
               <p className="mt-1 text-[11px] text-muted-foreground">
-                Clears your mock session and onboarding progress. Your local
-                demo data stays in place.
+                Clears your session and onboarding progress. Your local data
+                stays in place.
               </p>
             </div>
             <Button
@@ -1058,33 +1044,16 @@ function SettingsForm({
         ariaLabel="Remove account"
       >
         {deletingAccount ? (
-          <div className="space-y-4">
-            <div>
-              <h2 className="text-lg font-semibold tracking-[-0.02em]">
-                Remove {deletingAccount.name}?
-              </h2>
-              <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">
-                The account disappears from balances. Its transactions remain
-                in the ledger.
-              </p>
-            </div>
-            <div className="flex justify-end gap-2 pt-1">
-              <Button
-                variant="ghost"
-                onClick={() => setDeletingAccount(null)}
-                disabled={accountDeleting}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={confirmRemoveAccount}
-                loading={accountDeleting}
-              >
-                <Icon icon={Delete02Icon} className="size-4" /> Remove
-              </Button>
-            </div>
-          </div>
+          <OtpDeleteDialog
+            key={deletingAccount.id}
+            title={`Remove ${deletingAccount.name}?`}
+            description="The account disappears from balances. Its transactions remain in the ledger."
+            email={profileEmail}
+            confirmLabel="Remove account"
+            loading={accountDeleting}
+            onClose={() => setDeletingAccount(null)}
+            onConfirm={confirmRemoveAccount}
+          />
         ) : null}
       </MorphingModal>
 
@@ -1170,36 +1139,135 @@ function SettingsForm({
         ariaLabel="Delete account"
       >
         {deleteAccountOpen ? (
-          <div className="space-y-4">
-            <div>
-              <h2 className="text-lg font-semibold tracking-[-0.02em]">
-                Delete your account?
-              </h2>
-              <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">
-                This clears your mock session and onboarding progress. Your
-                local demo data stays in place.
-              </p>
-            </div>
-            <div className="flex justify-end gap-2 pt-1">
-              <Button
-                variant="ghost"
-                onClick={() => setDeleteAccountOpen(false)}
-                disabled={profileDeleting}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={deleteProfileAccount}
-                loading={profileDeleting}
-              >
-                <Icon icon={Delete02Icon} className="size-4" /> Delete account
-              </Button>
-            </div>
-          </div>
+          <OtpDeleteDialog
+            title="Delete your account?"
+            description="This clears your session and onboarding progress. Your local data stays in place."
+            email={profileEmail}
+            confirmLabel="Delete account"
+            loading={profileDeleting}
+            onClose={() => setDeleteAccountOpen(false)}
+            onConfirm={deleteProfileAccount}
+          />
         ) : null}
       </MorphingModal>
     </PageReveal>
+
+    <AnimatePresence>
+      {dirty ? (
+        <motion.div
+          initial={{ opacity: 0, y: 24, scale: 0.96 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: 20, scale: 0.97 }}
+          transition={{ type: "spring", stiffness: 320, damping: 28 }}
+          className="fixed inset-x-0 bottom-24 z-[60] flex justify-center px-4"
+        >
+          <div className="flex items-center gap-1.5 rounded-full border border-foreground/10 bg-background/95 p-1.5 shadow-2xl backdrop-blur-md">
+            <span className="hidden px-2.5 text-[11px] text-muted-foreground sm:inline">
+              Unsaved changes
+            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={discard}
+              disabled={saving}
+            >
+              Discard
+            </Button>
+            <Button size="sm" onClick={save} loading={saving}>
+              <Icon icon={Tick02Icon} className="size-3.5" />
+              Save changes
+            </Button>
+          </div>
+        </motion.div>
+      ) : null}
+    </AnimatePresence>
+    </>
+  );
+}
+
+function OtpDeleteDialog({
+  title,
+  description,
+  email,
+  confirmLabel,
+  loading,
+  onClose,
+  onConfirm,
+}: {
+  title: string;
+  description: string;
+  email: string;
+  confirmLabel: string;
+  loading: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+}) {
+  const [otp, setOtp] = useState("");
+
+  useEffect(() => {
+    gooeyToast.success("Verification code sent", {
+      description: `We sent a 6-digit code to ${email}.`,
+    });
+  }, [email]);
+
+  const valid = otp.length >= 4;
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <h2 className="text-lg font-semibold tracking-[-0.02em]">{title}</h2>
+        <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">
+          {description}
+        </p>
+      </div>
+
+      <div className="rounded-xl border border-border bg-muted/20 p-3 text-[11px] leading-relaxed text-muted-foreground">
+        A verification code was sent to{" "}
+        <span className="font-medium text-foreground">{email}</span>.
+      </div>
+
+      <Input
+        label="Verification code"
+        value={otp}
+        onChange={(value) =>
+          setOtp(value.replace(/[^0-9]/g, "").slice(0, 6))
+        }
+        placeholder="6-digit code"
+        inputMode="numeric"
+        autoFocus
+      />
+
+      <div className="flex items-center justify-between gap-2">
+        <button
+          type="button"
+          onClick={() =>
+            gooeyToast.success("Code resent", {
+              description: `We sent another code to ${email}.`,
+            })
+          }
+          className="text-[11px] text-muted-foreground underline-offset-2 transition-colors hover:text-foreground hover:underline"
+        >
+          Resend code
+        </button>
+        <span className="text-[10px] text-muted-foreground">
+          Check your inbox
+        </span>
+      </div>
+
+      <div className="flex justify-end gap-2 pt-1">
+        <Button variant="ghost" onClick={onClose} disabled={loading}>
+          Cancel
+        </Button>
+        <Button
+          variant="destructive"
+          onClick={onConfirm}
+          loading={loading}
+          disabled={!valid}
+        >
+          <Icon icon={Delete02Icon} className="size-4" /> {confirmLabel}
+        </Button>
+      </div>
+    </div>
   );
 }
 

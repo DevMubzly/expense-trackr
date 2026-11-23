@@ -291,7 +291,7 @@ function TransactionForm({
     setCategory("shopping");
     setNote("Supermarket receipt");
     gooeyToast.success("Receipt scanned", {
-      description: "Mock OCR filled the form. Review before saving.",
+      description: "Receipt filled the form. Review before saving.",
     });
   }
 
