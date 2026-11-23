@@ -3,14 +3,23 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { useRouter } from "next/navigation";
-import { Cancel01Icon, GoogleIcon, Tick02Icon } from "@hugeicons/core-free-icons";
+import {
+  ArrowRight01Icon,
+  Cancel01Icon,
+  Tick02Icon,
+} from "@hugeicons/core-free-icons";
 import { useAuth } from "@/components/auth-provider";
 import { isOnboarded } from "@/lib/onboarding";
 import { Input } from "@/components/motion/input";
 import { Icon } from "@/components/huge-icon";
 import { Button } from "@/components/ui/button";
+import { EASE_OUT } from "@/lib/ease";
 
-type Mode = "signin" | "register" | "forgot";
+const UNDERLINE_FIELD = {
+  field:
+    "h-10 rounded-none border-x-0 border-t-0 border-b border-border bg-transparent data-[state=focused]:ring-0",
+  input: "text-sm",
+};
 
 export function AuthDialog({
   open,
@@ -51,7 +60,7 @@ export function AuthDialog({
           <motion.div
             aria-hidden="true"
             onClick={onClose}
-            className="absolute inset-0 bg-black/50"
+            className="absolute inset-0 bg-black/50 backdrop-blur-[2px]"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -62,26 +71,18 @@ export function AuthDialog({
             role="dialog"
             aria-modal="true"
             aria-labelledby={titleId}
-            initial={{ opacity: 0, y: 14, scale: 0.97 }}
+            initial={{ opacity: 0, y: 16, scale: 0.97 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 8, scale: 0.98, transition: { duration: 0.16 } }}
-            transition={{ type: "spring", duration: 0.4, bounce: 0.12 }}
-            className="dark relative z-10 max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto rounded-2xl border border-foreground/10 bg-card p-5 text-foreground shadow-2xl"
+            exit={{
+              opacity: 0,
+              y: 8,
+              scale: 0.98,
+              transition: { duration: 0.16, ease: EASE_OUT },
+            }}
+            transition={{ type: "spring", stiffness: 360, damping: 30 }}
+            className="dark relative z-10 max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-hidden rounded-2xl border border-border bg-background p-1 text-foreground shadow-2xl"
           >
-            <button
-              type="button"
-              aria-label="Close"
-              onClick={onClose}
-              className="absolute right-3 top-3 grid size-7 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-            >
-              <Icon icon={Cancel01Icon} className="size-4" />
-            </button>
-
-            <h2 id={titleId} className="text-center text-base font-semibold tracking-[-0.02em]">
-              Expense Trackr
-            </h2>
-
-            <AuthBody onDone={onClose} />
+            <AuthBody onDone={onClose} titleId={titleId} />
           </motion.div>
         </motion.div>
       ) : null}
@@ -89,191 +90,352 @@ export function AuthDialog({
   );
 }
 
-function AuthBody({ onDone }: { onDone: () => void }) {
+type Step = "email" | "otp";
+
+function AuthBody({
+  onDone,
+  titleId,
+}: {
+  onDone: () => void;
+  titleId: string;
+}) {
   const { login } = useAuth();
   const router = useRouter();
-  const [mode, setMode] = useState<Mode>("signin");
+  const emailId = useId();
+  const emailRef = useRef<HTMLInputElement>(null);
+  const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+  const [step, setStep] = useState<Step>("email");
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirm, setConfirm] = useState("");
-  const [error, setError] = useState<string | undefined>();
-  const [sent, setSent] = useState(false);
+  const [otp, setOtp] = useState<string[]>(Array(6).fill(""));
+  const [error, setError] = useState<string>();
   const [pending, setPending] = useState(false);
+  const [googlePending, setGooglePending] = useState(false);
+  const [resending, setResending] = useState(false);
+  const [resent, setResent] = useState(false);
 
-  function enter(nextEmail = email, nextPassword = password) {
-    if (pending) return;
+  const code = otp.join("");
+  const validEmail = email.trim().includes("@");
+
+  function focusFirstOtp() {
+    window.setTimeout(() => otpRefs.current[0]?.focus(), 260);
+  }
+
+  function goBack() {
+    setStep("email");
+    setError(undefined);
+    window.setTimeout(() => emailRef.current?.focus(), 260);
+  }
+
+  async function sendCode() {
+    if (pending || googlePending || resending) return;
+    if (!validEmail) {
+      setError("Enter a valid email address.");
+      emailRef.current?.focus();
+      return;
+    }
+    setError(undefined);
     setPending(true);
-    // Brief pending state so the sign-in reads as an action, not a jump.
-    window.setTimeout(() => {
-      login(nextEmail, nextPassword);
-      onDone();
-      router.push(isOnboarded() ? "/dashboard" : "/onboarding?step=welcome");
-    }, 420);
+    await new Promise((resolve) => window.setTimeout(resolve, 650));
+    setPending(false);
+    setStep("otp");
+    focusFirstOtp();
   }
 
-  function submit() {
-    if (!email.trim()) {
-      setError("Enter your email address.");
-      return;
-    }
+  function finishLogin(nextEmail: string) {
+    login(nextEmail, "otp");
+    onDone();
+    router.push(isOnboarded() ? "/dashboard" : "/onboarding?step=welcome");
+  }
 
-    if (mode === "forgot") {
-      setError(undefined);
-      setSent(true);
-      return;
-    }
-
-    if (!password.trim()) {
-      setError("Enter a password.");
-      return;
-    }
-
-    if (mode === "register" && password !== confirm) {
-      setError("Passwords do not match.");
-      return;
-    }
-
+  async function continueWithGoogle() {
+    if (pending || googlePending) return;
     setError(undefined);
-    enter();
+    setGooglePending(true);
+    await new Promise((resolve) => window.setTimeout(resolve, 700));
+    finishLogin("brian@expense.app");
   }
 
-  function switchMode(next: Mode) {
-    setMode(next);
+  async function verifyCode() {
+    if (pending || googlePending || code.length !== 6) {
+      if (code.length !== 6) setError("Enter the 6-digit code.");
+      return;
+    }
     setError(undefined);
-    setSent(false);
-    setPassword("");
-    setConfirm("");
+    setPending(true);
+    await new Promise((resolve) => window.setTimeout(resolve, 700));
+    finishLogin(email.trim());
   }
 
-  if (mode === "forgot" && sent) {
-    return (
-      <div className="mt-6 text-center">
-        <span className="mx-auto grid size-10 place-items-center rounded-full bg-muted text-foreground">
-          <Icon icon={Tick02Icon} className="size-5" />
-        </span>
-        <p className="mt-4 text-sm font-medium">Check your inbox</p>
-        <p className="mt-1.5 text-[13px] leading-relaxed text-muted-foreground">
-          A reset link was sent to {email}. It expires in 30 minutes.
-        </p>
-        <Button className="mt-5 w-full" onClick={() => switchMode("signin")}>
-          Back to sign in
-        </Button>
-      </div>
-    );
+  async function resendCode() {
+    if (resending || pending) return;
+    setError(undefined);
+    setResending(true);
+    await new Promise((resolve) => window.setTimeout(resolve, 600));
+    setResending(false);
+    setResent(true);
+    window.setTimeout(() => setResent(false), 2400);
+  }
+
+  function setDigit(index: number, value: string) {
+    const digit = value.replace(/\D/g, "").slice(-1);
+    setOtp((current) => {
+      const next = [...current];
+      next[index] = digit;
+      return next;
+    });
+    if (digit && index < 5) {
+      otpRefs.current[index + 1]?.focus();
+    }
+  }
+
+  function handleOtpKeyDown(
+    index: number,
+    event: React.KeyboardEvent<HTMLInputElement>,
+  ) {
+    if (event.key === "Backspace" && !otp[index] && index > 0) {
+      event.preventDefault();
+      setOtp((current) => {
+        const next = [...current];
+        next[index - 1] = "";
+        return next;
+      });
+      otpRefs.current[index - 1]?.focus();
+    }
+    if (event.key === "Enter") verifyCode();
+  }
+
+  function handleOtpPaste(event: React.ClipboardEvent<HTMLInputElement>) {
+    const digits = event.clipboardData
+      .getData("text")
+      .replace(/\D/g, "")
+      .slice(0, 6);
+    if (!digits) return;
+    event.preventDefault();
+    const next = Array(6).fill("");
+    digits.split("").forEach((digit, index) => {
+      next[index] = digit;
+    });
+    setOtp(next);
+    otpRefs.current[Math.min(digits.length, 5)]?.focus();
   }
 
   return (
-    <div className="mt-5 space-y-4">
-      {mode !== "forgot" ? (
-        <>
-          <Button
-            variant="outline"
-            className="w-full bg-muted/50"
-            loading={pending}
-            disabled={pending}
-            onClick={() => enter("brian@expense.app", "google")}
+    <div className="flex flex-col">
+      <div className="overflow-y-auto rounded-xl border border-foreground/10 bg-muted/50 p-3.5 pb-2">
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key={step}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.18, ease: EASE_OUT }}
           >
-            <Icon icon={GoogleIcon} className="size-4" />
-            Continue with Google
-          </Button>
+            {step === "email" ? (
+              <div className="space-y-4">
+                <div>
+                  <h2
+                    id={titleId}
+                    className="text-lg font-semibold tracking-[-0.02em]"
+                  >
+                    Welcome back
+                  </h2>
+                  <p className="mt-0.5 text-[13px] leading-relaxed text-muted-foreground">
+                    Enter your email and we&apos;ll send a one-time code.
+                  </p>
+                </div>
 
-          <div className="flex items-center gap-3">
-            <span className="h-px flex-1 bg-border" />
-            <span className="text-[11px] text-muted-foreground">or</span>
-            <span className="h-px flex-1 bg-border" />
-          </div>
-        </>
-      ) : null}
+                <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2">
+                  <label
+                    htmlFor={emailId}
+                    className="text-[13px] text-muted-foreground"
+                  >
+                    Email:
+                  </label>
+                  <Input
+                    ref={emailRef}
+                    id={emailId}
+                    type="email"
+                    value={email}
+                    onChange={setEmail}
+                    placeholder="you@example.com"
+                    autoComplete="email"
+                    inputMode="email"
+                    aria-label="Email"
+                    disabled={pending || googlePending}
+                    classNames={UNDERLINE_FIELD}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") sendCode();
+                    }}
+                  />
+                  <Button
+                    onClick={sendCode}
+                    loading={pending}
+                    disabled={pending || googlePending || !email.trim()}
+                    className="h-8 shrink-0 px-3 text-[12px]"
+                  >
+                    <Icon icon={ArrowRight01Icon} className="size-3.5" />
+                    Send code
+                  </Button>
+                </div>
 
-      <div className="space-y-3">
-        <Input
-          label="Email"
-          type="email"
-          value={email}
-          onChange={setEmail}
-          placeholder="you@example.com"
-          autoComplete="email"
-        />
+                <div className="flex items-center gap-3">
+                  <span className="h-px flex-1 bg-border" />
+                  <span className="text-[11px] text-muted-foreground">or</span>
+                  <span className="h-px flex-1 bg-border" />
+                </div>
 
-        {mode !== "forgot" ? (
-          <Input
-            label="Password"
-            type="password"
-            value={password}
-            onChange={setPassword}
-            placeholder="At least 6 characters"
-            autoComplete={mode === "register" ? "new-password" : "current-password"}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") submit();
-            }}
-          />
-        ) : null}
+                <Button
+                  variant="outline"
+                  className="w-full bg-muted/50"
+                  onClick={continueWithGoogle}
+                  loading={googlePending}
+                  disabled={pending || googlePending}
+                >
+                  <GoogleLogo className="size-4" />
+                  Continue with Google
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div>
+                  <h2
+                    id={titleId}
+                    className="text-lg font-semibold tracking-[-0.02em]"
+                  >
+                    Enter your code
+                  </h2>
+                  <p className="mt-0.5 text-[13px] leading-relaxed text-muted-foreground">
+                    We sent a 6-digit code to{" "}
+                    <span className="font-medium text-foreground">
+                      {email.trim()}
+                    </span>
+                    .
+                  </p>
+                </div>
 
-        {mode === "register" ? (
-          <Input
-            label="Confirm password"
-            type="password"
-            value={confirm}
-            onChange={setConfirm}
-            placeholder="Repeat your password"
-            autoComplete="new-password"
-            onKeyDown={(event) => {
-              if (event.key === "Enter") submit();
-            }}
-          />
-        ) : null}
+                <div>
+                  <p className="mb-2 text-[13px] text-muted-foreground">
+                    Verification code:
+                  </p>
+                  <div className="grid grid-cols-6 gap-1.5">
+                    {otp.map((digit, index) => (
+                      <input
+                        key={index}
+                        ref={(element) => {
+                          otpRefs.current[index] = element;
+                        }}
+                        value={digit}
+                        onChange={(event) =>
+                          setDigit(index, event.target.value)
+                        }
+                        onKeyDown={(event) =>
+                          handleOtpKeyDown(index, event)
+                        }
+                        onPaste={handleOtpPaste}
+                        inputMode="numeric"
+                        autoComplete={index === 0 ? "one-time-code" : "off"}
+                        maxLength={1}
+                        aria-label={`Digit ${index + 1}`}
+                        disabled={pending}
+                        className="h-12 min-w-0 rounded-xl border border-foreground/10 bg-background/70 text-center text-lg font-semibold text-foreground outline-none transition-[border-color,box-shadow] focus:border-foreground/35 focus:ring-2 focus:ring-foreground/15 disabled:opacity-60"
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between gap-3 text-[11px]">
+                  <button
+                    type="button"
+                    onClick={goBack}
+                    disabled={pending}
+                    className="text-muted-foreground underline-offset-2 transition-colors hover:text-foreground hover:underline disabled:opacity-50"
+                  >
+                    Change email
+                  </button>
+                  <button
+                    type="button"
+                    onClick={resendCode}
+                    disabled={pending || resending}
+                    className="text-muted-foreground underline-offset-2 transition-colors hover:text-foreground hover:underline disabled:opacity-50"
+                  >
+                    {resending
+                      ? "Sending…"
+                      : resent
+                        ? "Code sent"
+                        : "Resend code"}
+                  </button>
+                </div>
+              </div>
+            )}
+          </motion.div>
+        </AnimatePresence>
+
+        <AnimatePresence initial={false}>
+          {error ? (
+            <motion.p
+              role="alert"
+              initial={{ opacity: 0, y: -3 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -3 }}
+              transition={{ duration: 0.15 }}
+              className="mt-3 text-[12px] text-destructive"
+            >
+              {error}
+            </motion.p>
+          ) : null}
+        </AnimatePresence>
       </div>
 
-      {error ? <p className="text-[12px] text-destructive">{error}</p> : null}
-
-      <Button onClick={submit} className="w-full" loading={pending} disabled={pending}>
-        {mode === "register"
-          ? "Create account"
-          : mode === "forgot"
-            ? "Send reset link"
-            : "Sign in"}
-      </Button>
-
-      <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-[12px] text-muted-foreground">
-        {mode === "signin" ? (
-          <>
-            <button
-              type="button"
-              onClick={() => switchMode("register")}
-              className="transition-colors hover:text-foreground"
-            >
-              Create account
-            </button>
-            <button
-              type="button"
-              onClick={() => switchMode("forgot")}
-              className="transition-colors hover:text-foreground"
-            >
-              Forgot password?
-            </button>
-          </>
-        ) : null}
-
-        {mode === "register" ? (
-          <button
-            type="button"
-            onClick={() => switchMode("signin")}
-            className="transition-colors hover:text-foreground"
+      <div className="mt-1 flex shrink-0 items-center justify-between gap-2">
+        <Button
+          variant="ghost"
+          onClick={onDone}
+          disabled={pending || googlePending}
+          className="h-8 px-3 text-[12px]"
+        >
+          <Icon icon={Cancel01Icon} className="size-4" /> Cancel
+        </Button>
+        {step === "otp" ? (
+          <Button
+            onClick={verifyCode}
+            loading={pending}
+            disabled={pending || googlePending || code.length !== 6}
+            className="h-8 min-w-28 px-3 text-[12px]"
           >
-            Already have an account? Sign in
-          </button>
-        ) : null}
-
-        {mode === "forgot" ? (
-          <button
-            type="button"
-            onClick={() => switchMode("signin")}
-            className="transition-colors hover:text-foreground"
-          >
-            Back to sign in
-          </button>
+            <Icon icon={Tick02Icon} className="size-4" />
+            Verify
+          </Button>
         ) : null}
       </div>
     </div>
+  );
+}
+
+function GoogleLogo({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+      className={className}
+      focusable="false"
+    >
+      <path
+        fill="#4285F4"
+        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.07 5.07 0 0 1-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09Z"
+      />
+      <path
+        fill="#34A853"
+        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23Z"
+      />
+      <path
+        fill="#FBBC05"
+        d="M5.84 14.09A6.97 6.97 0 0 1 5.49 12c0-.73.13-1.43.35-2.09V7.07H2.18A10.97 10.97 0 0 0 1 12c0 1.78.43 3.45 1.18 4.93l3.66-2.84Z"
+      />
+      <path
+        fill="#EA4335"
+        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53Z"
+      />
+    </svg>
   );
 }

@@ -21,6 +21,7 @@ export function CategorySelect({
   label = "Category",
   allLabel,
   compact = false,
+  className,
 }: {
   value: string;
   onValueChange: (value: string) => void;
@@ -29,12 +30,13 @@ export function CategorySelect({
   label?: string;
   allLabel?: string;
   compact?: boolean;
+  className?: string;
 }) {
   const contextCategories = useCategories();
   const options = categories ?? contextCategories.categoriesFor(kind);
 
   return (
-    <Combobox value={value} onValueChange={onValueChange}>
+    <Combobox value={value} onValueChange={onValueChange} className={className}>
       <ComboboxTrigger
         className={
           compact

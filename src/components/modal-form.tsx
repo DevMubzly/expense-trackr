@@ -21,7 +21,7 @@ export function ModalSurface({
   return (
     <div
       className={cn(
-        "max-h-[calc(100dvh-9rem)] space-y-4 overflow-y-auto rounded-xl border border-foreground/10 bg-muted/50 p-3.5",
+        "max-h-[calc(100dvh-9rem)] space-y-4 overflow-y-auto rounded-xl border border-foreground/10 bg-muted/50 p-3.5 pb-2",
         className,
       )}
     >
@@ -84,7 +84,7 @@ export function ModalForm({
         <ModalHeading title={title} hint={hint} />
         {children}
       </ModalSurface>
-      <div className="mt-3 flex shrink-0 items-center justify-between gap-2 pt-4">
+      <div className="mt-1 flex shrink-0 items-center justify-between gap-2">
         {onDelete ? (
           <Button
             variant="ghost"
@@ -139,7 +139,7 @@ export function ModalConfirm({
         <ModalHeading title={title} hint={description} />
         {children}
       </ModalSurface>
-      <div className="mt-3 flex shrink-0 items-center justify-between gap-2 pt-4">
+      <div className="mt-1 flex shrink-0 items-center justify-between gap-2">
         <Button variant="ghost" onClick={onCancel} disabled={loading}>
           <Icon icon={Cancel01Icon} className="size-4" /> Cancel
         </Button>

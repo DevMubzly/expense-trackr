@@ -27,6 +27,7 @@ export function AccountSelect({
   onValueChange,
   compact = false,
   hideLabel = false,
+  className,
 }: {
   label: string;
   value: string;
@@ -34,9 +35,10 @@ export function AccountSelect({
   onValueChange: (value: string) => void;
   compact?: boolean;
   hideLabel?: boolean;
+  className?: string;
 }) {
   return (
-    <div>
+    <div className={className}>
       {!compact && !hideLabel ? (
         <p className="mb-1 text-[13px] text-muted-foreground">{label}</p>
       ) : null}

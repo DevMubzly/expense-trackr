@@ -612,7 +612,7 @@ function SettingsForm({
                 iconClassName="size-4"
               />
             </div>
-            <div className="grid grid-cols-[minmax(0,1fr)_15rem] items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               <p className="text-[13px] text-muted-foreground">Currency:</p>
               <DropdownSelect
                 value={defaultCurrency}
@@ -624,6 +624,7 @@ function SettingsForm({
                   );
                 }}
                 ariaLabel="Default currency"
+                className="w-60"
                 options={CURRENCY_OPTIONS}
               />
             </div>
@@ -969,7 +970,7 @@ function SettingsForm({
                 hint="You have unsaved settings. Save them before leaving, or leave without saving."
               />
             </ModalSurface>
-            <div className="mt-3 flex shrink-0 flex-wrap items-center justify-between gap-2 pt-4">
+            <div className="mt-1 flex shrink-0 flex-wrap items-center justify-between gap-2">
               <Button
                 variant="ghost"
                 onClick={() => setPendingHref(null)}
@@ -1169,7 +1170,7 @@ function SettingsForm({
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: 20, scale: 0.97 }}
           transition={{ type: "spring", stiffness: 320, damping: 28 }}
-          className="fixed inset-x-0 bottom-20 z-[60] flex justify-center px-4"
+          className="fixed inset-x-0 bottom-[70px] z-[60] flex justify-center px-4"
         >
           <div className="flex items-center gap-1.5 rounded-full border border-foreground/10 bg-background/95 p-1.5 shadow-2xl backdrop-blur-md">
             <Button
@@ -1209,65 +1210,114 @@ function OtpDeleteDialog({
   onClose: () => void;
   onConfirm: () => void;
 }) {
+  const [step, setStep] = useState<"confirm" | "otp">("confirm");
   const [otp, setOtp] = useState("");
+  const [sending, setSending] = useState(false);
 
-  useEffect(() => {
+  const valid = otp.length >= 4;
+
+  async function sendCode() {
+    if (sending) return;
+    setSending(true);
+    await new Promise((resolve) => window.setTimeout(resolve, 500));
+    setSending(false);
+    setStep("otp");
     gooeyToast.success("Verification code sent", {
       description: `We sent a 6-digit code to ${email}.`,
     });
-  }, [email]);
-
-  const valid = otp.length >= 4;
+  }
 
   return (
     <div className="flex flex-col">
       <ModalSurface>
-        <ModalHeading title={title} hint={description} />
-
-        <div className="rounded-xl border border-border bg-muted/50 p-3 text-[11px] leading-relaxed text-muted-foreground">
-          A verification code was sent to{" "}
-          <span className="font-medium text-foreground">{email}</span>.
-        </div>
-
-        <Input
-          label="Verification code"
-          value={otp}
-          onChange={(value) =>
-            setOtp(value.replace(/[^0-9]/g, "").slice(0, 6))
-          }
-          placeholder="6-digit code"
-          inputMode="numeric"
-          autoFocus
-        />
-
-        <div className="flex items-center">
-          <button
-            type="button"
-            onClick={() =>
-              gooeyToast.success("Code resent", {
-                description: `We sent another code to ${email}.`,
-              })
-            }
-            className="text-[11px] text-muted-foreground underline-offset-2 transition-colors hover:text-foreground hover:underline"
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key={step}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.16 }}
+            className="space-y-4"
           >
-            Resend code
-          </button>
-        </div>
+            {step === "confirm" ? (
+              <>
+                <ModalHeading
+                  title="Are you sure?"
+                  hint={`${title} ${description}`}
+                />
+                <div className="rounded-xl bg-destructive/10 p-3 text-[11px] leading-relaxed text-destructive">
+                  We&apos;ll send a verification code to{" "}
+                  <span className="font-medium">{email}</span> first. Nothing
+                  is deleted until you confirm the code.
+                </div>
+              </>
+            ) : (
+              <>
+                <ModalHeading title={title} hint={description} />
+
+                <div className="rounded-xl border border-border bg-muted/50 p-3 text-[11px] leading-relaxed text-muted-foreground">
+                  A verification code was sent to{" "}
+                  <span className="font-medium text-foreground">{email}</span>.
+                </div>
+
+                <Input
+                  label="Verification code"
+                  value={otp}
+                  onChange={(value) =>
+                    setOtp(value.replace(/[^0-9]/g, "").slice(0, 6))
+                  }
+                  placeholder="6-digit code"
+                  inputMode="numeric"
+                  autoFocus
+                />
+
+                <div className="flex items-center">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      gooeyToast.success("Code resent", {
+                        description: `We sent another code to ${email}.`,
+                      })
+                    }
+                    className="text-[11px] text-muted-foreground underline-offset-2 transition-colors hover:text-foreground hover:underline"
+                  >
+                    Resend code
+                  </button>
+                </div>
+              </>
+            )}
+          </motion.div>
+        </AnimatePresence>
       </ModalSurface>
 
-      <div className="mt-3 flex shrink-0 items-center justify-between gap-2 pt-4">
-        <Button variant="ghost" onClick={onClose} disabled={loading}>
+      <div className="mt-1 flex shrink-0 items-center justify-between gap-2">
+        <Button
+          variant="ghost"
+          onClick={onClose}
+          disabled={loading || sending}
+        >
           <Icon icon={Cancel01Icon} className="size-4" /> Cancel
         </Button>
-        <Button
-          variant="destructive"
-          onClick={onConfirm}
-          loading={loading}
-          disabled={!valid}
-          className="min-w-32"
-        >
-          <Icon icon={Delete02Icon} className="size-4" /> {confirmLabel}
-        </Button>
+        {step === "confirm" ? (
+          <Button
+            onClick={sendCode}
+            loading={sending}
+            disabled={sending}
+            className="min-w-32"
+          >
+            Send code
+          </Button>
+        ) : (
+          <Button
+            variant="destructive"
+            onClick={onConfirm}
+            loading={loading}
+            disabled={!valid}
+            className="min-w-32"
+          >
+            <Icon icon={Delete02Icon} className="size-4" /> {confirmLabel}
+          </Button>
+        )}
       </div>
     </div>
   );
@@ -1369,12 +1419,13 @@ function IncomeSourceForm({
         placeholder="Salary, freelance retainer, side hustle"
       />
 
-      <div className="grid grid-cols-[minmax(0,1fr)_13rem] items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <p className="text-[13px] text-muted-foreground">Category:</p>
         <DropdownSelect
           value={categoryId}
           onValueChange={setCategoryId}
           ariaLabel="Income category"
+          className="w-52"
           options={categories.map((category) => ({
             value: category.id,
             label: category.label,
@@ -1382,12 +1433,13 @@ function IncomeSourceForm({
         />
       </div>
 
-      <div className="grid grid-cols-[minmax(0,1fr)_13rem] items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <p className="text-[13px] text-muted-foreground">Lands in:</p>
         <DropdownSelect
           value={accountId}
           onValueChange={setAccountId}
           ariaLabel="Income account"
+          className="w-52"
           options={accounts.map((account) => ({
             value: account.id,
             label: account.name,
@@ -1402,7 +1454,7 @@ function IncomeSourceForm({
         placeholder="0"
       />
 
-      <div className="grid grid-cols-[minmax(0,1fr)_13rem] items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <p className="text-[13px] text-muted-foreground">Cadence:</p>
         <DropdownSelect
           value={cadence}
@@ -1410,6 +1462,7 @@ function IncomeSourceForm({
             setCadence(value as IncomeSource["cadence"])
           }
           ariaLabel="Income cadence"
+          className="w-52"
           options={[
             { value: "fixed", label: "Fixed" },
             { value: "irregular", label: "Irregular" },
@@ -1567,12 +1620,13 @@ function CategoryForm({
       />
 
       {!category ? (
-        <div className="grid grid-cols-[minmax(0,1fr)_13rem] items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <p className="text-[13px] text-muted-foreground">Type:</p>
           <DropdownSelect
             value={kind}
             onValueChange={(value) => setKind(value as CategoryKind)}
             ariaLabel="Category type"
+            className="w-52"
             options={[
               { value: "expense", label: "Expense" },
               { value: "income", label: "Income" },
@@ -1706,12 +1760,13 @@ function AccountForm({
         placeholder="MTN MoMo"
       />
 
-      <div className="grid grid-cols-[minmax(0,1fr)_13rem] items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <p className="text-[13px] text-muted-foreground">Type:</p>
         <DropdownSelect
           value={type}
           onValueChange={(value) => setType(value as AccountType)}
           ariaLabel="Account type"
+          className="w-52"
           options={ACCOUNT_TYPES}
         />
       </div>

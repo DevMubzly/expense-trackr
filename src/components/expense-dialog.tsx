@@ -166,7 +166,7 @@ export function TransactionDialogProvider({ children }: { children: React.ReactN
           />
         ) : null}
         {mode === "quick-add" ? (
-          <div className="rounded-xl border border-foreground/10 bg-muted/50 p-3.5">
+          <div className="rounded-xl border border-foreground/10 bg-muted/50 p-3.5 pb-2">
           <QuickAddForm
             key="quick-add"
             accounts={accounts}
@@ -378,7 +378,7 @@ function TransactionForm({
 
   return (
     <div className="flex h-[min(720px,calc(100dvh-4.5rem))] max-h-[calc(100dvh-4.5rem)] flex-col">
-      <div className="min-h-0 flex-1 space-y-5 overflow-y-auto rounded-xl border border-foreground/10 bg-muted/50 p-3.5">
+      <div className="min-h-0 flex-1 space-y-5 overflow-y-auto rounded-xl border border-foreground/10 bg-muted/50 p-3.5 pb-2">
         <div className="flex items-start justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold tracking-[-0.02em]">
@@ -396,7 +396,7 @@ function TransactionForm({
         </div>
       </div>
 
-      <div className="grid grid-cols-[minmax(0,1fr)_13rem] items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <p className="text-[13px] text-muted-foreground">Type:</p>
         <DropdownSelect
           value={type}
@@ -404,17 +404,19 @@ function TransactionForm({
             changeType(value as TransactionType)
           }
           ariaLabel="Transaction type"
+          className="w-52"
           options={TYPES}
         />
       </div>
 
       {!isTransfer ? (
-        <div className="grid grid-cols-[minmax(0,1fr)_13rem] items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <p className="text-[13px] text-muted-foreground">Currency:</p>
           <DropdownSelect
             value={currency}
             onValueChange={(value) => changeCurrency(value as Currency)}
             ariaLabel="Transaction currency"
+            className="w-52"
             options={CURRENCY_OPTIONS}
           />
         </div>
@@ -486,7 +488,7 @@ function TransactionForm({
         >
           {isTransfer ? (
             <>
-              <div className="grid grid-cols-[minmax(0,1fr)_13rem] items-center gap-3">
+              <div className="flex flex-wrap items-center gap-3">
                 <p className="text-[13px] text-muted-foreground">From:</p>
                 <AccountSelect
                   label="From"
@@ -494,12 +496,13 @@ function TransactionForm({
                   accounts={accounts}
                   onValueChange={setAccountId}
                   hideLabel
+                  className="w-52"
                 />
               </div>
               <AnimatePresence initial={false}>
                 {showFee ? <FeeField key="fee" fee={fee} onChange={setFee} /> : null}
               </AnimatePresence>
-              <div className="grid grid-cols-[minmax(0,1fr)_13rem] items-center gap-3">
+              <div className="flex flex-wrap items-center gap-3">
                 <p className="text-[13px] text-muted-foreground">To:</p>
                 <AccountSelect
                   label="To"
@@ -507,12 +510,13 @@ function TransactionForm({
                   accounts={accounts}
                   onValueChange={setToAccountId}
                   hideLabel
+                  className="w-52"
                 />
               </div>
             </>
           ) : (
             <>
-              <div className="grid grid-cols-[minmax(0,1fr)_13rem] items-center gap-3">
+              <div className="flex flex-wrap items-center gap-3">
                 <p className="text-[13px] text-muted-foreground">Account:</p>
                 <AccountSelect
                   label="Account"
@@ -520,18 +524,20 @@ function TransactionForm({
                   accounts={accounts}
                   onValueChange={setAccountId}
                   hideLabel
+                  className="w-52"
                 />
               </div>
               <AnimatePresence initial={false}>
                 {showFee ? <FeeField key="fee" fee={fee} onChange={setFee} /> : null}
               </AnimatePresence>
-              <div className="grid grid-cols-[minmax(0,1fr)_13rem] items-center gap-3">
+              <div className="flex flex-wrap items-center gap-3">
                 <p className="text-[13px] text-muted-foreground">Category:</p>
                 <CategorySelect
                   value={category}
                   onValueChange={setCategory}
                   kind={type === "income" ? "income" : "expense"}
                   label="Category"
+                  className="w-52"
                 />
               </div>
             </>
@@ -572,7 +578,7 @@ function TransactionForm({
         </div>
       </div>
 
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex items-center gap-3">
         <p className="w-20 shrink-0 text-[13px] text-muted-foreground">Time:</p>
         <TimeSelect value={spentTime} onValueChange={setSpentTime} />
       </div>
@@ -592,7 +598,7 @@ function TransactionForm({
 
       </div>
 
-      <div className="mt-3 flex shrink-0 items-center justify-between gap-2 pt-4">
+      <div className="mt-1 flex shrink-0 items-center justify-between gap-2">
         {transaction ? (
           <Button variant="ghost" onClick={remove} loading={saving} className="text-destructive">
             <Icon icon={Delete02Icon} className="size-4" /> Delete
@@ -630,7 +636,7 @@ function FeeField({
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.96 }}
       transition={{ duration: 0.16, ease: EASE_OUT }}
-      className="grid grid-cols-[minmax(0,1fr)_13rem] items-center gap-3"
+      className="flex flex-wrap items-center gap-3"
     >
       <p className="shrink-0 text-[13px] text-muted-foreground">Transaction fee:</p>
       <Input
@@ -638,6 +644,7 @@ function FeeField({
         onChange={(value) => onChange(formatNumericInput(value))}
         placeholder="0"
         aria-label="Transaction fee (UGX)"
+        className="w-52"
         classNames={UNDERLINE_FIELD}
       />
     </motion.div>

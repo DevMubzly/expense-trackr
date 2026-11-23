@@ -1397,7 +1397,7 @@ export default function PlanPage() {
           />
         </div>
 
-        <div className="flex items-center justify-between gap-3 px-2 pb-3">
+        <div className="flex items-center gap-3 px-2 pb-3">
           <p className="text-[11px] text-muted-foreground">Newest first</p>
           <DropdownSelect
             value={activityFilter}
@@ -1754,7 +1754,7 @@ function ContributionForm({
         value={date}
         onChange={setDate}
       />
-      <div className="grid grid-cols-[minmax(0,1fr)_13rem] items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <p className="text-[13px] text-muted-foreground">
           {mode === "withdraw" ? "Put back in:" : "Source:"}
         </p>
@@ -1763,6 +1763,7 @@ function ContributionForm({
           onValueChange={setSource}
           ariaLabel={mode === "withdraw" ? "Withdrawal destination" : "Contribution source"}
           options={sourceOptions}
+          className="w-52"
         />
       </div>
       <div className="rounded-xl border border-foreground/10 bg-muted/50 p-3 text-[11px] leading-relaxed text-muted-foreground">
@@ -1850,7 +1851,7 @@ function PaymentForm({
         value={date}
         onChange={setDate}
       />
-      <div className="grid grid-cols-[minmax(0,1fr)_13rem] items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <p className="text-[13px] text-muted-foreground">
           {debt.direction === "borrowed" ? "Paid from:" : "Received in:"}
         </p>
@@ -1863,6 +1864,7 @@ function PaymentForm({
           onValueChange={setAccountId}
           compact
           hideLabel
+          className="w-52"
         />
       </div>
       <Input
@@ -2054,7 +2056,7 @@ function DebtForm({
       saving={saving}
       editing={Boolean(debt)}
     >
-      <div className="grid grid-cols-[minmax(0,1fr)_13rem] items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <p className="text-[13px] text-muted-foreground">Direction:</p>
         <DropdownSelect
           value={direction}
@@ -2062,6 +2064,7 @@ function DebtForm({
             setDirection(value as Debt["direction"])
           }
           ariaLabel="Debt direction"
+          className="w-52"
           options={[
             { value: "borrowed", label: "I borrowed" },
             { value: "lent", label: "I lent" },
@@ -2152,13 +2155,14 @@ function BudgetForm({
       editing={Boolean(budget)}
     >
       <Input label="Name" value={name} onChange={setName} placeholder="Food" />
-      <div className="grid grid-cols-[minmax(0,1fr)_13rem] items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <p className="text-[13px] text-muted-foreground">Category:</p>
         <CategorySelect
           value={categoryId}
           onValueChange={setCategoryId}
           allLabel="All categories"
           compact
+          className="w-52"
         />
       </div>
       <Input
@@ -2169,7 +2173,7 @@ function BudgetForm({
         }
         placeholder={moneyInputValue(display, 800_000)}
       />
-      <div className="grid grid-cols-[minmax(0,1fr)_13rem] items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <p className="text-[13px] text-muted-foreground">Period:</p>
         <DropdownSelect
           value={period}
@@ -2177,6 +2181,7 @@ function BudgetForm({
             setPeriod(value as Budget["period"])
           }
           ariaLabel="Budget period"
+          className="w-52"
           options={[
             { value: "monthly", label: "Monthly" },
             { value: "weekly", label: "Weekly" },
@@ -2283,7 +2288,7 @@ function RecurringForm({
       editing={Boolean(rule)}
     >
       <Input label="Name" value={name} onChange={setName} placeholder="Rent" />
-      <div className="grid grid-cols-[minmax(0,1fr)_13rem] items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <p className="text-[13px] text-muted-foreground">Type:</p>
         <DropdownSelect
           value={type}
@@ -2291,6 +2296,7 @@ function RecurringForm({
             changeType(value as TransactionType)
           }
           ariaLabel="Recurring type"
+          className="w-52"
           options={TYPES}
         />
       </div>
@@ -2314,17 +2320,18 @@ function RecurringForm({
         </label>
       </div>
       {!isTransfer ? (
-        <div className="grid grid-cols-[minmax(0,1fr)_13rem] items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <p className="text-[13px] text-muted-foreground">Category:</p>
           <CategorySelect
             value={category}
             onValueChange={setCategory}
             kind={type === "income" ? "income" : "expense"}
             compact
+            className="w-52"
           />
         </div>
       ) : null}
-      <div className="grid grid-cols-[minmax(0,1fr)_13rem] items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <p className="text-[13px] text-muted-foreground">
           {isTransfer ? "From:" : "Account:"}
         </p>
@@ -2335,10 +2342,11 @@ function RecurringForm({
           onValueChange={setAccountId}
           compact
           hideLabel
+          className="w-52"
         />
       </div>
       {isTransfer ? (
-        <div className="grid grid-cols-[minmax(0,1fr)_13rem] items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <p className="text-[13px] text-muted-foreground">To:</p>
           <AccountSelect
             label="To"
@@ -2347,10 +2355,11 @@ function RecurringForm({
             onValueChange={setToAccountId}
             compact
             hideLabel
+            className="w-52"
           />
         </div>
       ) : null}
-      <div className="grid grid-cols-[minmax(0,1fr)_13rem] items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <p className="text-[13px] text-muted-foreground">Frequency:</p>
         <DropdownSelect
           value={frequency}
@@ -2358,6 +2367,7 @@ function RecurringForm({
             setFrequency(value as RecurringRule["frequency"])
           }
           ariaLabel="Recurring frequency"
+          className="w-52"
           options={FREQUENCIES.map((value) => ({
             value,
             label: value.charAt(0).toUpperCase() + value.slice(1),
