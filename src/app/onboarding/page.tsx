@@ -40,7 +40,7 @@ const EASE = [0.23, 1, 0.32, 1] as const;
 
 export default function OnboardingPage() {
   return (
-    <Suspense fallback={<div className="min-h-dvh bg-background" />}>
+    <Suspense fallback={<div className="dark min-h-dvh bg-background" />}>
       <OnboardingFlow />
     </Suspense>
   );
@@ -122,7 +122,7 @@ function OnboardingFlow() {
   }
 
   if (!ready) {
-    return <div className="min-h-dvh bg-background" />;
+    return <div className="dark min-h-dvh bg-background" />;
   }
 
   const meta = STEP_META[step];
@@ -141,8 +141,11 @@ function OnboardingFlow() {
       };
 
   return (
-    <div className="flex min-h-dvh flex-col bg-background text-foreground">
-      <div className="mx-auto flex w-full max-w-[560px] flex-1 flex-col px-6 pb-16 pt-16 sm:pt-24">
+    <div
+      className="dark flex min-h-dvh flex-col bg-background text-foreground"
+      style={{ colorScheme: "dark" }}
+    >
+      <div className="mx-auto flex w-full max-w-[560px] flex-1 flex-col justify-center px-6 py-16">
         <div className="mb-10 h-1">
           {progress >= 0 ? (
             <div className="flex gap-1.5">
