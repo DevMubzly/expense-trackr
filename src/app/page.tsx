@@ -182,7 +182,20 @@ export default function LandingPage() {
                 className: "mx-auto mt-7 h-9 w-40 justify-center",
               })}
             >
-              Open app
+              <span className="relative inline-block">
+                Open app
+                <motion.span
+                  aria-hidden="true"
+                  initial={false}
+                  animate={{ scaleX: pricingOpen ? 1 : 0 }}
+                  transition={{
+                    duration: 0.65,
+                    delay: pricingOpen ? 0.35 : 0,
+                    ease: EASE_OUT,
+                  }}
+                  className="absolute -bottom-0.5 left-0 h-px w-full origin-left bg-current"
+                />
+              </span>
               <Icon icon={ArrowRight01Icon} className="size-4" />
             </button>
             </div>
