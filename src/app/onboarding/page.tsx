@@ -9,11 +9,11 @@ import {
 import { useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { ArrowRight01Icon, Tick02Icon } from "@hugeicons/core-free-icons";
-import { accountIcon } from "@/components/account-select";
 import { BrandStrip } from "@/components/brand-strip";
+import { DropdownSelect } from "@/components/dropdown-select";
 import { Icon } from "@/components/huge-icon";
 import { api } from "@/lib/use-api";
-import { CURRENCY_META } from "@/lib/currencies";
+import { CURRENCY_OPTIONS } from "@/lib/currencies";
 import type { AccountType, Currency } from "@/lib/types";
 import {
   STEP_META,
@@ -27,10 +27,8 @@ import {
   type OnboardingDraft,
   type Step,
 } from "@/lib/onboarding";
-import { cn } from "@/lib/utils";
 
 const QUESTIONS = ["name", "currency", "account", "budget", "payday"] as const;
-const CURRENCIES: Currency[] = ["UGX", "USD", "KES", "RWF", "TZS"];
 const ACCOUNT_TYPES: { value: AccountType; label: string; hint: string }[] = [
   { value: "cash", label: "Cash", hint: "Physical cash" },
   { value: "bank", label: "Bank", hint: "Bank account" },
@@ -381,56 +379,15 @@ function CurrencyStep({
         You can still log other currencies later.
       </p>
 
-      <div className="mt-8 grid gap-2 sm:grid-cols-2">
-        {CURRENCIES.map((currency) => {
-          const active = currency === selected;
-          const meta = CURRENCY_META[currency];
-          return (
-            <motion.button
-              key={currency}
-              type="button"
-              aria-pressed={active}
-              whileTap={{ scale: 0.985 }}
-              onClick={() => setSelected(currency)}
-              className={cn(
-                "flex items-center gap-3 rounded-2xl p-3.5 text-left transition-colors",
-                active
-                  ? "text-foreground"
-                  : "bg-muted/25 text-muted-foreground hover:bg-muted/40 hover:text-foreground",
-              )}
-              style={
-                active
-                  ? {
-                      background: `color-mix(in oklab, ${accent} 16%, transparent)`,
-                    }
-                  : undefined
-              }
-            >
-              <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-background/40 text-[13px] font-semibold text-foreground">
-                {meta.symbol}
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="flex items-center gap-2 text-sm font-medium">
-                  {currency}
-                </span>
-                <span className="block truncate text-[11px] text-muted-foreground">
-                  {meta.label}
-                </span>
-              </span>
-              <span
-                className={cn(
-                  "grid size-5 shrink-0 place-items-center rounded-full",
-                  active ? "text-black" : "bg-muted/60",
-                )}
-                style={active ? { background: accent } : undefined}
-              >
-                {active ? (
-                  <Icon icon={Tick02Icon} className="size-3" />
-                ) : null}
-              </span>
-            </motion.button>
-          );
-        })}
+      <div className="mt-8">
+        <p className="mb-2 text-[13px] text-muted-foreground">Currency</p>
+        <DropdownSelect
+          value={selected}
+          onValueChange={(value) => setSelected(value as Currency)}
+          ariaLabel="Currency"
+          options={CURRENCY_OPTIONS}
+          className="w-64 max-w-full"
+        />
       </div>
 
       <div className="mt-8">
@@ -482,56 +439,18 @@ function AccountStep({
         style={{ caretColor: accent }}
       />
 
-      <div className="mt-5 grid gap-2 sm:grid-cols-3">
-        {ACCOUNT_TYPES.map((option) => {
-          const active = option.value === type;
-          return (
-            <motion.button
-              key={option.value}
-              type="button"
-              aria-pressed={active}
-              whileTap={{ scale: 0.985 }}
-              onClick={() => setType(option.value)}
-              className={cn(
-                "flex items-center gap-3 rounded-xl p-3 text-left transition-colors",
-                active
-                  ? "text-foreground"
-                  : "bg-muted/30 text-muted-foreground hover:bg-muted/45 hover:text-foreground",
-              )}
-              style={
-                active
-                  ? {
-                      background: `color-mix(in oklab, ${accent} 14%, transparent)`,
-                    }
-                  : undefined
-              }
-            >
-              <span
-                className={cn(
-                  "grid size-9 shrink-0 place-items-center rounded-lg",
-                  active
-                    ? "bg-background/40 text-foreground"
-                    : "bg-muted/50 text-muted-foreground",
-                )}
-              >
-                <Icon icon={accountIcon(option.value)} className="size-4" />
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-medium">
-                  {option.label}
-                </span>
-                <span className="block truncate text-[10px] text-muted-foreground">
-                  {option.hint}
-                </span>
-              </span>
-              {active ? (
-                <span className="shrink-0" style={{ color: accent }}>
-                  <Icon icon={Tick02Icon} className="size-4" />
-                </span>
-              ) : null}
-            </motion.button>
-          );
-        })}
+      <div className="mt-5">
+        <p className="mb-2 text-[13px] text-muted-foreground">Account type</p>
+        <DropdownSelect
+          value={type}
+          onValueChange={(value) => setType(value as AccountType)}
+          ariaLabel="Account type"
+          options={ACCOUNT_TYPES.map((option) => ({
+            value: option.value,
+            label: option.label,
+          }))}
+          className="w-64 max-w-full"
+        />
       </div>
 
       {error ? <p className="mt-2 text-[12px] text-destructive">{error}</p> : null}
