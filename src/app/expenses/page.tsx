@@ -159,6 +159,16 @@ export default function ExpensesPage() {
   const [sort, setSort] = useState<SortState>({ key: "spentOn", direction: "desc" });
 
   useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      const q = new URLSearchParams(window.location.search).get("q");
+      if (!q) return;
+      setQuery(q);
+      setAppliedQuery(q);
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
+
+  useEffect(() => {
     const timer = window.setTimeout(() => {
       setAppliedQuery(query);
       setPage(1);

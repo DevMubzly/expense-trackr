@@ -711,14 +711,14 @@ export function InsightsBento({ period }: { period: StatPeriod }) {
               fill="var(--muted-foreground)"
               fillOpacity={0}
               stroke="var(--muted-foreground)"
-              strokeWidth={1.5}
+              strokeWidth={1.1}
             />
             <Area
               dataKey="spent"
               fill="var(--chart-1)"
               stroke="var(--chart-1)"
               fillOpacity={0.28}
-              strokeWidth={1.5}
+              strokeWidth={1.1}
               fadeBottom={40}
               fillFadeLeft
               fillFadeFromIndex={Math.max(

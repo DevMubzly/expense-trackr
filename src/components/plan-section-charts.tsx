@@ -52,7 +52,9 @@ function ChartCard({
           </p>
         </div>
       ) : null}
-      <div className="min-h-0 flex-1">{children}</div>
+      <div className="min-h-0 flex-1">
+        {children}
+      </div>
     </div>
   );
 }
@@ -176,9 +178,11 @@ export function PlanSectionCharts({
             dataKey="saved"
             fill={COLORS.violet}
             stroke={COLORS.violet}
-            fillOpacity={0.2}
-            strokeWidth={1.6}
-            fadeBottom={40}
+            fillOpacity={0.24}
+            strokeWidth={1.1}
+            fadeBottom={55}
+            fillFadeLeft
+            fillFadeFromIndex={Math.max(0, Math.floor(goalTrend.length * 0.72))}
           />
           <YAxis formatValue={display.formatMoney} />
           <XAxis />
@@ -212,9 +216,11 @@ export function PlanSectionCharts({
             dataKey="net"
             fill={COLORS.sky}
             stroke={COLORS.sky}
-            fillOpacity={0.18}
-            strokeWidth={1.6}
-            fadeBottom={40}
+            fillOpacity={0.24}
+            strokeWidth={1.1}
+            fadeBottom={55}
+            fillFadeLeft
+            fillFadeFromIndex={Math.max(0, Math.floor(debtTrend.length * 0.72))}
           />
           <YAxis formatValue={display.formatMoney} />
           <XAxis />

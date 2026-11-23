@@ -99,6 +99,7 @@ export type Settings = {
   weekPlan: WeekPlan;
   profileName: string;
   profileEmail: string;
+  profilePhone: string;
   avatarDataUrl: string;
 };
 

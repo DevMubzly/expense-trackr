@@ -798,7 +798,7 @@ export default function PlanPage() {
               return (
                 <div
                   key={goal.id}
-                  className="rounded-xl border border-foreground/10 bg-muted/10 p-4"
+                  className="rounded-xl border border-foreground/10 bg-muted/20 p-4"
                 >
                   <div className="flex items-start gap-3">
                     <span

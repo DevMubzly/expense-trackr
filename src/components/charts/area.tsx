@@ -159,7 +159,7 @@ export function Area({
   fill = chartCssVars.linePrimary,
   fillOpacity = 0.4,
   stroke,
-  strokeWidth = 1.5,
+  strokeWidth = 1.1,
   curve = curveMonotoneX,
   animate = true,
   showLine = true,

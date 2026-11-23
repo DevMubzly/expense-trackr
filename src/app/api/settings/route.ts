@@ -75,6 +75,9 @@ export async function PATCH(request: NextRequest) {
     }
     patch.profileEmail = email.slice(0, 160);
   }
+  if (body.profilePhone !== undefined) {
+    patch.profilePhone = String(body.profilePhone).trim().slice(0, 32);
+  }
   if (body.avatarDataUrl !== undefined) {
     const avatar = String(body.avatarDataUrl);
     if (avatar && !avatar.startsWith("data:image/")) {

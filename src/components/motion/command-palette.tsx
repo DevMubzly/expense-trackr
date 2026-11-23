@@ -133,7 +133,10 @@ export function CommandPalette({
     };
   }, [open]);
 
-  const filtered = useMemo(() => searchCommands(items, query), [items, query]);
+  const filtered = useMemo(
+    () => searchCommands(items, query).slice(0, 50),
+    [items, query],
+  );
 
   // Reserve the icon column only when at least one item brings an icon, so
   // icon-less lists don't render a dead gap before every label.

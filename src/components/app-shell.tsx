@@ -8,23 +8,35 @@ import {
   ArrowLeftRightIcon,
   ChartLineData01Icon,
   Home01Icon,
+  Invoice02Icon,
   Money01Icon,
   PlusSignIcon,
   ReceiptTextIcon,
   Search01Icon,
   Settings01Icon,
   Target02Icon,
+  Wallet02Icon,
 } from "@hugeicons/core-free-icons";
 import { Dock, DockItem, DockSeparator } from "@/components/motion/dock";
 import { ThemeToggle } from "@/components/motion/theme-toggle";
 import { DynamicIsland, DynamicIslandView } from "@/components/motion/dynamic-island";
 import { CommandPalette, type CommandItem } from "@/components/motion/command-palette";
+import { useCategories } from "@/components/categories-provider";
 import { useCurrency } from "@/components/currency-provider";
 import { useAuth } from "@/components/auth-provider";
 import { useTransactionDialog } from "@/components/expense-dialog";
 import { Icon } from "@/components/huge-icon";
 import { useApi } from "@/lib/use-api";
-import type { Stats } from "@/lib/types";
+import type {
+  BudgetProgress,
+  Debt,
+  Goal,
+  IncomeSource,
+  RecurringRule,
+  Settings,
+  Stats,
+  Transaction,
+} from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 const FRAME =
@@ -69,12 +81,34 @@ function SessionGateSkeleton() {
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, logout } = useAuth();
   const publicRoute = pathname === "/" || pathname.startsWith("/onboarding");
   const { version, openTransaction } = useTransactionDialog();
   const display = useCurrency();
+  const { categories, categoryOf } = useCategories();
   const { data: stats, loading: statsLoading } = useApi<Stats>(
     publicRoute ? null : `/api/stats?v=${version}`,
+  );
+  const { data: transactions } = useApi<Transaction[]>(
+    publicRoute ? null : `/api/transactions?v=${version}`,
+  );
+  const { data: goals } = useApi<Goal[]>(
+    publicRoute ? null : `/api/goals?v=${version}`,
+  );
+  const { data: debts } = useApi<Debt[]>(
+    publicRoute ? null : `/api/debts?v=${version}`,
+  );
+  const { data: budgets } = useApi<BudgetProgress[]>(
+    publicRoute ? null : `/api/budgets?v=${version}`,
+  );
+  const { data: recurring } = useApi<RecurringRule[]>(
+    publicRoute ? null : `/api/recurring?v=${version}`,
+  );
+  const { data: incomeSources } = useApi<IncomeSource[]>(
+    publicRoute ? null : `/api/income-sources?v=${version}`,
+  );
+  const { data: settingsData } = useApi<Settings>(
+    publicRoute ? null : `/api/settings?v=${version}`,
   );
   const [commandOpen, setCommandOpen] = useState(false);
   const [islandView, setIslandView] = useState<string | null>(null);
@@ -127,8 +161,323 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     router.replace("/?auth=1");
   }, [authLoading, publicRoute, router, user]);
 
-  const commands = useMemo<CommandItem[]>(
-    () => [
+  const commands = useMemo<CommandItem[]>(() => {
+    const accounts = stats?.accounts ?? [];
+    const accountById = new Map(accounts.map((account) => [account.id, account]));
+    const categoryLabel = (id: string) =>
+      categoryOf(id || "other-income").label;
+
+    const transactionCommands: CommandItem[] = (transactions ?? []).map(
+      (transaction) => {
+        const category = categoryLabel(transaction.category || "other");
+        const account = accountById.get(transaction.accountId);
+        const label =
+          transaction.note ||
+          category ||
+          (transaction.type === "income"
+            ? "Income"
+            : transaction.type === "transfer"
+              ? "Transfer"
+              : "Expense");
+        return {
+          id: `transaction-${transaction.id}`,
+          label,
+          group: "Transactions",
+          hint: `${display.formatMoney(transaction.amountUgx)} · ${transaction.spentOn}`,
+          icon: ReceiptTextIcon,
+          keywords: [
+            transaction.note,
+            category,
+            transaction.type,
+            transaction.spentOn,
+            String(transaction.amountUgx),
+            account?.name ?? "",
+            "transaction",
+            "expense",
+            "income",
+            "transfer",
+          ],
+          onSelect: () =>
+            router.push(
+              `/expenses?q=${encodeURIComponent(transaction.note || category || transaction.id)}`,
+            ),
+        };
+      },
+    );
+
+    const accountCommands: CommandItem[] = accounts.map((account) => ({
+      id: `account-${account.id}`,
+      label: account.name,
+      group: "Accounts",
+      hint: `${account.type} · ${display.formatMoney(account.balanceUgx)}`,
+      icon: Wallet02Icon,
+      keywords: [
+        account.name,
+        account.type,
+        account.provider ?? "",
+        "account",
+        "wallet",
+        "balance",
+      ],
+      onSelect: () => router.push("/settings"),
+    }));
+
+    const goalCommands: CommandItem[] = (goals ?? []).map((goal) => ({
+      id: `goal-${goal.id}`,
+      label: goal.name,
+      group: "Plan",
+      hint: `${display.formatMoney(goal.savedUgx)} of ${display.formatMoney(goal.targetUgx)}`,
+      icon: Target02Icon,
+      keywords: ["goal", "savings", "target", goal.note, goal.deadline],
+      onSelect: () => router.push("/plan?section=goals"),
+    }));
+
+    const debtCommands: CommandItem[] = (debts ?? []).map((debt) => ({
+      id: `debt-${debt.id}`,
+      label: debt.counterparty,
+      group: "Plan",
+      hint: `${debt.direction === "borrowed" ? "Borrowed" : "Lent"} · ${display.formatMoney(debt.balanceUgx)}`,
+      icon: ArrowLeftRightIcon,
+      keywords: [
+        "debt",
+        debt.direction,
+        debt.counterparty,
+        debt.note,
+        debt.dueOn,
+      ],
+      onSelect: () => router.push("/plan?section=debts"),
+    }));
+
+    const budgetCommands: CommandItem[] = (budgets ?? []).map((budget) => ({
+      id: `budget-${budget.id}`,
+      label: budget.name,
+      group: "Plan",
+      hint: `${budget.period} · ${display.formatMoney(budget.limitUgx)}`,
+      icon: Invoice02Icon,
+      keywords: [
+        "budget",
+        "limit",
+        budget.period,
+        budget.categoryId === "all"
+          ? "overall"
+          : categoryLabel(budget.categoryId),
+      ],
+      onSelect: () => router.push("/plan?section=budgets"),
+    }));
+
+    const recurringCommands: CommandItem[] = (recurring ?? []).map((rule) => ({
+      id: `recurring-${rule.id}`,
+      label: rule.name,
+      group: "Plan",
+      hint: `${rule.frequency} · ${display.formatMoney(rule.amountUgx)}`,
+      icon: Invoice02Icon,
+      keywords: [
+        "recurring",
+        "bill",
+        "subscription",
+        rule.name,
+        rule.type,
+        rule.frequency,
+        rule.note,
+        categoryLabel(rule.category),
+      ],
+      onSelect: () => router.push("/plan?section=recurring"),
+    }));
+
+    const incomeCommands: CommandItem[] = (incomeSources ?? []).map(
+      (source) => ({
+        id: `income-${source.id}`,
+        label: source.name,
+        group: "Earnings",
+        hint: `${display.formatMoney(source.expectedMonthlyUgx)} expected`,
+        icon: Money01Icon,
+        keywords: [
+          "income",
+          "earnings",
+          "source",
+          source.name,
+          source.cadence,
+          categoryLabel(source.categoryId),
+        ],
+        onSelect: () => router.push("/settings"),
+      }),
+    );
+
+    const categoryCommands: CommandItem[] = categories.map((category) => ({
+      id: `category-${category.id}`,
+      label: category.label,
+      group: "Categories",
+      hint: `${category.kind} category`,
+      icon: Settings01Icon,
+      keywords: [
+        "category",
+        "label",
+        category.label,
+        category.kind,
+        "expense",
+        "income",
+      ],
+      onSelect: () => router.push("/settings"),
+    }));
+
+    const overallBudget = (budgets ?? []).find(
+      (budget) => budget.categoryId === "all",
+    );
+
+    const settingsCommands: CommandItem[] = [
+      {
+        id: "settings-profile",
+        label: "Profile",
+        group: "Settings",
+        hint: "Name, email and avatar",
+        icon: Settings01Icon,
+        keywords: ["profile", "name", "email", "phone", "avatar", "account"],
+        onSelect: () => router.push("/settings"),
+      },
+      {
+        id: "settings-preferences",
+        label: "Preferences",
+        group: "Settings",
+        hint: "Theme and currency",
+        icon: Settings01Icon,
+        keywords: ["preferences", "theme", "dark", "light", "appearance"],
+        onSelect: () => router.push("/settings"),
+      },
+      {
+        id: "settings-currency",
+        label: "Currency",
+        group: "Settings",
+        hint: settingsData?.defaultCurrency ?? "UGX",
+        icon: Settings01Icon,
+        keywords: [
+          "currency",
+          "ugx",
+          "usd",
+          "kes",
+          "rwf",
+          "tzs",
+          "symbol",
+          "format",
+        ],
+        onSelect: () => router.push("/settings"),
+      },
+      {
+        id: "settings-budget",
+        label: "Monthly budget",
+        group: "Settings",
+        hint: overallBudget
+          ? display.formatMoney(overallBudget.limitUgx)
+          : "Not set",
+        icon: Invoice02Icon,
+        keywords: ["budget", "monthly", "limit", "spending"],
+        onSelect: () => router.push("/settings"),
+      },
+      {
+        id: "settings-payday",
+        label: "Payday",
+        group: "Settings",
+        hint: `Day ${settingsData?.payday ?? 28}`,
+        icon: Settings01Icon,
+        keywords: ["payday", "salary", "month", "income"],
+        onSelect: () => router.push("/settings"),
+      },
+      {
+        id: "settings-accounts",
+        label: "Accounts",
+        group: "Settings",
+        hint: `${accounts.length} accounts`,
+        icon: Wallet02Icon,
+        keywords: [
+          "accounts",
+          "cash",
+          "bank",
+          "mobile money",
+          "wallet",
+          "balance",
+          "default",
+        ],
+        onSelect: () => router.push("/settings"),
+      },
+      {
+        id: "settings-earnings",
+        label: "Earnings",
+        group: "Settings",
+        hint: "Expected income and sources",
+        icon: Money01Icon,
+        keywords: [
+          "earnings",
+          "income",
+          "salary",
+          "freelance",
+          "forex",
+          "side hustle",
+        ],
+        onSelect: () => router.push("/settings"),
+      },
+      {
+        id: "settings-categories",
+        label: "Categories",
+        group: "Settings",
+        hint: "Labels, colors and icons",
+        icon: Settings01Icon,
+        keywords: [
+          "categories",
+          "labels",
+          "colors",
+          "icons",
+          "expense",
+          "income",
+        ],
+        onSelect: () => router.push("/settings"),
+      },
+      {
+        id: "settings-sign-out",
+        label: "Sign out",
+        group: "Actions",
+        hint: "End this session",
+        icon: ArrowLeftRightIcon,
+        keywords: ["signout", "logout", "exit", "session"],
+        onSelect: () => {
+          logout();
+          router.push("/");
+        },
+      },
+      {
+        id: "settings-delete-account",
+        label: "Delete account",
+        group: "Danger zone",
+        hint: "Delete your account",
+        icon: Settings01Icon,
+        keywords: [
+          "delete",
+          "remove",
+          "danger",
+          "account",
+          "close",
+          "destroy",
+        ],
+        onSelect: () => router.push("/settings?danger=1"),
+      },
+      {
+        id: "settings-remove-wallet",
+        label: "Remove a wallet account",
+        group: "Danger zone",
+        hint: "Accounts",
+        icon: Wallet02Icon,
+        keywords: [
+          "delete",
+          "remove",
+          "account",
+          "wallet",
+          "cash",
+          "bank",
+          "momo",
+        ],
+        onSelect: () => router.push("/settings"),
+      },
+    ];
+
+    return [
       {
         id: "add-expense",
         label: "Add an expense",
@@ -164,9 +513,32 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         keywords: [item.href],
         onSelect: () => router.push(item.href),
       })),
-    ],
-    [openTransaction, router],
-  );
+      ...settingsCommands,
+      ...transactionCommands,
+      ...accountCommands,
+      ...goalCommands,
+      ...debtCommands,
+      ...budgetCommands,
+      ...recurringCommands,
+      ...incomeCommands,
+      ...categoryCommands,
+    ];
+  }, [
+    budgets,
+    categories,
+    categoryOf,
+    debts,
+    display,
+    goals,
+    incomeSources,
+    logout,
+    openTransaction,
+    recurring,
+    router,
+    settingsData,
+    stats,
+    transactions,
+  ]);
 
   const today = stats?.totals.todayNet ?? 0;
   const remaining = Math.max(0, (stats?.totals.budget ?? 0) - (stats?.totals.month ?? 0));
@@ -368,7 +740,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </AnimatePresence>
       </div>
 
-      <CommandPalette items={commands} open={commandOpen} onOpenChange={setCommandOpen} />
+      <CommandPalette
+        items={commands}
+        open={commandOpen}
+        onOpenChange={setCommandOpen}
+        placeholder="Search transactions, accounts, settings…"
+      />
     </div>
   );
 }

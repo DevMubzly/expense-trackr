@@ -47,6 +47,8 @@ import {
 import {
   CURRENCY_META,
   CURRENCY_OPTIONS,
+  PHONE_FORMATS,
+  formatPhoneNumber,
 } from "@/lib/currencies";
 import type {
   Account,
@@ -132,6 +134,10 @@ function SettingsForm({
   const { logout } = useAuth();
   const display = useCurrency();
   const router = useRouter();
+  const initialProfilePhone = formatPhoneNumber(
+    settings.profilePhone ?? "",
+    settings.defaultCurrency,
+  );
   const overallBudget = budgets.find(
     (entry) => entry.categoryId === "all" && entry.period === "monthly",
   );
@@ -148,6 +154,9 @@ function SettingsForm({
   const [profileName, setProfileName] = useState(settings.profileName ?? "");
   const [profileEmail, setProfileEmail] = useState(
     settings.profileEmail ?? "",
+  );
+  const [profilePhone, setProfilePhone] = useState(
+    initialProfilePhone,
   );
   const [avatarDataUrl, setAvatarDataUrl] = useState(
     settings.avatarDataUrl ?? "",
@@ -185,6 +194,7 @@ function SettingsForm({
       defaultAccountId !== settings.defaultAccountId ||
       profileName !== (settings.profileName ?? "") ||
       profileEmail !== (settings.profileEmail ?? "") ||
+      profilePhone !== initialProfilePhone ||
       avatarDataUrl !== (settings.avatarDataUrl ?? ""),
     [
       avatarDataUrl,
@@ -192,9 +202,11 @@ function SettingsForm({
       defaultAccountId,
       defaultCurrency,
       initialBudget,
+      initialProfilePhone,
       payday,
       profileEmail,
       profileName,
+      profilePhone,
       settings,
     ],
   );
@@ -233,6 +245,9 @@ function SettingsForm({
     setDefaultAccountId(settings.defaultAccountId);
     setProfileName(settings.profileName ?? "");
     setProfileEmail(settings.profileEmail ?? "");
+    setProfilePhone(
+      formatPhoneNumber(settings.profilePhone ?? "", settings.defaultCurrency),
+    );
     setAvatarDataUrl(settings.avatarDataUrl ?? "");
   }
 
@@ -245,6 +260,17 @@ function SettingsForm({
     window.addEventListener("beforeunload", onBeforeUnload);
     return () => window.removeEventListener("beforeunload", onBeforeUnload);
   }, [dirty]);
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      if (
+        new URLSearchParams(window.location.search).get("danger") === "1"
+      ) {
+        setDeleteAccountOpen(true);
+      }
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
 
   useEffect(() => {
     if (!dirty) return;
@@ -307,6 +333,7 @@ function SettingsForm({
         defaultAccountId,
         profileName: profileName.trim(),
         profileEmail: profileEmail.trim(),
+        profilePhone: profilePhone.trim(),
         avatarDataUrl,
       });
       gooeyToast.success("Settings updated", {
@@ -492,7 +519,7 @@ function SettingsForm({
       <div className="grid grid-cols-12 gap-6">
         <SectionPanel
           title="Profile"
-          info="Your display name, email and avatar for this account."
+          info="Your display name, email, phone and avatar for this account."
           hint="The identity attached to this ledger"
           className="col-span-12 lg:col-span-7"
           bodyClassName="p-5"
@@ -539,12 +566,25 @@ function SettingsForm({
                 onChange={setProfileName}
                 placeholder="Your name"
               />
-              <Input
-                label="Email"
-                value={profileEmail}
-                onChange={setProfileEmail}
-                placeholder="you@example.com"
-              />
+              <div className="grid gap-4 sm:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+                <Input
+                  label="Email"
+                  value={profileEmail}
+                  onChange={setProfileEmail}
+                  placeholder="you@example.com"
+                />
+                <Input
+                  label="Phone"
+                  value={profilePhone}
+                  onChange={(value) =>
+                    setProfilePhone(
+                      formatPhoneNumber(value, defaultCurrency),
+                    )
+                  }
+                  placeholder={PHONE_FORMATS[defaultCurrency].placeholder}
+                  inputMode="tel"
+                />
+              </div>
             </div>
           </div>
         </SectionPanel>
@@ -574,9 +614,13 @@ function SettingsForm({
               <p className="text-[13px] text-muted-foreground">Currency:</p>
               <DropdownSelect
                 value={defaultCurrency}
-                onValueChange={(value) =>
-                  setDefaultCurrency(value as Currency)
-                }
+                onValueChange={(value) => {
+                  const next = value as Currency;
+                  setDefaultCurrency(next);
+                  setProfilePhone((current) =>
+                    formatPhoneNumber(current, next),
+                  );
+                }}
                 ariaLabel="Default currency"
                 options={CURRENCY_OPTIONS}
               />
@@ -1159,12 +1203,9 @@ function SettingsForm({
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: 20, scale: 0.97 }}
           transition={{ type: "spring", stiffness: 320, damping: 28 }}
-          className="fixed inset-x-0 bottom-24 z-[60] flex justify-center px-4"
+          className="fixed inset-x-0 bottom-20 z-[60] flex justify-center px-4"
         >
           <div className="flex items-center gap-1.5 rounded-full border border-foreground/10 bg-background/95 p-1.5 shadow-2xl backdrop-blur-md">
-            <span className="hidden px-2.5 text-[11px] text-muted-foreground sm:inline">
-              Unsaved changes
-            </span>
             <Button
               variant="ghost"
               size="sm"
@@ -1221,7 +1262,7 @@ function OtpDeleteDialog({
         </p>
       </div>
 
-      <div className="rounded-xl border border-border bg-muted/20 p-3 text-[11px] leading-relaxed text-muted-foreground">
+      <div className="rounded-xl border border-border bg-muted/30 p-3 text-[11px] leading-relaxed text-muted-foreground">
         A verification code was sent to{" "}
         <span className="font-medium text-foreground">{email}</span>.
       </div>
@@ -1237,7 +1278,7 @@ function OtpDeleteDialog({
         autoFocus
       />
 
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex items-center">
         <button
           type="button"
           onClick={() =>
@@ -1249,9 +1290,6 @@ function OtpDeleteDialog({
         >
           Resend code
         </button>
-        <span className="text-[10px] text-muted-foreground">
-          Check your inbox
-        </span>
       </div>
 
       <div className="flex justify-end gap-2 pt-1">

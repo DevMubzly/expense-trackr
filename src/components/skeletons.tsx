@@ -77,7 +77,7 @@ export function SkeletonMetricCard({ compact = true }: { compact?: boolean }) {
       </div>
       <div
         className={cn(
-          "flex flex-1 flex-col rounded-xl border border-foreground/10 bg-muted/15",
+          "flex flex-1 flex-col rounded-xl border border-foreground/10 bg-muted/60",
           compact ? "mt-1 p-3 px-4" : "mt-1 p-3.5 px-4",
         )}
       >

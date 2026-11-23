@@ -52,6 +52,7 @@ import { useApi } from "@/lib/use-api";
 import { useNow } from "@/lib/use-now";
 import { useCategories } from "@/components/categories-provider";
 import { useCurrency } from "@/components/currency-provider";
+import { useAuth } from "@/components/auth-provider";
 import { CURRENCY_META } from "@/lib/currencies";
 import { daysInMonth, formatNumber, parseYmd, relativeDay, ymd } from "@/lib/format";
 import { PERIOD_LABELS, PERIOD_OPTIONS } from "@/lib/periods";
@@ -65,6 +66,7 @@ const SECTION_BODY =
 
 export default function DashboardPage() {
   const { version, openTransaction } = useTransactionDialog();
+  const { user } = useAuth();
   const { expense: expenseCategories, categoryOf } = useCategories();
   const display = useCurrency();
   const formatDisplay = (value: number) =>
@@ -79,6 +81,7 @@ export default function DashboardPage() {
       ? `${display.unit}${display.formatValue(value)}`
       : formatNumber(value);
   const [period, setPeriod] = useState<StatPeriod>("30d");
+  const firstName = user?.name?.split(/\s+/)[0] ?? "there";
   const { data: stats, loading } = useApi<Stats>(
     `/api/stats?period=${period}&v=${version}`,
   );
@@ -116,6 +119,7 @@ export default function DashboardPage() {
     (entry) => entry.value > 0,
   );
   const daily30 = stats?.daily30 ?? [];
+  const displayedAccounts = (stats?.accounts ?? []).slice(0, 5);
 
   if (loading && !stats) {
     return <HomePageSkeleton />;
@@ -143,10 +147,11 @@ export default function DashboardPage() {
               "\u00a0"
             )}
           </p>
-          <h1 className="mt-2 flex items-center gap-3 font-display text-2xl leading-none tracking-[-0.03em] md:text-3xl">
+          <h1 className="mt-2 flex flex-wrap items-center gap-2 font-display text-2xl leading-none tracking-[-0.03em] md:text-3xl">
             {now ? (
               <>
-                {greeting(now.getHours())}
+                {greeting(now.getHours())},{" "}
+                <span className="text-muted-foreground">{firstName}</span>
                 <span
                   aria-hidden
                   className={cn(
@@ -370,7 +375,7 @@ export default function DashboardPage() {
                 />
                 <p className="text-sm text-foreground">Safe to spend</p>
               </div>
-              <div className="flex flex-1 flex-col justify-center rounded-lg border border-foreground/10 bg-muted/15 p-2.5">
+              <div className="flex flex-1 flex-col justify-center rounded-lg border border-foreground/10 bg-muted/45 p-2.5">
                 <span className="tnum inline-flex items-baseline gap-1.5 text-foreground">
                   <span className="text-sm font-semibold leading-none tracking-[-0.02em] text-muted-foreground">{display.unit}</span>
                   <AnimatedNumber
@@ -395,7 +400,7 @@ export default function DashboardPage() {
                 />
                 <p className="text-sm text-foreground">Projected at payday</p>
               </div>
-              <div className="flex flex-1 flex-col justify-center rounded-lg border border-foreground/10 bg-muted/15 p-2.5">
+              <div className="flex flex-1 flex-col justify-center rounded-lg border border-foreground/10 bg-muted/45 p-2.5">
                 <span className="tnum inline-flex items-baseline gap-1.5 text-foreground">
                   <span className="text-sm font-semibold leading-none tracking-[-0.02em] text-muted-foreground">{display.unit}</span>
                   <AnimatedNumber
@@ -419,7 +424,7 @@ export default function DashboardPage() {
                 />
                 <p className="text-sm text-foreground">MoMo fees this month</p>
               </div>
-              <div className="flex flex-1 flex-col justify-center rounded-lg border border-foreground/10 bg-muted/15 p-2.5">
+              <div className="flex flex-1 flex-col justify-center rounded-lg border border-foreground/10 bg-muted/45 p-2.5">
                 <span className="tnum inline-flex items-baseline gap-1.5 text-foreground">
                   <span className="text-sm font-semibold leading-none tracking-[-0.02em] text-muted-foreground">{display.unit}</span>
                   <AnimatedNumber
@@ -448,7 +453,7 @@ export default function DashboardPage() {
                 fill="var(--chart-1)"
                 stroke="var(--chart-1)"
                 fillOpacity={0.18}
-                strokeWidth={1.5}
+                strokeWidth={1.1}
                 fadeBottom={75}
                 fillFadeFromIndex={historyEndIndex}
                 fillFadeLeft
@@ -513,11 +518,11 @@ export default function DashboardPage() {
             )} total across accounts`}
             className={SECTION_HEADER}
           />
-          <div className={cn(SECTION_BODY, "divide-y divide-foreground/5 p-1")}>
-            {(stats?.accounts ?? []).map((entry) => (
+          <div className={cn(SECTION_BODY, "h-[252px] divide-y divide-foreground/5 overflow-hidden p-1")}>
+            {displayedAccounts.map((entry) => (
               <div
                 key={entry.id}
-                className="flex items-center gap-3 px-2 py-2"
+                className="flex h-12 items-center gap-3 px-2"
               >
                 <span
                   className="grid size-7 place-items-center"
@@ -813,9 +818,9 @@ export default function DashboardPage() {
 }
 
 function greeting(hour: number) {
-  if (hour < 12) return "Morning";
-  if (hour < 18) return "Afternoon";
-  return "Evening";
+  if (hour < 12) return "Good Morning";
+  if (hour < 18) return "Good Afternoon";
+  return "Good Evening";
 }
 
 function monthRangeLabel(month: string) {

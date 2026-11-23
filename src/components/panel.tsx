@@ -45,7 +45,7 @@ export function PanelHeader({
 export const sectionCardClass = "flex flex-col border border-foreground/10 p-1";
 export const sectionHeaderClass = "px-3 pb-2 pt-2";
 export const sectionBodyClass =
-  "flex-1 rounded-xl border border-foreground/5 bg-muted/10";
+  "flex-1 rounded-xl border border-foreground/5 bg-muted/25";
 
 export function PanelBody({
   className,

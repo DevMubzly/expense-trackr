@@ -47,6 +47,48 @@ export const CURRENCY_OPTIONS = (
   label: `${CURRENCY_META[code].symbol} · ${CURRENCY_META[code].label}`,
 }));
 
+export const PHONE_FORMATS: Record<
+  Currency,
+  { country: string; placeholder: string }
+> = {
+  UGX: { country: "Uganda", placeholder: "0772 123 456" },
+  USD: { country: "United States", placeholder: "(555) 123-4567" },
+  KES: { country: "Kenya", placeholder: "0712 345 678" },
+  RWF: { country: "Rwanda", placeholder: "0788 123 456" },
+  TZS: { country: "Tanzania", placeholder: "0712 345 678" },
+};
+
+export function formatPhoneNumber(
+  value: string,
+  currency: Currency,
+): string {
+  let digits = value.replace(/\D/g, "");
+  if (!digits) return "";
+
+  const countryCodes: Partial<Record<Currency, string>> = {
+    UGX: "256",
+    KES: "254",
+    RWF: "250",
+    TZS: "255",
+  };
+  const countryCode = countryCodes[currency];
+  if (countryCode && digits.startsWith(countryCode)) {
+    digits = `0${digits.slice(countryCode.length)}`;
+  }
+
+  if (currency === "USD") {
+    const local = digits.slice(0, 10);
+    if (local.length <= 3) return `(${local}`;
+    if (local.length <= 6) return `(${local.slice(0, 3)}) ${local.slice(3)}`;
+    return `(${local.slice(0, 3)}) ${local.slice(3, 6)}-${local.slice(6)}`;
+  }
+
+  const local = digits.slice(0, 10);
+  return [local.slice(0, 4), local.slice(4, 7), local.slice(7, 10)]
+    .filter(Boolean)
+    .join(" ");
+}
+
 export function formatCurrencyAmount(
   amount: number,
   currency: Currency,
