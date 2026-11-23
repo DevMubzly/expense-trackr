@@ -60,7 +60,11 @@ export default function LandingPage() {
                   transition={{ duration: 0.7, ease: EASE_OUT }}
                   className="absolute top-0 whitespace-nowrap"
                 >
-                  <Link href="/" className="font-syncopate text-base font-bold tracking-[0.04em] text-white/90 sm:text-lg">
+                  <Link
+                    href="/"
+                    style={{ fontFamily: "var(--font-syncopate), system-ui, sans-serif" }}
+                    className="font-syncopate text-base font-bold tracking-[0.04em] text-white/90 sm:text-lg"
+                  >
                     Expense Trackr
                   </Link>
                 </motion.div>
@@ -184,7 +188,10 @@ export default function LandingPage() {
             </div>
 
             <div className="mt-auto flex flex-wrap items-center justify-center gap-3 pt-6">
-              <span className="font-syncopate text-[11px] tracking-[0.02em] text-white/70">
+              <span
+                style={{ fontFamily: "var(--font-syncopate), system-ui, sans-serif" }}
+                className="font-syncopate text-[11px] tracking-[0.02em] text-white/70"
+              >
                 Expense Trackr
               </span>
               <span className="h-4 w-px bg-white/15" />
@@ -195,7 +202,10 @@ export default function LandingPage() {
                 height={28}
                 className="opacity-60"
               />
-              <span className="font-syncopate text-[11px] tracking-[0.02em] text-white/70">
+              <span
+                style={{ fontFamily: "var(--font-syncopate), system-ui, sans-serif" }}
+                className="font-syncopate text-[11px] tracking-[0.02em] text-white/70"
+              >
                 <span className="text-purple-400">Sala</span>Stores
               </span>
             </div>

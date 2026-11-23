@@ -364,12 +364,6 @@
     font-variant-numeric: tabular-nums;
     font-feature-settings: "tnum" 1;
   }
-  .font-syncopate {
-    font-family: var(--font-syncopate), system-ui, sans-serif;
-  }
-  .font-inter-tight {
-    font-family: var(--font-inter-tight), system-ui, sans-serif;
-  }
 }
 
 @layer utilities {
@@ -420,6 +414,14 @@
 
 .skeleton-shimmer {
   animation: skeleton-shimmer 1.7s ease-in-out infinite;
+}
+
+.font-syncopate {
+  font-family: var(--font-syncopate), system-ui, sans-serif;
+}
+
+.font-inter-tight {
+  font-family: var(--font-inter-tight), system-ui, sans-serif;
 }
 
 @media (prefers-reduced-motion: reduce) {
