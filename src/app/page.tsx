@@ -50,7 +50,7 @@ export default function LandingPage() {
             />
 
             <div className="relative flex h-full flex-col px-6 pt-8 sm:px-10 lg:px-12">
-              <div className="relative h-4">
+              <div className="relative h-6">
                 <motion.div
                   initial={false}
                   animate={{
@@ -60,7 +60,7 @@ export default function LandingPage() {
                   transition={{ duration: 0.7, ease: EASE_OUT }}
                   className="absolute top-0 whitespace-nowrap"
                 >
-                  <Link href="/" className="font-syncopate text-[11px] font-bold tracking-[0.04em] text-white/90">
+                  <Link href="/" className="font-syncopate text-base font-bold tracking-[0.04em] text-white/90 sm:text-lg">
                     Expense Trackr
                   </Link>
                 </motion.div>
