@@ -96,14 +96,14 @@ export default function LandingPage() {
                 </div>
               </div>
 
-              <div className="mt-16 w-full pb-4 lg:mt-auto">
+              <div className="mt-20 w-full pb-4 lg:mt-auto">
                 <h1 className="font-display text-xl leading-tight tracking-[-0.03em] text-white [text-shadow:0_2px_20px_rgba(0,0,0,0.45)] sm:text-2xl">
                   Know where
                   <span className="block text-white/70">every shilling goes.</span>
                 </h1>
               </div>
 
-              <div className="relative mt-auto translate-y-1/4 overflow-hidden rounded-t-2xl p-3 pb-0 lg:mt-2 lg:translate-y-0 lg:rounded-3xl lg:p-4">
+              <div className="relative mt-auto h-[40vh] translate-y-1/4 overflow-hidden rounded-t-2xl p-3 pb-0 min-[380px]:h-[44vh] lg:h-auto lg:translate-y-0 lg:rounded-3xl lg:p-4">
                 <Image
                   src="/bg-hero.jpg"
                   alt=""
@@ -112,16 +112,20 @@ export default function LandingPage() {
                   sizes="100vw"
                   className="object-cover object-center"
                 />
-                <div className="relative flex justify-center">
+                <div className="relative flex h-full justify-center">
                   <Image
                     src="/dash.png"
                     alt="Expense Trackr dashboard"
                     width={1920}
                     height={956}
                     priority
-                    className="h-auto w-full max-w-6xl rounded-t-lg rounded-b-none shadow-lg lg:rounded-lg"
+                    className="h-full w-full rounded-t-lg rounded-b-none object-cover object-top shadow-lg lg:h-auto lg:rounded-lg lg:object-contain"
                   />
                 </div>
+                <div
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-0 shadow-[inset_0_0_60px_rgba(0,0,0,0.55)]"
+                />
               </div>
             </div>
           </motion.section>
@@ -165,7 +169,7 @@ export default function LandingPage() {
               Simple pricing
             </p>*/}
             <h2
-              className="mt-4 inline-block font-display text-7xl leading-[0.85] tracking-[-0.06em] sm:text-8xl"
+              className="mt-4 inline-block font-display text-5xl leading-[0.85] tracking-[-0.06em] sm:text-5xl"
               style={{
                 backgroundImage:
                   "linear-gradient(100deg, #d9f99d 0%, #4ade80 45%, #22c55e 100%)",
