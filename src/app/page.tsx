@@ -63,7 +63,7 @@ export default function LandingPage() {
                   <Link
                     href="/"
                     style={{ fontFamily: "var(--font-syncopate), system-ui, sans-serif" }}
-                    className="font-syncopate text-base font-bold tracking-[0.04em] text-white/90 sm:text-lg"
+                    className="font-syncopate text-[13px] font-bold tracking-[0.04em] text-white/90 sm:text-sm"
                   >
                     Expense Trackr
                   </Link>
