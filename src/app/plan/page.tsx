@@ -37,6 +37,7 @@ import {
 import { Input } from "@/components/motion/input";
 import { PageReveal, PlanPageSkeleton } from "@/components/skeletons";
 import { MorphingModal } from "@/components/motion/morphing-modal";
+import { ModalConfirm, ModalForm } from "@/components/modal-form";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/huge-icon";
 import { Money } from "@/components/money";
@@ -1547,6 +1548,7 @@ export default function PlanPage() {
         onClose={() => setModal(null)}
         placement="center"
         className="max-w-lg"
+        contentClassName="p-1"
         ariaLabel={modal ? `Edit ${modal.kind}` : "Plan item"}
       >
         {modal?.kind === "goal" ? (
@@ -1590,6 +1592,7 @@ export default function PlanPage() {
         onClose={() => setActionModal(null)}
         placement="center"
         className="max-w-md"
+        contentClassName="p-1"
         ariaLabel={
           actionModal?.kind === "payment"
             ? "Log debt payment"
@@ -1626,40 +1629,21 @@ export default function PlanPage() {
         }}
         placement="center"
         className="max-w-sm"
+        contentClassName="p-1"
         ariaLabel="Confirm delete"
       >
         {deleteTarget ? (
-          <div className="space-y-4">
-            <div>
-              <h2 className="text-lg font-semibold tracking-[-0.02em]">
-                {deleteTarget.label}
-              </h2>
-              <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">
-                This removes the item and its related history.
-              </p>
-            </div>
-            <div className="flex justify-end gap-2 pt-1">
-              <Button
-                variant="ghost"
-                onClick={() => setDeleteTarget(null)}
-                disabled={Boolean(removingKey)}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="destructive"
-                loading={Boolean(removingKey)}
-                onClick={async () => {
-                  if (!deleteTarget) return;
-                  await remove(deleteTarget.kind, deleteTarget.id);
-                  setDeleteTarget(null);
-                }}
-              >
-                <Icon icon={Delete02Icon} className="size-4" />
-                Delete
-              </Button>
-            </div>
-          </div>
+          <ModalConfirm
+            title={deleteTarget.label}
+            description="This removes the item and its related history."
+            loading={Boolean(removingKey)}
+            onCancel={() => setDeleteTarget(null)}
+            onConfirm={async () => {
+              if (!deleteTarget) return;
+              await remove(deleteTarget.kind, deleteTarget.id);
+              setDeleteTarget(null);
+            }}
+          />
         ) : null}
       </MorphingModal>
     </PageReveal>
@@ -1770,7 +1754,7 @@ function ContributionForm({
         value={date}
         onChange={setDate}
       />
-      <div className="grid grid-cols-[auto_176px] items-center gap-3">
+      <div className="grid grid-cols-[minmax(0,1fr)_13rem] items-center gap-3">
         <p className="text-[13px] text-muted-foreground">
           {mode === "withdraw" ? "Put back in:" : "Source:"}
         </p>
@@ -1866,7 +1850,7 @@ function PaymentForm({
         value={date}
         onChange={setDate}
       />
-      <div className="grid grid-cols-[auto_176px] items-center gap-3">
+      <div className="grid grid-cols-[minmax(0,1fr)_13rem] items-center gap-3">
         <p className="text-[13px] text-muted-foreground">
           {debt.direction === "borrowed" ? "Paid from:" : "Received in:"}
         </p>
@@ -1913,28 +1897,18 @@ function FormShell({
   onDelete?: () => void;
 }) {
   return (
-    <div className="space-y-4">
-      <div>
-        <h2 className="text-lg font-semibold tracking-[-0.02em]">{title}</h2>
-        <p className="mt-0.5 text-[13px] text-muted-foreground">{hint}</p>
-      </div>
+    <ModalForm
+      title={title}
+      hint={hint}
+      onCancel={onCancel}
+      onSubmit={onSubmit}
+      saving={saving}
+      editing={editing}
+      submitLabel={submitLabel}
+      onDelete={onDelete}
+    >
       {children}
-      <div className="flex items-center justify-between gap-2 pt-1">
-        {onDelete ? (
-          <Button variant="ghost" onClick={onDelete} disabled={saving} className="text-destructive">
-            <Icon icon={Delete02Icon} className="size-4" /> Delete
-          </Button>
-        ) : (
-          <Button variant="ghost" onClick={onCancel} disabled={saving}>
-            Cancel
-          </Button>
-        )}
-        <Button onClick={onSubmit} loading={saving}>
-          <Icon icon={Tick02Icon} className="size-4" />
-          {submitLabel ?? (editing ? "Save changes" : "Add")}
-        </Button>
-      </div>
-    </div>
+    </ModalForm>
   );
 }
 
@@ -2080,7 +2054,7 @@ function DebtForm({
       saving={saving}
       editing={Boolean(debt)}
     >
-      <div className="grid grid-cols-[auto_176px] items-center gap-3">
+      <div className="grid grid-cols-[minmax(0,1fr)_13rem] items-center gap-3">
         <p className="text-[13px] text-muted-foreground">Direction:</p>
         <DropdownSelect
           value={direction}
@@ -2178,7 +2152,7 @@ function BudgetForm({
       editing={Boolean(budget)}
     >
       <Input label="Name" value={name} onChange={setName} placeholder="Food" />
-      <div className="grid grid-cols-[auto_176px] items-center gap-3">
+      <div className="grid grid-cols-[minmax(0,1fr)_13rem] items-center gap-3">
         <p className="text-[13px] text-muted-foreground">Category:</p>
         <CategorySelect
           value={categoryId}
@@ -2195,7 +2169,7 @@ function BudgetForm({
         }
         placeholder={moneyInputValue(display, 800_000)}
       />
-      <div className="grid grid-cols-[auto_176px] items-center gap-3">
+      <div className="grid grid-cols-[minmax(0,1fr)_13rem] items-center gap-3">
         <p className="text-[13px] text-muted-foreground">Period:</p>
         <DropdownSelect
           value={period}
@@ -2309,7 +2283,7 @@ function RecurringForm({
       editing={Boolean(rule)}
     >
       <Input label="Name" value={name} onChange={setName} placeholder="Rent" />
-      <div className="grid grid-cols-[auto_176px] items-center gap-3">
+      <div className="grid grid-cols-[minmax(0,1fr)_13rem] items-center gap-3">
         <p className="text-[13px] text-muted-foreground">Type:</p>
         <DropdownSelect
           value={type}
@@ -2340,7 +2314,7 @@ function RecurringForm({
         </label>
       </div>
       {!isTransfer ? (
-        <div className="grid grid-cols-[auto_176px] items-center gap-3">
+        <div className="grid grid-cols-[minmax(0,1fr)_13rem] items-center gap-3">
           <p className="text-[13px] text-muted-foreground">Category:</p>
           <CategorySelect
             value={category}
@@ -2350,7 +2324,7 @@ function RecurringForm({
           />
         </div>
       ) : null}
-      <div className="grid grid-cols-[auto_176px] items-center gap-3">
+      <div className="grid grid-cols-[minmax(0,1fr)_13rem] items-center gap-3">
         <p className="text-[13px] text-muted-foreground">
           {isTransfer ? "From:" : "Account:"}
         </p>
@@ -2364,7 +2338,7 @@ function RecurringForm({
         />
       </div>
       {isTransfer ? (
-        <div className="grid grid-cols-[auto_176px] items-center gap-3">
+        <div className="grid grid-cols-[minmax(0,1fr)_13rem] items-center gap-3">
           <p className="text-[13px] text-muted-foreground">To:</p>
           <AccountSelect
             label="To"
@@ -2376,7 +2350,7 @@ function RecurringForm({
           />
         </div>
       ) : null}
-      <div className="grid grid-cols-[auto_176px] items-center gap-3">
+      <div className="grid grid-cols-[minmax(0,1fr)_13rem] items-center gap-3">
         <p className="text-[13px] text-muted-foreground">Frequency:</p>
         <DropdownSelect
           value={frequency}

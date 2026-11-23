@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import { gooeyToast } from "goey-toast";
 import {
+  Cancel01Icon,
   ChartIncreaseIcon,
   Delete02Icon,
   Money03Icon,
@@ -22,6 +23,7 @@ import { Input } from "@/components/motion/input";
 import { ThemeToggle } from "@/components/motion/theme-toggle";
 import { WheelPicker } from "@/components/motion/wheel-picker";
 import { MorphingModal } from "@/components/motion/morphing-modal";
+import { ModalConfirm, ModalForm, ModalHeading, ModalSurface } from "@/components/modal-form";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/huge-icon";
 import { MetricCard } from "@/components/metric-card";
@@ -610,7 +612,7 @@ function SettingsForm({
                 iconClassName="size-4"
               />
             </div>
-            <div className="grid grid-cols-[auto_240px] items-center gap-3">
+            <div className="grid grid-cols-[minmax(0,1fr)_15rem] items-center gap-3">
               <p className="text-[13px] text-muted-foreground">Currency:</p>
               <DropdownSelect
                 value={defaultCurrency}
@@ -956,20 +958,18 @@ function SettingsForm({
         onClose={() => setPendingHref(null)}
         placement="center"
         className="max-w-sm"
+        contentClassName="p-1"
         ariaLabel="Unsaved changes"
       >
         {pendingHref ? (
-          <div className="space-y-4">
-            <div>
-              <h2 className="text-lg font-semibold tracking-[-0.02em]">
-                Save your changes first?
-              </h2>
-              <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">
-                You have unsaved settings. Save them before leaving, or leave
-                without saving.
-              </p>
-            </div>
-            <div className="grid grid-cols-2 gap-2 pt-1">
+          <div className="flex flex-col">
+            <ModalSurface>
+              <ModalHeading
+                title="Save your changes first?"
+                hint="You have unsaved settings. Save them before leaving, or leave without saving."
+              />
+            </ModalSurface>
+            <div className="mt-3 flex shrink-0 flex-wrap items-center justify-between gap-2 pt-4">
               <Button
                 variant="ghost"
                 onClick={() => setPendingHref(null)}
@@ -977,21 +977,19 @@ function SettingsForm({
               >
                 Stay
               </Button>
-              <Button
-                variant="outline"
-                onClick={leaveWithoutSaving}
-                disabled={saving}
-              >
-                Leave without saving
-              </Button>
-              <Button
-                className="col-span-2"
-                onClick={saveAndLeave}
-                loading={saving}
-              >
-                <Icon icon={Tick02Icon} className="size-4" />
-                Save and leave
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  onClick={leaveWithoutSaving}
+                  disabled={saving}
+                >
+                  Leave without saving
+                </Button>
+                <Button onClick={saveAndLeave} loading={saving}>
+                  <Icon icon={Tick02Icon} className="size-4" />
+                  Save and leave
+                </Button>
+              </div>
             </div>
           </div>
         ) : null}
@@ -1002,6 +1000,7 @@ function SettingsForm({
         onClose={closeAccount}
         placement="center"
         className="max-w-md"
+        contentClassName="p-1"
         ariaLabel={editingAccount ? "Edit account" : "Add account"}
       >
         {accountModalOpen ? (
@@ -1023,6 +1022,7 @@ function SettingsForm({
         onClose={closeCategory}
         placement="center"
         className="max-w-md"
+        contentClassName="p-1"
         ariaLabel={editingCategory ? "Edit category" : "Add category"}
       >
         {categoryModalOpen ? (
@@ -1046,35 +1046,17 @@ function SettingsForm({
         }}
         placement="center"
         className="max-w-sm"
+        contentClassName="p-1"
         ariaLabel="Delete category"
       >
         {deletingCategory ? (
-          <div className="space-y-4">
-            <div>
-              <h2 className="text-lg font-semibold tracking-[-0.02em]">
-                Delete {deletingCategory.label}?
-              </h2>
-              <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">
-                Categories used by transactions or budgets cannot be removed.
-              </p>
-            </div>
-            <div className="flex justify-end gap-2 pt-1">
-              <Button
-                variant="ghost"
-                onClick={() => setDeletingCategory(null)}
-                disabled={categoryDeleting}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={removeCategory}
-                loading={categoryDeleting}
-              >
-                <Icon icon={Delete02Icon} className="size-4" /> Delete
-              </Button>
-            </div>
-          </div>
+          <ModalConfirm
+            title={`Delete ${deletingCategory.label}?`}
+            description="Categories used by transactions or budgets cannot be removed."
+            loading={categoryDeleting}
+            onCancel={() => setDeletingCategory(null)}
+            onConfirm={removeCategory}
+          />
         ) : null}
       </MorphingModal>
 
@@ -1085,6 +1067,7 @@ function SettingsForm({
         }}
         placement="center"
         className="max-w-sm"
+        contentClassName="p-1"
         ariaLabel="Remove account"
       >
         {deletingAccount ? (
@@ -1109,6 +1092,7 @@ function SettingsForm({
         }}
         placement="center"
         className="max-w-md"
+        contentClassName="p-1"
         ariaLabel={editingIncome ? "Edit income source" : "Add income source"}
       >
         {incomeModalOpen ? (
@@ -1140,36 +1124,17 @@ function SettingsForm({
         }}
         placement="center"
         className="max-w-sm"
+        contentClassName="p-1"
         ariaLabel="Delete income source"
       >
         {deletingIncome ? (
-          <div className="space-y-4">
-            <div>
-              <h2 className="text-lg font-semibold tracking-[-0.02em]">
-                Delete {deletingIncome.name}?
-              </h2>
-              <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">
-                It will be removed from expected earnings. Actual income
-                transactions stay in the ledger.
-              </p>
-            </div>
-            <div className="flex justify-end gap-2 pt-1">
-              <Button
-                variant="ghost"
-                onClick={() => setDeletingIncome(null)}
-                disabled={incomeDeleting}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={removeIncome}
-                loading={incomeDeleting}
-              >
-                <Icon icon={Delete02Icon} className="size-4" /> Delete
-              </Button>
-            </div>
-          </div>
+          <ModalConfirm
+            title={`Delete ${deletingIncome.name}?`}
+            description="It will be removed from expected earnings. Actual income transactions stay in the ledger."
+            loading={incomeDeleting}
+            onCancel={() => setDeletingIncome(null)}
+            onConfirm={removeIncome}
+          />
         ) : null}
       </MorphingModal>
 
@@ -1180,6 +1145,7 @@ function SettingsForm({
         }}
         placement="center"
         className="max-w-sm"
+        contentClassName="p-1"
         ariaLabel="Delete account"
       >
         {deleteAccountOpen ? (
@@ -1254,53 +1220,51 @@ function OtpDeleteDialog({
   const valid = otp.length >= 4;
 
   return (
-    <div className="space-y-4">
-      <div>
-        <h2 className="text-lg font-semibold tracking-[-0.02em]">{title}</h2>
-        <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">
-          {description}
-        </p>
-      </div>
+    <div className="flex flex-col">
+      <ModalSurface>
+        <ModalHeading title={title} hint={description} />
 
-      <div className="rounded-xl border border-border bg-muted/50 p-3 text-[11px] leading-relaxed text-muted-foreground">
-        A verification code was sent to{" "}
-        <span className="font-medium text-foreground">{email}</span>.
-      </div>
+        <div className="rounded-xl border border-border bg-muted/50 p-3 text-[11px] leading-relaxed text-muted-foreground">
+          A verification code was sent to{" "}
+          <span className="font-medium text-foreground">{email}</span>.
+        </div>
 
-      <Input
-        label="Verification code"
-        value={otp}
-        onChange={(value) =>
-          setOtp(value.replace(/[^0-9]/g, "").slice(0, 6))
-        }
-        placeholder="6-digit code"
-        inputMode="numeric"
-        autoFocus
-      />
-
-      <div className="flex items-center">
-        <button
-          type="button"
-          onClick={() =>
-            gooeyToast.success("Code resent", {
-              description: `We sent another code to ${email}.`,
-            })
+        <Input
+          label="Verification code"
+          value={otp}
+          onChange={(value) =>
+            setOtp(value.replace(/[^0-9]/g, "").slice(0, 6))
           }
-          className="text-[11px] text-muted-foreground underline-offset-2 transition-colors hover:text-foreground hover:underline"
-        >
-          Resend code
-        </button>
-      </div>
+          placeholder="6-digit code"
+          inputMode="numeric"
+          autoFocus
+        />
 
-      <div className="flex justify-end gap-2 pt-1">
+        <div className="flex items-center">
+          <button
+            type="button"
+            onClick={() =>
+              gooeyToast.success("Code resent", {
+                description: `We sent another code to ${email}.`,
+              })
+            }
+            className="text-[11px] text-muted-foreground underline-offset-2 transition-colors hover:text-foreground hover:underline"
+          >
+            Resend code
+          </button>
+        </div>
+      </ModalSurface>
+
+      <div className="mt-3 flex shrink-0 items-center justify-between gap-2 pt-4">
         <Button variant="ghost" onClick={onClose} disabled={loading}>
-          Cancel
+          <Icon icon={Cancel01Icon} className="size-4" /> Cancel
         </Button>
         <Button
           variant="destructive"
           onClick={onConfirm}
           loading={loading}
           disabled={!valid}
+          className="min-w-32"
         >
           <Icon icon={Delete02Icon} className="size-4" /> {confirmLabel}
         </Button>
@@ -1388,16 +1352,16 @@ function IncomeSourceForm({
   }
 
   return (
-    <div className="space-y-4">
-      <div>
-        <h2 className="text-lg font-semibold tracking-[-0.02em]">
-          {source ? "Edit income source" : "Add income source"}
-        </h2>
-        <p className="mt-0.5 text-[13px] text-muted-foreground">
-          Expected monthly income, where it lands and how often it arrives.
-        </p>
-      </div>
-
+    <ModalForm
+      title={source ? "Edit income source" : "Add income source"}
+      hint="Expected monthly income, where it lands and how often it arrives."
+      onCancel={onCancel}
+      onSubmit={submit}
+      saving={saving}
+      editing={Boolean(source)}
+      submitLabel={source ? "Save source" : "Add source"}
+      disabled={!name.trim()}
+    >
       <Input
         label="Name"
         value={name}
@@ -1405,7 +1369,7 @@ function IncomeSourceForm({
         placeholder="Salary, freelance retainer, side hustle"
       />
 
-      <div className="grid grid-cols-[auto_176px] items-center gap-3">
+      <div className="grid grid-cols-[minmax(0,1fr)_13rem] items-center gap-3">
         <p className="text-[13px] text-muted-foreground">Category:</p>
         <DropdownSelect
           value={categoryId}
@@ -1418,7 +1382,7 @@ function IncomeSourceForm({
         />
       </div>
 
-      <div className="grid grid-cols-[auto_176px] items-center gap-3">
+      <div className="grid grid-cols-[minmax(0,1fr)_13rem] items-center gap-3">
         <p className="text-[13px] text-muted-foreground">Lands in:</p>
         <DropdownSelect
           value={accountId}
@@ -1438,7 +1402,7 @@ function IncomeSourceForm({
         placeholder="0"
       />
 
-      <div className="grid grid-cols-[auto_176px] items-center gap-3">
+      <div className="grid grid-cols-[minmax(0,1fr)_13rem] items-center gap-3">
         <p className="text-[13px] text-muted-foreground">Cadence:</p>
         <DropdownSelect
           value={cadence}
@@ -1461,17 +1425,7 @@ function IncomeSourceForm({
           placeholder="28"
         />
       ) : null}
-
-      <div className="flex justify-end gap-2 pt-1">
-        <Button variant="ghost" onClick={onCancel} disabled={saving}>
-          Cancel
-        </Button>
-        <Button onClick={submit} loading={saving} disabled={!name.trim()}>
-          <Icon icon={Tick02Icon} className="size-4" />
-          {source ? "Save source" : "Add source"}
-        </Button>
-      </div>
-    </div>
+    </ModalForm>
   );
 }
 
@@ -1595,16 +1549,16 @@ function CategoryForm({
   }
 
   return (
-    <div className="space-y-4">
-      <div>
-        <h2 className="text-lg font-semibold tracking-[-0.02em]">
-          {category ? "Edit category" : "Add category"}
-        </h2>
-        <p className="mt-0.5 text-[13px] text-muted-foreground">
-          Name, type, color and icon used across charts.
-        </p>
-      </div>
-
+    <ModalForm
+      title={category ? "Edit category" : "Add category"}
+      hint="Name, type, color and icon used across charts."
+      onCancel={onCancel}
+      onSubmit={submit}
+      saving={saving}
+      editing={Boolean(category)}
+      submitLabel={category ? "Save category" : "Add category"}
+      disabled={!label.trim()}
+    >
       <Input
         label="Name"
         value={label}
@@ -1613,7 +1567,7 @@ function CategoryForm({
       />
 
       {!category ? (
-        <div className="grid grid-cols-[auto_176px] items-center gap-3">
+        <div className="grid grid-cols-[minmax(0,1fr)_13rem] items-center gap-3">
           <p className="text-[13px] text-muted-foreground">Type:</p>
           <DropdownSelect
             value={kind}
@@ -1669,17 +1623,7 @@ function CategoryForm({
           ))}
         </div>
       </div>
-
-      <div className="flex justify-end gap-2 pt-1">
-        <Button variant="ghost" onClick={onCancel} disabled={saving}>
-          Cancel
-        </Button>
-        <Button onClick={submit} loading={saving} disabled={!label.trim()}>
-          <Icon icon={Tick02Icon} className="size-4" />
-          {category ? "Save category" : "Add category"}
-        </Button>
-      </div>
-    </div>
+    </ModalForm>
   );
 }
 
@@ -1745,16 +1689,16 @@ function AccountForm({
   }
 
   return (
-    <div className="space-y-4">
-      <div>
-        <h2 className="text-lg font-semibold tracking-[-0.02em]">
-          {account ? "Edit account" : "Add account"}
-        </h2>
-        <p className="mt-0.5 text-[13px] text-muted-foreground">
-          Cash, bank, or a Mobile Money wallet.
-        </p>
-      </div>
-
+    <ModalForm
+      title={account ? "Edit account" : "Add account"}
+      hint="Cash, bank, or a Mobile Money wallet."
+      onCancel={onCancel}
+      onSubmit={submit}
+      saving={saving}
+      editing={Boolean(account)}
+      submitLabel={account ? "Save account" : "Add account"}
+      disabled={!name.trim()}
+    >
       <Input
         label="Name"
         value={name}
@@ -1762,7 +1706,7 @@ function AccountForm({
         placeholder="MTN MoMo"
       />
 
-      <div className="grid grid-cols-[auto_176px] items-center gap-3">
+      <div className="grid grid-cols-[minmax(0,1fr)_13rem] items-center gap-3">
         <p className="text-[13px] text-muted-foreground">Type:</p>
         <DropdownSelect
           value={type}
@@ -1789,16 +1733,6 @@ function AccountForm({
         }
         placeholder="0"
       />
-
-      <div className="flex justify-end gap-2 pt-1">
-        <Button variant="ghost" onClick={onCancel} disabled={saving}>
-          Cancel
-        </Button>
-        <Button onClick={submit} loading={saving} disabled={!name.trim()}>
-          <Icon icon={Tick02Icon} className="size-4" />
-          {account ? "Save account" : "Add account"}
-        </Button>
-      </div>
-    </div>
+    </ModalForm>
   );
 }

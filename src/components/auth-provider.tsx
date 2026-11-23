@@ -45,7 +45,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const stored = window.localStorage.getItem(STORAGE_KEY);
         if (stored) {
           const parsed = JSON.parse(stored) as AuthUser;
-          if (parsed?.email) setUser(parsed);
+          if (parsed?.email === "demo@expense.app") {
+            const renamed: AuthUser = {
+              name: "Brian",
+              email: "brian@expense.app",
+            };
+            window.localStorage.setItem(STORAGE_KEY, JSON.stringify(renamed));
+            setUser(renamed);
+          } else if (parsed?.email) {
+            setUser(parsed);
+          }
         }
       } catch {
         // Mock sessions are best-effort only.
@@ -58,7 +67,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = useCallback((email: string, password: string) => {
     void password;
-    const trimmed = email.trim() || "demo@expense.app";
+    const trimmed = email.trim() || "brian@expense.app";
     const next: AuthUser = {
       email: trimmed,
       name: displayName(trimmed),

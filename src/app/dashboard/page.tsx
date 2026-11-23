@@ -306,9 +306,9 @@ export default function DashboardPage() {
                 totalNotches={36}
                 height={250}
                 width={340}
-                activeFill="var(--primary)"
-                inactiveFill="var(--muted)"
-                needle="line"
+                activeFill="var(--chart-1)"
+                inactiveFill="color-mix(in oklab, var(--chart-1) 18%, var(--muted))"
+                needle={{ variant: "line", color: "var(--chart-1)" }}
               />
             </div>
 

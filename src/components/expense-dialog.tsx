@@ -143,7 +143,7 @@ export function TransactionDialogProvider({ children }: { children: React.ReactN
         viewId={mode}
         onClose={close}
         placement="center"
-        className="dark max-w-xl text-foreground"
+        className="max-w-xl text-foreground"
         contentClassName="p-1"
         ariaLabel={
           mode === "quick-add"
@@ -377,7 +377,7 @@ function TransactionForm({
   }
 
   return (
-    <div className="flex h-[580px] max-h-[calc(100dvh-4.5rem)] flex-col">
+    <div className="flex h-[min(720px,calc(100dvh-4.5rem))] max-h-[calc(100dvh-4.5rem)] flex-col">
       <div className="min-h-0 flex-1 space-y-5 overflow-y-auto rounded-xl border border-foreground/10 bg-muted/50 p-3.5">
         <div className="flex items-start justify-between gap-3">
         <div>
@@ -396,7 +396,7 @@ function TransactionForm({
         </div>
       </div>
 
-      <div className="grid grid-cols-[auto_176px] items-center gap-3">
+      <div className="grid grid-cols-[minmax(0,1fr)_13rem] items-center gap-3">
         <p className="text-[13px] text-muted-foreground">Type:</p>
         <DropdownSelect
           value={type}
@@ -409,7 +409,7 @@ function TransactionForm({
       </div>
 
       {!isTransfer ? (
-        <div className="grid grid-cols-[auto_176px] items-center gap-3">
+        <div className="grid grid-cols-[minmax(0,1fr)_13rem] items-center gap-3">
           <p className="text-[13px] text-muted-foreground">Currency:</p>
           <DropdownSelect
             value={currency}
@@ -486,7 +486,7 @@ function TransactionForm({
         >
           {isTransfer ? (
             <>
-              <div className="grid grid-cols-[auto_176px_auto] items-center gap-3">
+              <div className="grid grid-cols-[minmax(0,1fr)_13rem] items-center gap-3">
                 <p className="text-[13px] text-muted-foreground">From:</p>
                 <AccountSelect
                   label="From"
@@ -495,11 +495,11 @@ function TransactionForm({
                   onValueChange={setAccountId}
                   hideLabel
                 />
-                <AnimatePresence initial={false}>
-                  {showFee ? <FeeField key="fee" fee={fee} onChange={setFee} /> : null}
-                </AnimatePresence>
               </div>
-              <div className="grid grid-cols-[auto_176px] items-center gap-3">
+              <AnimatePresence initial={false}>
+                {showFee ? <FeeField key="fee" fee={fee} onChange={setFee} /> : null}
+              </AnimatePresence>
+              <div className="grid grid-cols-[minmax(0,1fr)_13rem] items-center gap-3">
                 <p className="text-[13px] text-muted-foreground">To:</p>
                 <AccountSelect
                   label="To"
@@ -512,7 +512,7 @@ function TransactionForm({
             </>
           ) : (
             <>
-              <div className="grid grid-cols-[auto_176px_auto] items-center gap-3">
+              <div className="grid grid-cols-[minmax(0,1fr)_13rem] items-center gap-3">
                 <p className="text-[13px] text-muted-foreground">Account:</p>
                 <AccountSelect
                   label="Account"
@@ -521,11 +521,11 @@ function TransactionForm({
                   onValueChange={setAccountId}
                   hideLabel
                 />
-                <AnimatePresence initial={false}>
-                  {showFee ? <FeeField key="fee" fee={fee} onChange={setFee} /> : null}
-                </AnimatePresence>
               </div>
-              <div className="grid grid-cols-[auto_176px] items-center gap-3">
+              <AnimatePresence initial={false}>
+                {showFee ? <FeeField key="fee" fee={fee} onChange={setFee} /> : null}
+              </AnimatePresence>
+              <div className="grid grid-cols-[minmax(0,1fr)_13rem] items-center gap-3">
                 <p className="text-[13px] text-muted-foreground">Category:</p>
                 <CategorySelect
                   value={category}
@@ -572,7 +572,7 @@ function TransactionForm({
         </div>
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between gap-3">
         <p className="w-20 shrink-0 text-[13px] text-muted-foreground">Time:</p>
         <TimeSelect value={spentTime} onValueChange={setSpentTime} />
       </div>
@@ -630,18 +630,16 @@ function FeeField({
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.96 }}
       transition={{ duration: 0.16, ease: EASE_OUT }}
-      className="flex items-center gap-2"
+      className="grid grid-cols-[minmax(0,1fr)_13rem] items-center gap-3"
     >
       <p className="shrink-0 text-[13px] text-muted-foreground">Transaction fee:</p>
-      <div className="w-28">
-        <Input
-          value={fee}
-          onChange={(value) => onChange(formatNumericInput(value))}
-          placeholder="0"
-          aria-label="Transaction fee (UGX)"
-          classNames={UNDERLINE_FIELD}
-        />
-      </div>
+      <Input
+        value={fee}
+        onChange={(value) => onChange(formatNumericInput(value))}
+        placeholder="0"
+        aria-label="Transaction fee (UGX)"
+        classNames={UNDERLINE_FIELD}
+      />
     </motion.div>
   );
 }

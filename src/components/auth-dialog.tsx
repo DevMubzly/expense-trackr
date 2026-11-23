@@ -171,7 +171,7 @@ function AuthBody({ onDone }: { onDone: () => void }) {
             className="w-full bg-muted/50"
             loading={pending}
             disabled={pending}
-            onClick={() => enter("demo@expense.app", "google")}
+            onClick={() => enter("brian@expense.app", "google")}
           >
             <Icon icon={GoogleIcon} className="size-4" />
             Continue with Google

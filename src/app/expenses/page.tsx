@@ -25,6 +25,7 @@ import {
   Skeleton,
 } from "@/components/skeletons";
 import { MorphingModal } from "@/components/motion/morphing-modal";
+import { ModalConfirm } from "@/components/modal-form";
 import {
   Combobox,
   ComboboxContent,
@@ -845,40 +846,25 @@ export default function ExpensesPage() {
         }}
         placement="center"
         className="max-w-sm"
+        contentClassName="p-1"
         ariaLabel="Confirm delete"
       >
         {confirmDelete ? (
-          <div className="space-y-4">
-            <div>
-              <h2 className="text-lg font-semibold tracking-[-0.02em]">
-                {confirmDelete.ids.length > 1
-                  ? `Delete ${confirmDelete.ids.length} transactions?`
-                  : "Delete this transaction?"}
-              </h2>
-              <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">
-                {confirmDelete.ids.length > 1
-                  ? `${confirmDelete.label} will be permanently removed.`
-                  : `“${confirmDelete.label}” will be permanently removed.`}
-              </p>
-            </div>
-            <div className="flex justify-end gap-2 pt-1">
-              <Button
-                variant="ghost"
-                onClick={() => setConfirmDelete(null)}
-                disabled={deleting}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={deleteConfirmed}
-                loading={deleting}
-              >
-                <Icon icon={Delete02Icon} className="size-4" />
-                Delete
-              </Button>
-            </div>
-          </div>
+          <ModalConfirm
+            title={
+              confirmDelete.ids.length > 1
+                ? `Delete ${confirmDelete.ids.length} transactions?`
+                : "Delete this transaction?"
+            }
+            description={
+              confirmDelete.ids.length > 1
+                ? `${confirmDelete.label} will be permanently removed.`
+                : `“${confirmDelete.label}” will be permanently removed.`
+            }
+            loading={deleting}
+            onCancel={() => setConfirmDelete(null)}
+            onConfirm={deleteConfirmed}
+          />
         ) : null}
       </MorphingModal>
     </div>

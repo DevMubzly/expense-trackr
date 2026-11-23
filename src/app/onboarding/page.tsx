@@ -379,8 +379,8 @@ function CurrencyStep({
         You can still log other currencies later.
       </p>
 
-      <div className="mt-8">
-        <p className="mb-2 text-[13px] text-muted-foreground">Currency:</p>
+      <div className="mt-8 flex items-center justify-between gap-3">
+        <p className="text-[13px] text-muted-foreground">Currency:</p>
         <DropdownSelect
           value={selected}
           onValueChange={(value) => setSelected(value as Currency)}
@@ -439,8 +439,8 @@ function AccountStep({
         style={{ caretColor: accent }}
       />
 
-      <div className="mt-5">
-        <p className="mb-2 text-[13px] text-muted-foreground">Account type:</p>
+      <div className="mt-5 flex items-center justify-between gap-3">
+        <p className="text-[13px] text-muted-foreground">Account type:</p>
         <DropdownSelect
           value={type}
           onValueChange={(value) => setType(value as AccountType)}
