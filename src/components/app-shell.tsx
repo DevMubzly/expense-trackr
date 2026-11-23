@@ -82,7 +82,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, loading: authLoading, logout } = useAuth();
-  const publicRoute = pathname === "/" || pathname.startsWith("/onboarding");
+  const publicRoute =
+    pathname === "/" ||
+    pathname.startsWith("/onboarding") ||
+    pathname.startsWith("/connect");
   const { version, openTransaction } = useTransactionDialog();
   const display = useCurrency();
   const { categories, categoryOf } = useCategories();
