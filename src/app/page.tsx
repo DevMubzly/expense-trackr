@@ -143,7 +143,10 @@ export default function LandingPage() {
               aria-hidden={pricingOpen || undefined}
               className="pointer-events-none absolute inset-x-0 bottom-5 flex flex-wrap items-center justify-center gap-3"
             >
-              <span className="text-[11px] leading-none tracking-[0.02em] text-white/70">
+              <span
+                style={{ fontFamily: "var(--font-syncopate), system-ui, sans-serif" }}
+                className="font-syncopate text-[11px] leading-none tracking-[0.02em] text-white/70"
+              >
                 Expense Trackr
               </span>
               <span className="h-4 w-px bg-white/15" />
@@ -261,26 +264,19 @@ export default function LandingPage() {
                     "mx-auto cursor-pointer justify-center bg-green-400 px-3 text-black hover:bg-green-300",
                 })}
               >
-                <span className="relative inline-flex items-center">
+                <span className="inline-flex items-center gap-2">
                   Open the App
-                  <motion.span
-                    aria-hidden="true"
-                    initial={false}
-                    animate={{ scaleX: pricingOpen ? 1 : 0 }}
-                    transition={{
-                      duration: 0.65,
-                      delay: pricingOpen ? 0.35 : 0,
-                      ease: EASE_OUT,
-                    }}
-                    className="absolute -bottom-1 left-0 hidden h-px w-full origin-left bg-current lg:block"
-                  />
+                  <Icon icon={ArrowRight01Icon} className="size-4" />
                 </span>
               </button>
             </motion.div>
             </div>
 
             <div className="mt-auto flex flex-wrap items-center justify-center gap-3 pt-6">
-              <span className="text-[11px] leading-none tracking-[0.02em] text-white/70">
+              <span
+                style={{ fontFamily: "var(--font-syncopate), system-ui, sans-serif" }}
+                className="font-syncopate text-[11px] leading-none tracking-[0.02em] text-white/70"
+              >
                 Expense Trackr
               </span>
               <span className="h-4 w-px bg-white/15" />

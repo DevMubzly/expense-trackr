@@ -8,7 +8,10 @@ export function BrandStrip({ className }: { className?: string }) {
         className,
       )}
     >
-      <span className="text-[11px] leading-none tracking-[0.02em] text-muted-foreground">
+      <span
+        style={{ fontFamily: "var(--font-syncopate), system-ui, sans-serif" }}
+        className="font-syncopate text-[11px] leading-none tracking-[0.02em] text-muted-foreground"
+      >
         Expense Trackr
       </span>
       <span className="h-4 w-px self-center bg-border" />
