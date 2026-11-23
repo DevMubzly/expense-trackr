@@ -29,6 +29,7 @@ import { SectionPanel } from "@/components/panel";
 import { PageReveal, SettingsPageSkeleton } from "@/components/skeletons";
 import { useApi, api } from "@/lib/use-api";
 import { useTransactionDialog } from "@/components/expense-dialog";
+import { COMPLETE_KEY, DRAFT_KEY } from "@/lib/onboarding";
 import {
   CATEGORY_COLORS,
   CATEGORY_ICONS,
@@ -172,6 +173,8 @@ function SettingsForm({
     null,
   );
   const [incomeDeleting, setIncomeDeleting] = useState(false);
+  const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
+  const [profileDeleting, setProfileDeleting] = useState(false);
 
   const dirty = useMemo(
     () =>
@@ -435,7 +438,20 @@ function SettingsForm({
     }
   }
 
-  function readAvatar(file: File | undefined) {    if (!file) return;
+  function deleteProfileAccount() {
+    setProfileDeleting(true);
+    logout();
+    try {
+      window.localStorage.removeItem(DRAFT_KEY);
+      window.localStorage.removeItem(COMPLETE_KEY);
+    } catch {
+      // Local storage may be unavailable; the session is already cleared.
+    }
+    router.push("/");
+  }
+
+  function readAvatar(file: File | undefined) {
+    if (!file) return;
     if (!file.type.startsWith("image/")) {
       gooeyToast.error("Choose an image file");
       return;
@@ -469,15 +485,6 @@ function SettingsForm({
               Unsaved changes
             </span>
           ) : null}
-          <Button
-            variant="ghost"
-            onClick={() => {
-              logout();
-              router.push("/");
-            }}
-          >
-            Sign out
-          </Button>
           <Button
             variant="ghost"
             onClick={discard}
@@ -577,8 +584,8 @@ function SettingsForm({
                 iconClassName="size-4"
               />
             </div>
-            <div className="grid grid-cols-[88px_176px] items-center gap-2">
-              <p className="text-[13px] text-muted-foreground">Currency</p>
+            <div className="grid grid-cols-[auto_240px] items-center gap-3">
+              <p className="text-[13px] text-muted-foreground">Currency:</p>
               <DropdownSelect
                 value={defaultCurrency}
                 onValueChange={(value) =>
@@ -859,6 +866,59 @@ function SettingsForm({
             />
           </div>
         </SectionPanel>
+
+        <SectionPanel
+          title="Sign out"
+          info="End this mock session on this device."
+          hint="You can sign back in with any email"
+          className="col-span-12"
+          bodyClassName="p-4"
+        >
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-[13px] font-medium">End this session</p>
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                Signing out clears your session but keeps your local demo data.
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              onClick={() => {
+                logout();
+                router.push("/");
+              }}
+            >
+              Sign out
+            </Button>
+          </div>
+        </SectionPanel>
+
+        <SectionPanel
+          title="Danger zone"
+          info="Permanently clear this mock account and its onboarding progress."
+          hint="This cannot be undone"
+          className="col-span-12 border-destructive/20"
+          bodyClassName="p-4"
+        >
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-[13px] font-medium text-destructive">
+                Delete account
+              </p>
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                Clears your mock session and onboarding progress. Your local
+                demo data stays in place.
+              </p>
+            </div>
+            <Button
+              variant="destructive"
+              onClick={() => setDeleteAccountOpen(true)}
+            >
+              <Icon icon={Delete02Icon} className="size-4" />
+              Delete account
+            </Button>
+          </div>
+        </SectionPanel>
       </div>
 
       <MorphingModal
@@ -1099,6 +1159,46 @@ function SettingsForm({
           </div>
         ) : null}
       </MorphingModal>
+
+      <MorphingModal
+        viewId={deleteAccountOpen ? "delete-profile" : null}
+        onClose={() => {
+          if (!profileDeleting) setDeleteAccountOpen(false);
+        }}
+        placement="center"
+        className="max-w-sm"
+        ariaLabel="Delete account"
+      >
+        {deleteAccountOpen ? (
+          <div className="space-y-4">
+            <div>
+              <h2 className="text-lg font-semibold tracking-[-0.02em]">
+                Delete your account?
+              </h2>
+              <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">
+                This clears your mock session and onboarding progress. Your
+                local demo data stays in place.
+              </p>
+            </div>
+            <div className="flex justify-end gap-2 pt-1">
+              <Button
+                variant="ghost"
+                onClick={() => setDeleteAccountOpen(false)}
+                disabled={profileDeleting}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={deleteProfileAccount}
+                loading={profileDeleting}
+              >
+                <Icon icon={Delete02Icon} className="size-4" /> Delete account
+              </Button>
+            </div>
+          </div>
+        ) : null}
+      </MorphingModal>
     </PageReveal>
   );
 }
@@ -1199,8 +1299,8 @@ function IncomeSourceForm({
         placeholder="Salary, freelance retainer, side hustle"
       />
 
-      <div className="grid grid-cols-[96px_176px] items-center gap-2">
-        <p className="text-[13px] text-muted-foreground">Category</p>
+      <div className="grid grid-cols-[auto_176px] items-center gap-3">
+        <p className="text-[13px] text-muted-foreground">Category:</p>
         <DropdownSelect
           value={categoryId}
           onValueChange={setCategoryId}
@@ -1212,8 +1312,8 @@ function IncomeSourceForm({
         />
       </div>
 
-      <div className="grid grid-cols-[96px_176px] items-center gap-2">
-        <p className="text-[13px] text-muted-foreground">Lands in</p>
+      <div className="grid grid-cols-[auto_176px] items-center gap-3">
+        <p className="text-[13px] text-muted-foreground">Lands in:</p>
         <DropdownSelect
           value={accountId}
           onValueChange={setAccountId}
@@ -1232,8 +1332,8 @@ function IncomeSourceForm({
         placeholder="0"
       />
 
-      <div className="grid grid-cols-[96px_176px] items-center gap-2">
-        <p className="text-[13px] text-muted-foreground">Cadence</p>
+      <div className="grid grid-cols-[auto_176px] items-center gap-3">
+        <p className="text-[13px] text-muted-foreground">Cadence:</p>
         <DropdownSelect
           value={cadence}
           onValueChange={(value) =>
@@ -1407,8 +1507,8 @@ function CategoryForm({
       />
 
       {!category ? (
-        <div className="grid grid-cols-[88px_176px] items-center gap-2">
-          <p className="text-[13px] text-muted-foreground">Type</p>
+        <div className="grid grid-cols-[auto_176px] items-center gap-3">
+          <p className="text-[13px] text-muted-foreground">Type:</p>
           <DropdownSelect
             value={kind}
             onValueChange={(value) => setKind(value as CategoryKind)}
@@ -1556,8 +1656,8 @@ function AccountForm({
         placeholder="MTN MoMo"
       />
 
-      <div className="grid grid-cols-[88px_176px] items-center gap-2">
-        <p className="text-[13px] text-muted-foreground">Type</p>
+      <div className="grid grid-cols-[auto_176px] items-center gap-3">
+        <p className="text-[13px] text-muted-foreground">Type:</p>
         <DropdownSelect
           value={type}
           onValueChange={(value) => setType(value as AccountType)}

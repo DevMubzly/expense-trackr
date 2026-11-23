@@ -1770,9 +1770,9 @@ function ContributionForm({
         value={date}
         onChange={setDate}
       />
-      <div className="grid grid-cols-[88px_176px] items-center gap-2">
+      <div className="grid grid-cols-[auto_176px] items-center gap-3">
         <p className="text-[13px] text-muted-foreground">
-          {mode === "withdraw" ? "Put back in" : "Source"}
+          {mode === "withdraw" ? "Put back in:" : "Source:"}
         </p>
         <DropdownSelect
           value={source}
@@ -1866,9 +1866,9 @@ function PaymentForm({
         value={date}
         onChange={setDate}
       />
-      <div className="grid grid-cols-[88px_176px] items-center gap-2">
+      <div className="grid grid-cols-[auto_176px] items-center gap-3">
         <p className="text-[13px] text-muted-foreground">
-          {debt.direction === "borrowed" ? "Paid from" : "Received in"}
+          {debt.direction === "borrowed" ? "Paid from:" : "Received in:"}
         </p>
         <AccountSelect
           label={
@@ -2080,8 +2080,8 @@ function DebtForm({
       saving={saving}
       editing={Boolean(debt)}
     >
-      <div className="grid grid-cols-[88px_176px] items-center gap-2">
-        <p className="text-[13px] text-muted-foreground">Direction</p>
+      <div className="grid grid-cols-[auto_176px] items-center gap-3">
+        <p className="text-[13px] text-muted-foreground">Direction:</p>
         <DropdownSelect
           value={direction}
           onValueChange={(value) =>
@@ -2178,8 +2178,8 @@ function BudgetForm({
       editing={Boolean(budget)}
     >
       <Input label="Name" value={name} onChange={setName} placeholder="Food" />
-      <div className="grid grid-cols-[88px_176px] items-center gap-2">
-        <p className="text-[13px] text-muted-foreground">Category</p>
+      <div className="grid grid-cols-[auto_176px] items-center gap-3">
+        <p className="text-[13px] text-muted-foreground">Category:</p>
         <CategorySelect
           value={categoryId}
           onValueChange={setCategoryId}
@@ -2195,8 +2195,8 @@ function BudgetForm({
         }
         placeholder={moneyInputValue(display, 800_000)}
       />
-      <div className="grid grid-cols-[88px_176px] items-center gap-2">
-        <p className="text-[13px] text-muted-foreground">Period</p>
+      <div className="grid grid-cols-[auto_176px] items-center gap-3">
+        <p className="text-[13px] text-muted-foreground">Period:</p>
         <DropdownSelect
           value={period}
           onValueChange={(value) =>
@@ -2309,8 +2309,8 @@ function RecurringForm({
       editing={Boolean(rule)}
     >
       <Input label="Name" value={name} onChange={setName} placeholder="Rent" />
-      <div className="grid grid-cols-[88px_176px] items-center gap-2">
-        <p className="text-[13px] text-muted-foreground">Type</p>
+      <div className="grid grid-cols-[auto_176px] items-center gap-3">
+        <p className="text-[13px] text-muted-foreground">Type:</p>
         <DropdownSelect
           value={type}
           onValueChange={(value) =>
@@ -2340,8 +2340,8 @@ function RecurringForm({
         </label>
       </div>
       {!isTransfer ? (
-        <div className="grid grid-cols-[88px_176px] items-center gap-2">
-          <p className="text-[13px] text-muted-foreground">Category</p>
+        <div className="grid grid-cols-[auto_176px] items-center gap-3">
+          <p className="text-[13px] text-muted-foreground">Category:</p>
           <CategorySelect
             value={category}
             onValueChange={setCategory}
@@ -2350,9 +2350,9 @@ function RecurringForm({
           />
         </div>
       ) : null}
-      <div className="grid grid-cols-[88px_176px] items-center gap-2">
+      <div className="grid grid-cols-[auto_176px] items-center gap-3">
         <p className="text-[13px] text-muted-foreground">
-          {isTransfer ? "From" : "Account"}
+          {isTransfer ? "From:" : "Account:"}
         </p>
         <AccountSelect
           label={isTransfer ? "From" : "Account"}
@@ -2364,8 +2364,8 @@ function RecurringForm({
         />
       </div>
       {isTransfer ? (
-        <div className="grid grid-cols-[88px_176px] items-center gap-2">
-          <p className="text-[13px] text-muted-foreground">To</p>
+        <div className="grid grid-cols-[auto_176px] items-center gap-3">
+          <p className="text-[13px] text-muted-foreground">To:</p>
           <AccountSelect
             label="To"
             value={toAccountId}
@@ -2376,8 +2376,8 @@ function RecurringForm({
           />
         </div>
       ) : null}
-      <div className="grid grid-cols-[88px_176px] items-center gap-2">
-        <p className="text-[13px] text-muted-foreground">Frequency</p>
+      <div className="grid grid-cols-[auto_176px] items-center gap-3">
+        <p className="text-[13px] text-muted-foreground">Frequency:</p>
         <DropdownSelect
           value={frequency}
           onValueChange={(value) =>

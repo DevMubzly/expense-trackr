@@ -396,8 +396,8 @@ function TransactionForm({
         </div>
       </div>
 
-      <div className="grid grid-cols-[80px_176px] items-center gap-2">
-        <p className="text-[13px] text-muted-foreground">Type</p>
+      <div className="grid grid-cols-[auto_176px] items-center gap-3">
+        <p className="text-[13px] text-muted-foreground">Type:</p>
         <DropdownSelect
           value={type}
           onValueChange={(value) =>
@@ -409,8 +409,8 @@ function TransactionForm({
       </div>
 
       {!isTransfer ? (
-        <div className="grid grid-cols-[80px_176px] items-center gap-2">
-          <p className="text-[13px] text-muted-foreground">Currency</p>
+        <div className="grid grid-cols-[auto_176px] items-center gap-3">
+          <p className="text-[13px] text-muted-foreground">Currency:</p>
           <DropdownSelect
             value={currency}
             onValueChange={(value) => changeCurrency(value as Currency)}
@@ -486,7 +486,7 @@ function TransactionForm({
         >
           {isTransfer ? (
             <>
-              <div className="grid grid-cols-[80px_176px_auto] items-center gap-2">
+              <div className="grid grid-cols-[auto_176px_auto] items-center gap-3">
                 <p className="text-[13px] text-muted-foreground">From:</p>
                 <AccountSelect
                   label="From"
@@ -499,7 +499,7 @@ function TransactionForm({
                   {showFee ? <FeeField key="fee" fee={fee} onChange={setFee} /> : null}
                 </AnimatePresence>
               </div>
-              <div className="grid grid-cols-[80px_176px] items-center gap-2">
+              <div className="grid grid-cols-[auto_176px] items-center gap-3">
                 <p className="text-[13px] text-muted-foreground">To:</p>
                 <AccountSelect
                   label="To"
@@ -512,7 +512,7 @@ function TransactionForm({
             </>
           ) : (
             <>
-              <div className="grid grid-cols-[80px_176px_auto] items-center gap-2">
+              <div className="grid grid-cols-[auto_176px_auto] items-center gap-3">
                 <p className="text-[13px] text-muted-foreground">Account:</p>
                 <AccountSelect
                   label="Account"
@@ -525,7 +525,7 @@ function TransactionForm({
                   {showFee ? <FeeField key="fee" fee={fee} onChange={setFee} /> : null}
                 </AnimatePresence>
               </div>
-              <div className="grid grid-cols-[80px_176px] items-center gap-2">
+              <div className="grid grid-cols-[auto_176px] items-center gap-3">
                 <p className="text-[13px] text-muted-foreground">Category:</p>
                 <CategorySelect
                   value={category}

@@ -380,7 +380,7 @@ function CurrencyStep({
       </p>
 
       <div className="mt-8">
-        <p className="mb-2 text-[13px] text-muted-foreground">Currency</p>
+        <p className="mb-2 text-[13px] text-muted-foreground">Currency:</p>
         <DropdownSelect
           value={selected}
           onValueChange={(value) => setSelected(value as Currency)}
@@ -440,7 +440,7 @@ function AccountStep({
       />
 
       <div className="mt-5">
-        <p className="mb-2 text-[13px] text-muted-foreground">Account type</p>
+        <p className="mb-2 text-[13px] text-muted-foreground">Account type:</p>
         <DropdownSelect
           value={type}
           onValueChange={(value) => setType(value as AccountType)}
