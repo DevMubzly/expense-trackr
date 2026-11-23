@@ -9,6 +9,7 @@ import {
 import { useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { ArrowRight01Icon, Tick02Icon } from "@hugeicons/core-free-icons";
+import { BrandStrip } from "@/components/brand-strip";
 import { Icon } from "@/components/huge-icon";
 import { api } from "@/lib/use-api";
 import { CURRENCY_META } from "@/lib/currencies";
@@ -141,122 +142,130 @@ function OnboardingFlow() {
 
   return (
     <div className="flex min-h-dvh flex-col bg-background text-foreground">
-      <div className="mx-auto flex w-full max-w-[560px] flex-1 flex-col justify-center px-6 py-14">
-        {progress >= 0 ? (
-          <div className="mb-10 flex gap-1.5">
-            {QUESTIONS.map((question, position) => (
-              <span
-                key={question}
-                className="h-1 flex-1 rounded-full transition-colors duration-300"
-                style={{
-                  background:
-                    position <= progress
-                      ? meta.accent
-                      : "color-mix(in oklab, var(--foreground) 10%, transparent)",
-                }}
-              />
-            ))}
-          </div>
-        ) : null}
+      <div className="mx-auto flex w-full max-w-[560px] flex-1 flex-col px-6 pb-16 pt-16 sm:pt-24">
+        <div className="mb-10 h-1">
+          {progress >= 0 ? (
+            <div className="flex gap-1.5">
+              {QUESTIONS.map((question, position) => (
+                <span
+                  key={question}
+                  className="h-1 flex-1 rounded-full transition-colors duration-300"
+                  style={{
+                    background:
+                      position <= progress
+                        ? meta.accent
+                        : "color-mix(in oklab, var(--foreground) 10%, transparent)",
+                  }}
+                />
+              ))}
+            </div>
+          ) : null}
+        </div>
 
-        <AnimatePresence mode="wait" custom={direction} initial={false}>
-          <motion.div
-            key={step}
-            custom={direction}
-            variants={variants}
-            initial="enter"
-            animate="center"
-            exit="exit"
-            transition={{ duration: 0.32, ease: EASE }}
-          >
-            {step === "welcome" ? (
-              <Welcome onStart={() => go("name")} />
-            ) : null}
+        <div className="min-h-[360px]">
+          <AnimatePresence mode="wait" custom={direction} initial={false}>
+            <motion.div
+              key={step}
+              custom={direction}
+              variants={variants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={{ duration: 0.32, ease: EASE }}
+            >
+              {step === "welcome" ? (
+                <Welcome onStart={() => go("name")} />
+              ) : null}
 
-            {step === "name" ? (
-              <Question
-                number={meta.number}
-                accent={meta.accent}
-                title="What should we call you?"
-                hint="First name is fine."
-                onSubmit={(value) => {
-                  if (!value.trim()) {
-                    setError("Please type your name.");
-                    return;
-                  }
-                  update({ name: value.trim() });
-                  go("currency");
-                }}
-                initial={draft.name ?? ""}
-                placeholder="Your name"
-                error={error}
-                buttonLabel="OK"
-                autoFocus
-              />
-            ) : null}
+              {step === "name" ? (
+                <Question
+                  number={meta.number}
+                  accent={meta.accent}
+                  title="What should we call you?"
+                  hint="First name is fine."
+                  onSubmit={(value) => {
+                    if (!value.trim()) {
+                      setError("Please type your name.");
+                      return;
+                    }
+                    update({ name: value.trim() });
+                    go("currency");
+                  }}
+                  initial={draft.name ?? ""}
+                  placeholder="Your name"
+                  error={error}
+                  buttonLabel="OK"
+                  autoFocus
+                />
+              ) : null}
 
-            {step === "currency" ? (
-              <CurrencyStep
-                number={meta.number}
-                accent={meta.accent}
-                value={draft.currency ?? "UGX"}
-                onNext={(currency) => {
-                  update({ currency });
-                  go("account");
-                }}
-              />
-            ) : null}
+              {step === "currency" ? (
+                <CurrencyStep
+                  number={meta.number}
+                  accent={meta.accent}
+                  value={draft.currency ?? "UGX"}
+                  onNext={(currency) => {
+                    update({ currency });
+                    go("account");
+                  }}
+                />
+              ) : null}
 
-            {step === "account" ? (
-              <AccountStep
-                number={meta.number}
-                accent={meta.accent}
-                draft={draft}
-                error={error}
-                onNext={(accountName, accountType) => {
-                  if (!accountName.trim()) {
-                    setError("Give the account a name.");
-                    return;
-                  }
-                  update({ accountName: accountName.trim(), accountType });
-                  go("budget");
-                }}
-              />
-            ) : null}
+              {step === "account" ? (
+                <AccountStep
+                  number={meta.number}
+                  accent={meta.accent}
+                  draft={draft}
+                  error={error}
+                  onNext={(accountName, accountType) => {
+                    if (!accountName.trim()) {
+                      setError("Give the account a name.");
+                      return;
+                    }
+                    update({ accountName: accountName.trim(), accountType });
+                    go("budget");
+                  }}
+                />
+              ) : null}
 
-            {step === "budget" ? (
-              <BudgetStep
-                number={meta.number}
-                accent={meta.accent}
-                currency={draft.currency ?? "UGX"}
-                initial={draft.budget ?? ""}
-                onNext={(budget) => {
-                  update({ budget });
-                  go("payday");
-                }}
-              />
-            ) : null}
+              {step === "budget" ? (
+                <BudgetStep
+                  number={meta.number}
+                  accent={meta.accent}
+                  currency={draft.currency ?? "UGX"}
+                  initial={draft.budget ?? ""}
+                  onNext={(budget) => {
+                    update({ budget });
+                    go("payday");
+                  }}
+                />
+              ) : null}
 
-            {step === "payday" ? (
-              <PaydayStep
-                number={meta.number}
-                accent={meta.accent}
-                initial={draft.payday ?? ""}
-                saving={saving}
-                error={error}
-                onFinish={(payday) => finish({ payday })}
-              />
-            ) : null}
+              {step === "payday" ? (
+                <PaydayStep
+                  number={meta.number}
+                  accent={meta.accent}
+                  initial={draft.payday ?? ""}
+                  saving={saving}
+                  error={error}
+                  onFinish={(payday) => finish({ payday })}
+                />
+              ) : null}
 
-            {step === "done" ? (
-              <Done
-                accent={meta.accent}
-                draft={draft}
-                onOpen={() => router.replace("/dashboard")}
-              />
-            ) : null}
-          </motion.div>
-        </AnimatePresence>
+              {step === "done" ? (
+                <Done
+                  accent={meta.accent}
+                  draft={draft}
+                  onOpen={() => router.replace("/dashboard")}
+                />
+              ) : null}
+            </motion.div>
+          </AnimatePresence>
+        </div>
+      </div>
+
+      <div className="flex justify-center pb-8">
+        <BrandStrip />
       </div>
     </div>
   );
@@ -269,10 +278,7 @@ function OnboardingFlow() {
 function Welcome({ onStart }: { onStart: () => void }) {
   return (
     <div className="max-w-[460px]">
-      <p className="font-syncopate text-[11px] tracking-[0.16em] text-muted-foreground">
-        Expense Trackr
-      </p>
-      <h1 className="mt-6 font-display text-3xl leading-tight tracking-[-0.04em] sm:text-4xl">
+      <h1 className="font-display text-3xl leading-tight tracking-[-0.04em] sm:text-4xl">
         Money, one clear picture.
       </h1>
       <p className="mt-4 text-[15px] leading-relaxed text-muted-foreground">
