@@ -280,7 +280,7 @@ function OnboardingFlow() {
 
 function Welcome({ onStart }: { onStart: () => void }) {
   return (
-    <div className="max-w-[460px]">
+    <div className="w-full text-center">
       <h1 className="font-display text-3xl leading-tight tracking-[-0.04em] sm:text-4xl">
         Money, one clear picture.
       </h1>
@@ -288,7 +288,7 @@ function Welcome({ onStart }: { onStart: () => void }) {
         A couple of questions so the first screen makes sense. Takes about two
         minutes, and you can change everything later.
       </p>
-      <div className="mt-8">
+      <div className="mt-8 flex justify-center">
         <AccentButton accent={STEP_META.welcome.accent} onClick={onStart}>
           Let&apos;s go
         </AccentButton>
