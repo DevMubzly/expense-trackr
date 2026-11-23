@@ -36,7 +36,7 @@ export default function LandingPage() {
     <div className="theme-light flex min-h-dvh flex-col overflow-x-hidden bg-[oklch(0.165_0.008_285)] text-foreground lg:h-dvh lg:overflow-hidden">
 
 
-      <main className="min-h-0 flex-1 px-4 pb-0 pt-4 sm:px-6 sm:pb-4 sm:pt-6">
+      <main className="min-h-0 flex-1 px-4 pb-0 pt-0 sm:px-6 sm:pb-4 sm:pt-0">
         <div
           className={cn(
             "mx-auto flex w-full max-w-[1500px] flex-col gap-4 transition-[gap] duration-700 lg:h-full lg:flex-row",
@@ -51,7 +51,7 @@ export default function LandingPage() {
           >
             <div
               className={cn(
-                "relative flex min-h-[calc(100dvh-1rem)] flex-col pb-0 pt-8 sm:min-h-[calc(100dvh-2.5rem)] lg:h-full lg:min-h-0 lg:pb-4",
+                "relative flex min-h-[calc(100dvh-1rem)] flex-col pb-0 pt-4 sm:min-h-[calc(100dvh-2.5rem)] lg:h-full lg:min-h-0 lg:pb-4",
                 pricingOpen
                   ? "px-6 sm:px-10 lg:px-12"
                   : "px-8 sm:px-14 lg:px-16",
@@ -96,36 +96,15 @@ export default function LandingPage() {
                 </div>
               </div>
 
-              <div className="mt-20 w-full pb-4 lg:mt-auto">
-                <h1 className="font-display text-xl leading-tight tracking-[-0.03em] text-white [text-shadow:0_2px_20px_rgba(0,0,0,0.45)] sm:text-2xl">
+              <div className="flex flex-1 flex-col items-center justify-center px-0 py-10 text-center">
+                <h1 className="max-w-2xl font-display text-2xl leading-tight tracking-[-0.03em] text-white [text-shadow:0_2px_20px_rgba(0,0,0,0.45)] sm:text-3xl">
                   Know where
                   <span className="block text-white/70">every shilling goes.</span>
                 </h1>
-              </div>
-
-              <div className="relative mt-auto h-[40vh] translate-y-1/4 overflow-hidden rounded-t-2xl p-3 pb-0 min-[380px]:h-[44vh] lg:h-auto lg:translate-y-0 lg:rounded-3xl lg:p-4">
-                <Image
-                  src="/bg-hero.jpg"
-                  alt=""
-                  fill
-                  priority
-                  sizes="100vw"
-                  className="object-cover object-center"
-                />
-                <div className="relative flex h-full justify-center">
-                  <Image
-                    src="/dash.png"
-                    alt="Expense Trackr dashboard"
-                    width={1920}
-                    height={956}
-                    priority
-                    className="h-full w-full rounded-t-lg rounded-b-none object-cover object-top shadow-lg lg:h-auto lg:rounded-lg lg:object-contain"
-                  />
-                </div>
-                <div
-                  aria-hidden="true"
-                  className="pointer-events-none absolute inset-0 shadow-[inset_0_0_60px_rgba(0,0,0,0.55)]"
-                />
+                <p className="mt-4 max-w-md text-[15px] leading-relaxed text-white/60">
+                  Accounts, spending, budgets, goals and debts in one workspace,
+                  so the month adds up without a spreadsheet.
+                </p>
               </div>
             </div>
           </motion.section>
@@ -145,7 +124,7 @@ export default function LandingPage() {
             className={cn(
               "min-h-0 shrink-0 overflow-hidden transition-[width,opacity] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)]",
               pricingOpen
-                ? "fixed inset-0 z-50 h-dvh w-full opacity-100 lg:static lg:inset-auto lg:h-auto lg:w-[34%]"
+                ? "fixed inset-x-0 bottom-0 top-4 z-50 h-auto w-full opacity-100 lg:static lg:inset-auto lg:h-auto lg:w-[34%]"
                 : "pointer-events-none h-0 w-0 opacity-0",
             )}
           >
@@ -153,7 +132,7 @@ export default function LandingPage() {
             initial={false}
             animate={{ x: pricingOpen ? 0 : 48, opacity: pricingOpen ? 1 : 0 }}
             transition={{ duration: 0.8, ease: EASE_OUT }}
-            className="relative flex h-full min-h-0 w-full flex-col overflow-y-auto rounded-none border-0 bg-[oklch(0.165_0.008_285)] p-6 lg:rounded-[32px] lg:border lg:border-white/10 lg:bg-white/[0.035] lg:p-8 lg:hover:border-white/20"
+            className="relative flex h-full min-h-0 w-full flex-col overflow-y-auto rounded-t-2xl border-0 bg-[oklch(0.165_0.008_285)] p-6 lg:rounded-[32px] lg:border lg:border-white/10 lg:bg-white/[0.035] lg:p-8 lg:hover:border-white/20"
           >
             <button
               type="button"
