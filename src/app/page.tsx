@@ -179,11 +179,13 @@ export default function LandingPage() {
               onClick={() => setAuthOpen(true)}
               className={buttonVariants({
                 size: "lg",
-                className: "mx-auto mt-7 h-9 w-40 justify-center",
+                className:
+                  "mx-auto mt-7 h-9 w-40 cursor-pointer justify-center",
               })}
             >
-              <span className="relative inline-block">
+              <span className="relative inline-flex items-center gap-2">
                 Open app
+                <Icon icon={ArrowRight01Icon} className="size-4" />
                 <motion.span
                   aria-hidden="true"
                   initial={false}
@@ -193,10 +195,9 @@ export default function LandingPage() {
                     delay: pricingOpen ? 0.35 : 0,
                     ease: EASE_OUT,
                   }}
-                  className="absolute -bottom-0.5 left-0 h-px w-full origin-left bg-current"
+                  className="absolute -bottom-1 left-0 h-px w-full origin-left bg-current"
                 />
               </span>
-              <Icon icon={ArrowRight01Icon} className="size-4" />
             </button>
             </div>
 
