@@ -4,13 +4,16 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { motion } from "motion/react";
-import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
+import { ArrowRight01Icon, Cancel01Icon } from "@hugeicons/core-free-icons";
 import { AuthDialog } from "@/components/auth-dialog";
 import { Icon } from "@/components/huge-icon";
 import { buttonVariants } from "@/components/ui/button";
+import { EASE_OUT } from "@/lib/ease";
+import { cn } from "@/lib/utils";
 
 export default function LandingPage() {
   const [authOpen, setAuthOpen] = useState(false);
+  const [pricingOpen, setPricingOpen] = useState(false);
 
   useEffect(() => {
     // Post-hydration only: the query string is not available during prerender.
@@ -25,12 +28,17 @@ export default function LandingPage() {
 
 
       <main className="min-h-0 flex-1 px-4 pb-4 pt-4 sm:px-6 sm:pt-6">
-        <div className="mx-auto grid h-full w-full max-w-[1500px] gap-4 lg:grid-cols-[1.55fr_1fr]">
+        <div
+          className={cn(
+            "mx-auto flex h-full w-full max-w-[1500px] flex-col gap-4 transition-[gap] duration-700 lg:flex-row",
+            pricingOpen ? "lg:gap-4" : "lg:gap-0",
+          )}
+        >
           <motion.section
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.55, ease: [0.23, 1, 0.32, 1] }}
-            className="relative isolate overflow-hidden rounded-[32px] bg-black"
+            className="relative isolate min-w-0 flex-1 overflow-hidden rounded-[32px] bg-black"
           >
             <Image
               src="/bg-hero.jpg"
@@ -62,6 +70,20 @@ export default function LandingPage() {
                 <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
                   <button
                     type="button"
+                    onClick={() => setPricingOpen((open) => !open)}
+                    aria-expanded={pricingOpen}
+                    aria-controls="landing-pricing"
+                    className={buttonVariants({
+                      variant: "outline",
+                      size: "lg",
+                      className:
+                        "h-9 w-40 justify-center border-white/25 bg-white/5 px-4 text-white hover:bg-white/10",
+                    })}
+                  >
+                    {pricingOpen ? "Hide pricing" : "View pricing"}
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => setAuthOpen(true)}
                     className={buttonVariants({
                       size: "lg",
@@ -88,12 +110,39 @@ export default function LandingPage() {
             </div>
           </motion.section>
 
-          <motion.aside
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.55, delay: 0.08, ease: [0.23, 1, 0.32, 1] }}
-            className="flex min-h-0 flex-col overflow-y-auto rounded-[32px] border border-white/10 bg-white/[0.035] p-6 transition-colors hover:border-white/20 lg:p-8"
+          {pricingOpen ? (
+            <button
+              type="button"
+              aria-label="Close pricing"
+              onClick={() => setPricingOpen(false)}
+              className="fixed inset-0 z-40 bg-black/55 backdrop-blur-sm lg:hidden"
+            />
+          ) : null}
+
+          <div
+            id="landing-pricing"
+            inert={!pricingOpen}
+            className={cn(
+              "min-h-0 shrink-0 overflow-hidden transition-[width,opacity] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)]",
+              pricingOpen
+                ? "fixed inset-4 z-50 h-[calc(100dvh-2rem)] w-auto opacity-100 lg:static lg:inset-auto lg:h-auto lg:w-[34%]"
+                : "pointer-events-none w-0 opacity-0",
+            )}
           >
+          <motion.aside
+            initial={false}
+            animate={{ x: pricingOpen ? 0 : 48, opacity: pricingOpen ? 1 : 0 }}
+            transition={{ duration: 0.8, ease: EASE_OUT }}
+            className="relative flex h-full min-h-0 w-full flex-col overflow-y-auto rounded-[32px] border border-white/10 bg-white/[0.035] p-6 transition-colors hover:border-white/20 lg:p-8"
+          >
+            <button
+              type="button"
+              aria-label="Close pricing"
+              onClick={() => setPricingOpen(false)}
+              className="absolute right-4 top-4 z-10 grid size-8 place-items-center rounded-full border border-white/10 bg-black/30 text-white/60 transition-colors hover:bg-white/10 hover:text-white"
+            >
+              <Icon icon={Cancel01Icon} className="size-4" />
+            </button>
             <div className="mx-auto flex h-full w-full max-w-sm flex-col text-center">
             <div className="flex flex-1 flex-col justify-center">
             <h2 className="font-display text-2xl leading-tight tracking-[-0.03em] text-white">
@@ -111,6 +160,17 @@ export default function LandingPage() {
               Every feature in one workspace, billed monthly in Ugandan
               shillings.
             </p>
+            <button
+              type="button"
+              onClick={() => setAuthOpen(true)}
+              className={buttonVariants({
+                size: "lg",
+                className: "mx-auto mt-7 h-9 w-40 justify-center",
+              })}
+            >
+              Open app
+              <Icon icon={ArrowRight01Icon} className="size-4" />
+            </button>
             </div>
 
             <div className="mt-auto flex flex-wrap items-center justify-center gap-3 pt-6">
@@ -131,6 +191,7 @@ export default function LandingPage() {
             </div>
             </div>
           </motion.aside>
+          </div>
         </div>
       </main>
 
