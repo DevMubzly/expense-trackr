@@ -9,6 +9,7 @@ import {
 import { useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { ArrowRight01Icon, Tick02Icon } from "@hugeicons/core-free-icons";
+import { accountIcon } from "@/components/account-select";
 import { BrandStrip } from "@/components/brand-strip";
 import { Icon } from "@/components/huge-icon";
 import { api } from "@/lib/use-api";
@@ -481,29 +482,53 @@ function AccountStep({
         style={{ caretColor: accent }}
       />
 
-      <div className="mt-5 flex flex-wrap gap-2">
+      <div className="mt-5 grid gap-2 sm:grid-cols-3">
         {ACCOUNT_TYPES.map((option) => {
           const active = option.value === type;
           return (
-            <button
+            <motion.button
               key={option.value}
               type="button"
+              aria-pressed={active}
+              whileTap={{ scale: 0.985 }}
               onClick={() => setType(option.value)}
               className={cn(
-                "rounded-full border px-4 py-2 text-sm transition-colors",
-                active ? "text-foreground" : "border-border text-muted-foreground hover:text-foreground",
+                "relative flex flex-col items-start gap-3 rounded-2xl p-4 text-left transition-colors",
+                active
+                  ? "text-foreground"
+                  : "bg-muted/25 text-muted-foreground hover:bg-muted/40 hover:text-foreground",
               )}
               style={
                 active
                   ? {
-                      borderColor: accent,
                       background: `color-mix(in oklab, ${accent} 16%, transparent)`,
                     }
                   : undefined
               }
             >
-              {option.label}
-            </button>
+              <span
+                className={cn(
+                  "grid size-9 place-items-center rounded-xl",
+                  active
+                    ? "bg-background/40 text-foreground"
+                    : "bg-muted/40 text-muted-foreground",
+                )}
+              >
+                <Icon icon={accountIcon(option.value)} className="size-4" />
+              </span>
+              <span className="pr-6 text-sm font-medium">{option.label}</span>
+              <span
+                className={cn(
+                  "absolute right-3 top-3 grid size-5 place-items-center rounded-full",
+                  active ? "text-black" : "bg-muted/60",
+                )}
+                style={active ? { background: accent } : undefined}
+              >
+                {active ? (
+                  <Icon icon={Tick02Icon} className="size-3" />
+                ) : null}
+              </span>
+            </motion.button>
           );
         })}
       </div>
