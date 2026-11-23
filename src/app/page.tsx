@@ -103,7 +103,7 @@ export default function LandingPage() {
                 </h1>
               </div>
 
-              <div className="relative mt-auto overflow-hidden rounded-t-2xl p-3 pb-0 lg:mt-2 lg:rounded-3xl lg:p-4">
+              <div className="relative mt-auto translate-y-1/4 overflow-hidden rounded-t-2xl p-3 pb-0 lg:mt-2 lg:translate-y-0 lg:rounded-3xl lg:p-4">
                 <Image
                   src="/bg-hero.jpg"
                   alt=""
