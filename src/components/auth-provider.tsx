@@ -4,11 +4,12 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
   useMemo,
-  useState,
   type ReactNode,
 } from "react";
+import { useAuthActions } from "@convex-dev/auth/react";
+import { useConvexAuth, useQuery } from "convex/react";
+import { api } from "../../convex/_generated/api";
 
 export type AuthUser = {
   name: string;
@@ -18,11 +19,9 @@ export type AuthUser = {
 type AuthContextValue = {
   user: AuthUser | null;
   loading: boolean;
-  login: (email: string, password: string) => AuthUser;
   logout: () => void;
 };
 
-const STORAGE_KEY = "xpense-session";
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 function displayName(email: string) {
@@ -34,65 +33,31 @@ function displayName(email: string) {
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<AuthUser | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { isAuthenticated, isLoading } = useConvexAuth();
+  const { signOut } = useAuthActions();
+  const viewer = useQuery(
+    api.users.viewer,
+    isAuthenticated ? {} : "skip",
+  );
 
-  useEffect(() => {
-    // A timer, not requestAnimationFrame: rAF is paused in background tabs and
-    // would leave the app stuck on the session skeleton.
-    const timer = window.setTimeout(() => {
-      try {
-        const stored = window.localStorage.getItem(STORAGE_KEY);
-        if (stored) {
-          const parsed = JSON.parse(stored) as AuthUser;
-          if (parsed?.email === "demo@expense.app") {
-            const renamed: AuthUser = {
-              name: "Brian",
-              email: "brian@expense.app",
-            };
-            window.localStorage.setItem(STORAGE_KEY, JSON.stringify(renamed));
-            setUser(renamed);
-          } else if (parsed?.email) {
-            setUser(parsed);
-          }
-        }
-      } catch {
-        // Mock sessions are best-effort only.
-      } finally {
-        setLoading(false);
-      }
-    }, 0);
-    return () => window.clearTimeout(timer);
-  }, []);
-
-  const login = useCallback((email: string, password: string) => {
-    void password;
-    const trimmed = email.trim() || "brian@expense.app";
-    const next: AuthUser = {
-      email: trimmed,
-      name: displayName(trimmed),
+  const user = useMemo<AuthUser | null>(() => {
+    if (!viewer) return null;
+    return {
+      name: viewer.name.trim() || displayName(viewer.email),
+      email: viewer.email,
     };
-    setUser(next);
-    try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-    } catch {
-      // The in-memory session still works.
-    }
-    return next;
-  }, []);
+  }, [viewer]);
+
+  const loading =
+    isLoading || (isAuthenticated && viewer === undefined);
 
   const logout = useCallback(() => {
-    setUser(null);
-    try {
-      window.localStorage.removeItem(STORAGE_KEY);
-    } catch {
-      // The in-memory session is already cleared.
-    }
-  }, []);
+    void signOut();
+  }, [signOut]);
 
   const value = useMemo(
-    () => ({ user, loading, login, logout }),
-    [loading, login, logout, user],
+    () => ({ user, loading, logout }),
+    [loading, logout, user],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
