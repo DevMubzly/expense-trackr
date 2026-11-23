@@ -593,7 +593,7 @@ function Done({
     if (featureIndex >= features.length) return;
     const timer = window.setTimeout(() => {
       setFeatureIndex((index) => index + 1);
-    }, 1000);
+    }, 1600);
     return () => window.clearTimeout(timer);
   }, [featureIndex, features.length]);
 
@@ -606,9 +606,14 @@ function Done({
         initial={{ scale: 0, rotate: -18 }}
         animate={{ scale: 1, rotate: 0 }}
         transition={{ type: "spring", stiffness: 280, damping: 16, delay: 0.05 }}
-        className="text-5xl"
       >
-        🎉
+        <motion.div
+          animate={{ scale: [1, 1.12, 1] }}
+          transition={{ duration: 2.6, repeat: Infinity, ease: "easeInOut" }}
+          className="text-5xl"
+        >
+          🎉
+        </motion.div>
       </motion.div>
 
       <h1 className="mt-5 font-display text-3xl leading-tight tracking-[-0.04em]">
@@ -616,7 +621,16 @@ function Done({
         <span className="text-muted-foreground">you&apos;re all set.</span>
       </h1>
 
-      <div className="relative mt-8 flex h-12 w-full items-center justify-center">
+      <motion.div
+        initial={{ height: 40, marginTop: 20, opacity: 1 }}
+        animate={{
+          height: finished ? 0 : 40,
+          marginTop: finished ? 0 : 20,
+          opacity: finished ? 0 : 1,
+        }}
+        transition={{ duration: 0.4, ease: EASE }}
+        className="relative flex w-full items-center justify-center overflow-hidden"
+      >
         <AnimatePresence mode="wait">
           {!finished ? (
             <motion.p
@@ -624,22 +638,22 @@ function Done({
               initial={{ opacity: 0, y: 10, filter: "blur(4px)" }}
               animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
               exit={{ opacity: 0, y: -10, filter: "blur(4px)" }}
-              transition={{ duration: 0.28, ease: EASE }}
+              transition={{ duration: 0.42, ease: EASE }}
               className="text-sm leading-relaxed text-muted-foreground"
             >
               {features[featureIndex]}
             </motion.p>
           ) : null}
         </AnimatePresence>
-      </div>
+      </motion.div>
 
       <AnimatePresence>
         {finished ? (
           <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.35, ease: EASE }}
-            className="mt-2"
+            transition={{ duration: 0.4, ease: EASE }}
+            className="mt-5"
           >
             <AccentButton accent={accent} onClick={onOpen}>
               Open dashboard
