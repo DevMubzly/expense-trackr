@@ -404,7 +404,7 @@ function TransactionForm({
             changeType(value as TransactionType)
           }
           ariaLabel="Transaction type"
-          className="w-52"
+          className="w-40 min-[360px]:w-52"
           options={TYPES}
         />
       </div>
@@ -416,7 +416,7 @@ function TransactionForm({
             value={currency}
             onValueChange={(value) => changeCurrency(value as Currency)}
             ariaLabel="Transaction currency"
-            className="w-52"
+            className="w-40 min-[360px]:w-52"
             options={CURRENCY_OPTIONS}
           />
         </div>
@@ -496,7 +496,7 @@ function TransactionForm({
                   accounts={accounts}
                   onValueChange={setAccountId}
                   hideLabel
-                  className="w-52"
+                  className="w-40 min-[360px]:w-52"
                 />
               </div>
               <AnimatePresence initial={false}>
@@ -510,7 +510,7 @@ function TransactionForm({
                   accounts={accounts}
                   onValueChange={setToAccountId}
                   hideLabel
-                  className="w-52"
+                  className="w-40 min-[360px]:w-52"
                 />
               </div>
             </>
@@ -524,7 +524,7 @@ function TransactionForm({
                   accounts={accounts}
                   onValueChange={setAccountId}
                   hideLabel
-                  className="w-52"
+                  className="w-40 min-[360px]:w-52"
                 />
               </div>
               <AnimatePresence initial={false}>
@@ -537,7 +537,7 @@ function TransactionForm({
                   onValueChange={setCategory}
                   kind={type === "income" ? "income" : "expense"}
                   label="Category"
-                  className="w-52"
+                  className="w-40 min-[360px]:w-52"
                 />
               </div>
             </>
@@ -644,7 +644,7 @@ function FeeField({
         onChange={(value) => onChange(formatNumericInput(value))}
         placeholder="0"
         aria-label="Transaction fee (UGX)"
-        className="w-52"
+        className="w-40 min-[360px]:w-52"
         classNames={UNDERLINE_FIELD}
       />
     </motion.div>

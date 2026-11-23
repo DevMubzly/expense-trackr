@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Bricolage_Grotesque, Inter, Inter_Tight, Syncopate } from "next/font/google";
+import { Inter, Inter_Tight, Syncopate } from "next/font/google";
 import "./globals.css";
 import "goey-toast/styles.css";
 import { Providers } from "@/components/providers";
@@ -25,12 +25,6 @@ const syncopate = Syncopate({
   display: "swap",
 });
 
-const bricolage = Bricolage_Grotesque({
-  variable: "--font-bricolage",
-  subsets: ["latin"],
-  display: "swap",
-});
-
 export const metadata: Metadata = {
   title: "Expense Trackr",
   description: "A desktop expense tracker for UGX, USD, KES, RWF and TZS.",
@@ -41,7 +35,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${inter.variable} ${bricolage.variable} ${interTight.variable} ${syncopate.variable} h-full antialiased`}
+      className={`${inter.variable} ${interTight.variable} ${syncopate.variable} h-full antialiased`}
     >
       <body className="min-h-full">
         <Providers>

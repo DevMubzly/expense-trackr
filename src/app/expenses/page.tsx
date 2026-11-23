@@ -382,7 +382,7 @@ export default function ExpensesPage() {
           />
         </div>
 
-        <div className="ml-auto flex items-center gap-2">
+        <div className="flex w-full flex-wrap items-center gap-2 sm:ml-auto sm:w-auto">
           <Combobox
             value={typeFilter}
             onValueChange={(value) => changeType(value as TypeFilter)}
@@ -553,7 +553,7 @@ export default function ExpensesPage() {
           />
         ) : (
           <>
-            <div className="overflow-x-auto">
+            <div className="hidden overflow-x-auto md:block">
               <table className="w-full min-w-[992px] table-fixed border-collapse text-left">
                 <caption className="sr-only">Transactions</caption>
                 <colgroup>
@@ -784,6 +784,143 @@ export default function ExpensesPage() {
                 </tbody>
               </table>
             </div>
+
+            <ul className="divide-y divide-border/70 md:hidden">
+              {pageRows.map((row) => {
+                const cat = categoryOf(row.category || "other");
+                const spentOn = parseYmd(row.spentOn);
+                const source = accountById.get(row.accountId);
+                const destination = row.toAccountId
+                  ? accountById.get(row.toAccountId)
+                  : undefined;
+                const description =
+                  row.note ||
+                  (row.type === "transfer" ? "Transfer" : cat.label);
+                return (
+                  <li
+                    key={row.id}
+                    className="flex items-start gap-2 px-3 py-3"
+                  >
+                    <div className="pt-1">
+                      <Checkbox
+                        checked={selected.includes(row.id)}
+                        onCheckedChange={(checked) =>
+                          toggleRow(row.id, checked)
+                        }
+                        aria-label={`Select ${description}`}
+                      />
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => openTransaction(row)}
+                      className="min-w-0 flex-1 text-left"
+                    >
+                      <span className="flex items-start gap-2.5">
+                        <span className="grid size-8 shrink-0 place-items-center">
+                          <Icon
+                            icon={
+                              row.type === "transfer"
+                                ? ArrowLeftRightIcon
+                                : cat.icon
+                            }
+                            className="size-4"
+                          />
+                        </span>
+
+                        <span className="min-w-0 flex-1">
+                          <span className="flex items-start justify-between gap-2">
+                            <span className="block min-w-0 flex-1 truncate text-[13px]">
+                              {description}
+                            </span>
+
+                            <span className="flex shrink-0 items-center gap-1">
+                              {row.type !== "transfer" ? (
+                                <span
+                                  className={cn(
+                                    "text-sm font-semibold",
+                                    row.type === "income"
+                                      ? "text-emerald-600 dark:text-emerald-400"
+                                      : "text-muted-foreground",
+                                  )}
+                                >
+                                  {row.type === "income" ? "+" : "−"}
+                                </span>
+                              ) : null}
+                              <Money value={row.amountUgx} size="sm" />
+                            </span>
+                          </span>
+
+                          <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">
+                            {relativeDay(row.spentOn, today)} ·{" "}
+                            {spentOn.toLocaleDateString("en-GB", {
+                              day: "2-digit",
+                              month: "short",
+                            })}{" "}
+                            · {transactionTime(row)}
+                          </span>
+
+                          <span className="mt-2 flex flex-wrap items-center gap-1.5 text-[10px] text-muted-foreground">
+                            <span
+                              className={cn(
+                                "rounded-full px-2 py-0.5 font-medium",
+                                typeClass(row.type),
+                              )}
+                            >
+                              {typeLabel(row.type)}
+                            </span>
+                            {row.type !== "transfer" ? (
+                              <span
+                                className="rounded-full px-2 py-0.5"
+                                style={{
+                                  background: `color-mix(in oklab, ${cat.color} 12%, transparent)`,
+                                }}
+                              >
+                                {cat.label}
+                              </span>
+                            ) : null}
+                            <span className="min-w-0 truncate">
+                              {source?.name ?? "Account"}
+                              {destination ? ` → ${destination.name}` : ""}
+                            </span>
+                            {row.feeUgx ? (
+                              <span>
+                                + {display.formatValue(row.feeUgx)}{" "}
+                                {display.unit} fee
+                              </span>
+                            ) : null}
+                          </span>
+                        </span>
+                      </span>
+                    </button>
+
+                    <div className="flex shrink-0 flex-col gap-0.5">
+                      <button
+                        type="button"
+                        onClick={() => openTransaction(row)}
+                        aria-label={`Edit ${description}`}
+                        className="grid size-8 place-items-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                      >
+                        <Icon icon={PencilEdit01Icon} className="size-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setConfirmDelete({
+                            ids: [row.id],
+                            label: description,
+                          })
+                        }
+                        aria-label={`Delete ${description}`}
+                        className="grid size-8 place-items-center rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                      >
+                        <Icon icon={Delete02Icon} className="size-3.5" />
+                      </button>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
 
             <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border/70 px-4 py-3">
               <p className="text-[11px] text-muted-foreground">

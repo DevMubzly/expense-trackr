@@ -532,7 +532,7 @@ export function InsightsBento({ period }: { period: StatPeriod }) {
             <Grid horizontal />
             <YAxis formatValue={display.formatMoney} />
             <Bar dataKey="total" fill="var(--chart-1)" lineCap="round" />
-            <BarXAxis />
+            <BarXAxis maxLabels={{ base: 3, sm: 6 }} />
             <ChartTooltip
               rows={(point) => [
                 {
@@ -667,7 +667,7 @@ export function InsightsBento({ period }: { period: StatPeriod }) {
                 lineCap={2}
               />
             ))}
-            <BarXAxis />
+            <BarXAxis maxLabels={{ base: 4, sm: 8 }} />
             <ChartTooltip
               rows={(point) =>
                 expenseCategories.map((category) => ({

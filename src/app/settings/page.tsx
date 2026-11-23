@@ -624,7 +624,7 @@ function SettingsForm({
                   );
                 }}
                 ariaLabel="Default currency"
-                className="w-60"
+                className="w-44 min-[360px]:w-60"
                 options={CURRENCY_OPTIONS}
               />
             </div>
@@ -842,8 +842,11 @@ function SettingsForm({
                     variant="ghost"
                     size="sm"
                     onClick={() => setDefaultAccountId(account.id)}
+                    aria-label={`Set ${account.name} as default`}
+                    className="px-2"
                   >
-                    Set default
+                    <Icon icon={Tick02Icon} className="size-3.5 sm:hidden" />
+                    <span className="hidden sm:inline">Set default</span>
                   </Button>
                 )}
                 <Button
@@ -1219,7 +1222,7 @@ function OtpDeleteDialog({
   async function sendCode() {
     if (sending) return;
     setSending(true);
-    await new Promise((resolve) => window.setTimeout(resolve, 500));
+    await new Promise((resolve) => window.setTimeout(resolve, 400));
     setSending(false);
     setStep("otp");
     gooeyToast.success("Verification code sent", {
@@ -1230,12 +1233,11 @@ function OtpDeleteDialog({
   return (
     <div className="flex flex-col">
       <ModalSurface>
-        <AnimatePresence mode="wait" initial={false}>
+        <AnimatePresence initial={false}>
           <motion.div
             key={step}
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -4 }}
             transition={{ duration: 0.16 }}
             className="space-y-4"
           >
@@ -1425,7 +1427,7 @@ function IncomeSourceForm({
           value={categoryId}
           onValueChange={setCategoryId}
           ariaLabel="Income category"
-          className="w-52"
+          className="w-40 min-[360px]:w-52"
           options={categories.map((category) => ({
             value: category.id,
             label: category.label,
@@ -1439,7 +1441,7 @@ function IncomeSourceForm({
           value={accountId}
           onValueChange={setAccountId}
           ariaLabel="Income account"
-          className="w-52"
+          className="w-40 min-[360px]:w-52"
           options={accounts.map((account) => ({
             value: account.id,
             label: account.name,
@@ -1462,7 +1464,7 @@ function IncomeSourceForm({
             setCadence(value as IncomeSource["cadence"])
           }
           ariaLabel="Income cadence"
-          className="w-52"
+          className="w-40 min-[360px]:w-52"
           options={[
             { value: "fixed", label: "Fixed" },
             { value: "irregular", label: "Irregular" },
@@ -1626,7 +1628,7 @@ function CategoryForm({
             value={kind}
             onValueChange={(value) => setKind(value as CategoryKind)}
             ariaLabel="Category type"
-            className="w-52"
+            className="w-40 min-[360px]:w-52"
             options={[
               { value: "expense", label: "Expense" },
               { value: "income", label: "Income" },
@@ -1766,7 +1768,7 @@ function AccountForm({
           value={type}
           onValueChange={(value) => setType(value as AccountType)}
           ariaLabel="Account type"
-          className="w-52"
+          className="w-40 min-[360px]:w-52"
           options={ACCOUNT_TYPES}
         />
       </div>

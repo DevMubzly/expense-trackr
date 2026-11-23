@@ -23,34 +23,41 @@ export default function LandingPage() {
     }
   }, []);
 
+  useEffect(() => {
+    if (!pricingOpen) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previous;
+    };
+  }, [pricingOpen]);
+
   return (
-    <div className="theme-light flex h-dvh flex-col overflow-hidden bg-[oklch(0.165_0.008_285)] text-foreground">
+    <div className="theme-light flex min-h-dvh flex-col overflow-x-hidden bg-[oklch(0.165_0.008_285)] text-foreground lg:h-dvh lg:overflow-hidden">
 
 
-      <main className="min-h-0 flex-1 px-4 pb-4 pt-4 sm:px-6 sm:pt-6">
+      <main className="min-h-0 flex-1 px-4 pb-0 pt-4 sm:px-6 sm:pb-4 sm:pt-6">
         <div
           className={cn(
-            "mx-auto flex h-full w-full max-w-[1500px] flex-col gap-4 transition-[gap] duration-700 lg:flex-row",
-            pricingOpen ? "lg:gap-4" : "lg:gap-0",
+            "mx-auto flex w-full max-w-[1500px] flex-col gap-4 transition-[gap] duration-700 lg:h-full lg:flex-row",
+            pricingOpen ? "lg:gap-4" : "gap-0 lg:gap-0",
           )}
         >
           <motion.section
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.55, ease: [0.23, 1, 0.32, 1] }}
-            className="relative isolate min-w-0 flex-1 overflow-hidden rounded-[32px] bg-black"
+            className="relative isolate min-w-0 flex-none overflow-hidden rounded-t-[32px] rounded-b-none bg-[oklch(0.165_0.008_285)] min-h-[calc(100dvh-1rem)] sm:min-h-[calc(100dvh-2.5rem)] lg:min-h-0 lg:flex-1 lg:rounded-[32px]"
           >
-            <Image
-              src="/bg-hero.jpg"
-              alt=""
-              fill
-              priority
-              sizes="100vw"
-              className="-z-10 object-cover object-center"
-            />
-
-            <div className="relative flex h-full flex-col px-6 pt-8 sm:px-10 lg:px-12">
-              <div className="flex min-h-8 flex-wrap items-center justify-between gap-2">
+            <div
+              className={cn(
+                "relative flex min-h-[calc(100dvh-1rem)] flex-col pb-0 pt-8 sm:min-h-[calc(100dvh-2.5rem)] lg:h-full lg:min-h-0 lg:pb-4",
+                pricingOpen
+                  ? "px-6 sm:px-10 lg:px-12"
+                  : "px-8 sm:px-14 lg:px-16",
+              )}
+            >
+              <div className="flex min-h-[72px] flex-wrap items-center justify-between gap-2 sm:min-h-8">
                 <Link
                   href="/"
                   style={{ fontFamily: "var(--font-syncopate), system-ui, sans-serif" }}
@@ -59,7 +66,7 @@ export default function LandingPage() {
                   Expense Trackr
                 </Link>
 
-                <div className="flex items-center gap-2">
+                <div className="ml-auto flex items-center gap-2">
                   <button
                     type="button"
                     onClick={() => setAuthOpen(true)}
@@ -89,31 +96,32 @@ export default function LandingPage() {
                 </div>
               </div>
 
-              <div className="mx-auto mt-auto w-full max-w-4xl pb-4">
-                <div className="grid items-center gap-6 md:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] md:gap-10">
-                  <div>
-                    <h1 className="font-display text-2xl leading-tight tracking-[-0.03em] text-white [text-shadow:0_2px_20px_rgba(0,0,0,0.45)] sm:text-3xl">
-                      Know where
-                      <span className="block text-white/70">every shilling goes.</span>
-                    </h1>
-                  </div>
-
-                  <p className="max-w-sm text-[15px] leading-relaxed text-white/70 [text-shadow:0_1px_14px_rgba(0,0,0,0.5)]">
-                    Accounts, spending, budgets, goals and debts in one
-                    workspace, so the month adds up without a spreadsheet.
-                  </p>
-                </div>
+              <div className="mt-16 w-full pb-4 lg:mt-auto">
+                <h1 className="font-display text-xl leading-tight tracking-[-0.03em] text-white [text-shadow:0_2px_20px_rgba(0,0,0,0.45)] sm:text-2xl">
+                  Know where
+                  <span className="block text-white/70">every shilling goes.</span>
+                </h1>
               </div>
 
-              <div className="flex justify-center overflow-hidden">
+              <div className="relative mt-auto overflow-hidden rounded-t-2xl p-3 pb-0 lg:mt-2 lg:rounded-3xl lg:p-4">
                 <Image
-                  src="/dash.png"
-                  alt="Expense Trackr dashboard"
-                  width={1920}
-                  height={956}
+                  src="/bg-hero.jpg"
+                  alt=""
+                  fill
                   priority
-                  className="h-auto w-full max-w-6xl rounded-t-2xl border-x-[5px] border-t-[5px] border-white/45 shadow-2xl shadow-black/40"
+                  sizes="100vw"
+                  className="object-cover object-center"
                 />
+                <div className="relative flex justify-center">
+                  <Image
+                    src="/dash.png"
+                    alt="Expense Trackr dashboard"
+                    width={1920}
+                    height={956}
+                    priority
+                    className="h-auto w-full max-w-6xl rounded-t-lg rounded-b-none shadow-lg lg:rounded-lg"
+                  />
+                </div>
               </div>
             </div>
           </motion.section>
@@ -133,15 +141,15 @@ export default function LandingPage() {
             className={cn(
               "min-h-0 shrink-0 overflow-hidden transition-[width,opacity] duration-700 ease-[cubic-bezier(0.16,1,0.3,1)]",
               pricingOpen
-                ? "fixed inset-4 z-50 h-[calc(100dvh-2rem)] w-auto opacity-100 lg:static lg:inset-auto lg:h-auto lg:w-[34%]"
-                : "pointer-events-none w-0 opacity-0",
+                ? "fixed inset-0 z-50 h-dvh w-full opacity-100 lg:static lg:inset-auto lg:h-auto lg:w-[34%]"
+                : "pointer-events-none h-0 w-0 opacity-0",
             )}
           >
           <motion.aside
             initial={false}
             animate={{ x: pricingOpen ? 0 : 48, opacity: pricingOpen ? 1 : 0 }}
             transition={{ duration: 0.8, ease: EASE_OUT }}
-            className="relative flex h-full min-h-0 w-full flex-col overflow-y-auto rounded-[32px] border border-white/10 bg-white/[0.035] p-6 transition-colors hover:border-white/20 lg:p-8"
+            className="relative flex h-full min-h-0 w-full flex-col overflow-y-auto rounded-none border-0 bg-[oklch(0.165_0.008_285)] p-6 lg:rounded-[32px] lg:border lg:border-white/10 lg:bg-white/[0.035] lg:p-8 lg:hover:border-white/20"
           >
             <button
               type="button"

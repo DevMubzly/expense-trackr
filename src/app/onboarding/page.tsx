@@ -386,7 +386,7 @@ function CurrencyStep({
           onValueChange={(value) => setSelected(value as Currency)}
           ariaLabel="Currency"
           options={CURRENCY_OPTIONS}
-          className="w-64 max-w-full"
+          className="w-52 max-w-full min-[360px]:w-64"
         />
       </div>
 
@@ -449,7 +449,7 @@ function AccountStep({
             value: option.value,
             label: option.label,
           }))}
-          className="w-64 max-w-full"
+          className="w-52 max-w-full min-[360px]:w-64"
         />
       </div>
 

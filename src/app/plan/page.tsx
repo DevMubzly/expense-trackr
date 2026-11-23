@@ -1763,7 +1763,7 @@ function ContributionForm({
           onValueChange={setSource}
           ariaLabel={mode === "withdraw" ? "Withdrawal destination" : "Contribution source"}
           options={sourceOptions}
-          className="w-52"
+          className="w-40 min-[360px]:w-52"
         />
       </div>
       <div className="rounded-xl border border-foreground/10 bg-muted/50 p-3 text-[11px] leading-relaxed text-muted-foreground">
@@ -1864,7 +1864,7 @@ function PaymentForm({
           onValueChange={setAccountId}
           compact
           hideLabel
-          className="w-52"
+          className="w-40 min-[360px]:w-52"
         />
       </div>
       <Input
@@ -2064,7 +2064,7 @@ function DebtForm({
             setDirection(value as Debt["direction"])
           }
           ariaLabel="Debt direction"
-          className="w-52"
+          className="w-40 min-[360px]:w-52"
           options={[
             { value: "borrowed", label: "I borrowed" },
             { value: "lent", label: "I lent" },
@@ -2162,7 +2162,7 @@ function BudgetForm({
           onValueChange={setCategoryId}
           allLabel="All categories"
           compact
-          className="w-52"
+          className="w-40 min-[360px]:w-52"
         />
       </div>
       <Input
@@ -2181,7 +2181,7 @@ function BudgetForm({
             setPeriod(value as Budget["period"])
           }
           ariaLabel="Budget period"
-          className="w-52"
+          className="w-40 min-[360px]:w-52"
           options={[
             { value: "monthly", label: "Monthly" },
             { value: "weekly", label: "Weekly" },
@@ -2296,7 +2296,7 @@ function RecurringForm({
             changeType(value as TransactionType)
           }
           ariaLabel="Recurring type"
-          className="w-52"
+          className="w-40 min-[360px]:w-52"
           options={TYPES}
         />
       </div>
@@ -2327,7 +2327,7 @@ function RecurringForm({
             onValueChange={setCategory}
             kind={type === "income" ? "income" : "expense"}
             compact
-            className="w-52"
+            className="w-40 min-[360px]:w-52"
           />
         </div>
       ) : null}
@@ -2342,7 +2342,7 @@ function RecurringForm({
           onValueChange={setAccountId}
           compact
           hideLabel
-          className="w-52"
+          className="w-40 min-[360px]:w-52"
         />
       </div>
       {isTransfer ? (
@@ -2355,7 +2355,7 @@ function RecurringForm({
             onValueChange={setToAccountId}
             compact
             hideLabel
-            className="w-52"
+            className="w-40 min-[360px]:w-52"
           />
         </div>
       ) : null}
@@ -2367,7 +2367,7 @@ function RecurringForm({
             setFrequency(value as RecurringRule["frequency"])
           }
           ariaLabel="Recurring frequency"
-          className="w-52"
+          className="w-40 min-[360px]:w-52"
           options={FREQUENCIES.map((value) => ({
             value,
             label: value.charAt(0).toUpperCase() + value.slice(1),

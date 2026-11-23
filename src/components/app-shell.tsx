@@ -547,7 +547,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   if (authLoading || !user) return <SessionGateSkeleton />;
 
   return (
-    <div className="flex min-h-dvh flex-col">
+    <div className="flex min-h-dvh flex-col overflow-x-hidden">
       <main className={cn("flex-1 pb-40 pt-20", FRAME)}>{children}</main>
 
       <div className="pointer-events-none fixed inset-x-0 top-0 z-50 flex justify-center">
@@ -567,7 +567,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <DynamicIsland
             view={islandView}
             compact={
-              <span className="flex items-center gap-2 whitespace-nowrap px-3 text-[11px] font-medium">
+              <span className="flex items-center gap-2 whitespace-nowrap px-2 text-[10px] font-medium sm:px-3 sm:text-[11px]">
                 Today net
                 <span className="text-white/50">·</span>
                 {statsLoading ? (
