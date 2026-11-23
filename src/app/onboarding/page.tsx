@@ -145,7 +145,7 @@ function OnboardingFlow() {
       className="dark flex min-h-dvh flex-col bg-background text-foreground"
       style={{ colorScheme: "dark" }}
     >
-      <div className="mx-auto flex w-full max-w-[560px] flex-1 flex-col justify-center px-6 py-16">
+      <div className="mx-auto flex w-full max-w-[560px] flex-1 flex-col px-6 pb-16 pt-[18vh]">
         <div className="mb-10 h-1">
           {progress >= 0 ? (
             <div className="flex gap-1.5">
@@ -392,21 +392,20 @@ function CurrencyStep({
               whileTap={{ scale: 0.985 }}
               onClick={() => setSelected(currency)}
               className={cn(
-                "flex items-center gap-3 rounded-2xl border p-3.5 text-left transition-colors",
+                "flex items-center gap-3 rounded-2xl p-3.5 text-left transition-colors",
                 active
                   ? "text-foreground"
-                  : "border-border bg-muted/10 text-muted-foreground hover:border-foreground/20 hover:text-foreground",
+                  : "bg-muted/25 text-muted-foreground hover:bg-muted/40 hover:text-foreground",
               )}
               style={
                 active
                   ? {
-                      borderColor: accent,
-                      background: `color-mix(in oklab, ${accent} 12%, transparent)`,
+                      background: `color-mix(in oklab, ${accent} 16%, transparent)`,
                     }
                   : undefined
               }
             >
-              <span className="grid size-10 shrink-0 place-items-center rounded-xl border border-border/60 bg-background/50 text-[13px] font-semibold text-foreground">
+              <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-background/40 text-[13px] font-semibold text-foreground">
                 {meta.symbol}
               </span>
               <span className="min-w-0 flex-1">
@@ -419,10 +418,8 @@ function CurrencyStep({
               </span>
               <span
                 className={cn(
-                  "grid size-5 shrink-0 place-items-center rounded-full border",
-                  active
-                    ? "border-transparent text-black"
-                    : "border-border",
+                  "grid size-5 shrink-0 place-items-center rounded-full",
+                  active ? "text-black" : "bg-muted/60",
                 )}
                 style={active ? { background: accent } : undefined}
               >
