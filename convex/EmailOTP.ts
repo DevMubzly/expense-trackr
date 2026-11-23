@@ -18,10 +18,13 @@ export const EmailOTP = Email({
       process.env.AUTH_EMAIL_FROM ?? "Expense Trackr <onboarding@resend.dev>";
 
     if (!apiKey) {
-      // Development fallback: the code is printed in the Convex logs.
-      // Set AUTH_RESEND_KEY on the deployment to send real emails.
-      console.log(`[auth] OTP for ${email}: ${token}`);
-      return;
+      if (process.env.AUTH_DEV_OTP_LOGGING === "1") {
+        // Development fallback: the code is printed in the Convex logs.
+        // Production must configure AUTH_RESEND_KEY.
+        console.log(`[auth] OTP for ${email}: ${token}`);
+        return;
+      }
+      throw new Error("AUTH_RESEND_KEY is not configured.");
     }
 
     const response = await fetch("https://api.resend.com/emails", {
