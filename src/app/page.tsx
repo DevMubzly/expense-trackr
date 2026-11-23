@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { motion } from "motion/react";
@@ -152,27 +151,17 @@ export default function LandingPage() {
               </span>
               <span className="h-4 w-px bg-white/15" />
               <a
-                href="https://salastores.com"
+                href="https://bmubarak.xyz"
                 target="_blank"
                 rel="noopener noreferrer"
-                aria-label="SalaStores"
+                aria-label="By Mubarak"
                 className={cn(
-                  "group inline-flex items-center gap-3",
+                  "group inline-flex items-center gap-1.5",
                   pricingOpen ? "pointer-events-none" : "pointer-events-auto",
                 )}
               >
-                <Image
-                  src="/salastores-logo.svg"
-                  alt=""
-                  width={30}
-                  height={28}
-                  className="opacity-60 pb-1 transition-opacity group-hover:opacity-100"
-                />
-                <span
-                  style={{ fontFamily: "var(--font-syncopate), system-ui, sans-serif" }}
-                  className="font-syncopate text-[11px] tracking-[0.02em] text-white/70 transition-colors group-hover:text-white"
-                >
-                  <span className="text-purple-400">Sala</span>Stores
+                <span className="text-[11px] tracking-[0.02em] text-white/70 transition-colors group-hover:text-white">
+                  By Mubarak <span aria-hidden="true">☁️</span>
                 </span>
               </a>
             </motion.div>
@@ -310,24 +299,14 @@ export default function LandingPage() {
               </span>
               <span className="h-4 w-px bg-white/15" />
               <a
-                href="https://salastores.com"
+                href="https://bmubarak.xyz"
                 target="_blank"
                 rel="noopener noreferrer"
-                aria-label="SalaStores"
-                className="group inline-flex items-center gap-3"
+                aria-label="By Mubarak"
+                className="group inline-flex items-center gap-1.5"
               >
-                <Image
-                  src="/salastores-logo.svg"
-                  alt=""
-                  width={30}
-                  height={28}
-                  className="opacity-60 pb-1 transition-opacity group-hover:opacity-100"
-                />
-                <span
-                  style={{ fontFamily: "var(--font-syncopate), system-ui, sans-serif" }}
-                  className="font-syncopate text-[11px] tracking-[0.02em] text-white/70 transition-colors group-hover:text-white"
-                >
-                  <span className="text-purple-400">Sala</span>Stores
+                <span className="text-[11px] tracking-[0.02em] text-white/70 transition-colors group-hover:text-white">
+                  By Mubarak <span aria-hidden="true">☁️</span>
                 </span>
               </a>
             </div>

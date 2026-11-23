@@ -1,4 +1,3 @@
-import Image from "next/image";
 import { cn } from "@/lib/utils";
 
 export function BrandStrip({ className }: { className?: string }) {
@@ -17,24 +16,14 @@ export function BrandStrip({ className }: { className?: string }) {
       </span>
       <span className="h-4 w-px bg-border" />
       <a
-        href="https://salastores.com"
+        href="https://bmubarak.xyz"
         target="_blank"
         rel="noopener noreferrer"
-        aria-label="SalaStores"
-        className="group inline-flex items-center gap-3"
+        aria-label="By Mubarak"
+        className="group inline-flex items-center gap-1.5"
       >
-        <Image
-          src="/salastores-logo.svg"
-          alt=""
-          width={30}
-          height={28}
-          className="opacity-60 pb-1 transition-opacity group-hover:opacity-100"
-        />
-        <span
-          style={{ fontFamily: "var(--font-syncopate), system-ui, sans-serif" }}
-          className="font-syncopate text-[11px] tracking-[0.02em] text-muted-foreground transition-colors group-hover:text-foreground"
-        >
-          <span className="text-purple-400">Sala</span>Stores
+        <span className="text-[11px] text-muted-foreground transition-colors group-hover:text-foreground">
+          By Mubarak <span aria-hidden="true">☁️</span>
         </span>
       </a>
     </div>
