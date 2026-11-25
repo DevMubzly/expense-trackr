@@ -107,7 +107,6 @@ function AuthBody({ onDone }: { onDone: () => void }) {
   const { signIn } = useAuthActions();
   const router = useRouter();
   const [mode, setMode] = useState<Mode>("signin");
-  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -155,10 +154,6 @@ function AuthBody({ onDone }: { onDone: () => void }) {
     }
 
     if (mode === "signup") {
-      if (!name.trim()) {
-        setError("Enter your name.");
-        return;
-      }
       if (!email.trim()) {
         setError("Enter your email.");
         return;
@@ -175,7 +170,6 @@ function AuthBody({ onDone }: { onDone: () => void }) {
         await signIn("password", {
           email: email.trim(),
           password,
-          name: name.trim(),
           flow: "signUp",
         });
         finish();
@@ -266,17 +260,6 @@ function AuthBody({ onDone }: { onDone: () => void }) {
           </div>
 
           <div className="space-y-3">
-            {mode === "signup" ? (
-              <Input
-                label="Name"
-                value={name}
-                onChange={setName}
-                placeholder="Your name"
-                autoComplete="name"
-                classNames={UNDERLINE_FIELD}
-              />
-            ) : null}
-
             <Input
               label="Email"
               type="email"
