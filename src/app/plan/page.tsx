@@ -452,7 +452,7 @@ export default function PlanPage() {
       await api.delete(`/api/${path}/${id}`);
       const label =
         kind === "goal"
-          ? "Goal"
+          ? "Savings pot"
           : kind === "debt"
             ? "Debt"
             : kind === "budget"
@@ -550,7 +550,7 @@ export default function PlanPage() {
     activeBudgetMonth && currentMonth && activeBudgetMonth < currentMonth,
   );
   const sectionNav = [
-    { id: "goals" as const, label: "Goals", count: goals.length },
+    { id: "goals" as const, label: "Savings", count: goals.length },
     { id: "debts" as const, label: "Debts", count: debts.length },
     {
       id: "recurring" as const,
@@ -663,8 +663,8 @@ export default function PlanPage() {
         />
         <MetricCard
           compact
-          label="Goals saved"
-          info="Total saved across all goals."
+          label="Savings saved"
+          info="Total saved across all savings pots."
           value={goalsSaved}
           foot={PERIOD_LABELS[period]}
           spark={goalsSpark}
@@ -755,25 +755,25 @@ export default function PlanPage() {
         </Panel>
       ) : null}
       <SectionPanel
-        title="Goals"
-        info="Savings targets, progress, contributions and deadlines."
+        title="Savings pots"
+        info="Targets, funding accounts, deposits and deadlines."
         className={showsSection("goals") ? undefined : "hidden"}
-        hint={`${display.formatMoney(goalsSaved)} saved across ${formatNumber(goals.length)} goals`}
+        hint={`${display.formatMoney(goalsSaved)} saved across ${formatNumber(goals.length)} pots`}
         action={
           <Button
             variant="outline"
             size="sm"
             onClick={() => setModal({ kind: "goal", item: null })}
           >
-            <Icon icon={PlusSignIcon} className="size-3.5" /> Add goal
+            <Icon icon={PlusSignIcon} className="size-3.5" /> Add pot
           </Button>
         }
         bodyClassName="p-5"
       >
         {goals.length === 0 ? (
           <EmptyState
-            title="No goals yet"
-            hint="Add a target, a deadline, and start contributing."
+            title="No savings yet"
+            hint="Add a target, a funding account, and start saving."
           />
         ) : (
           <div className="grid gap-4 md:grid-cols-2">
@@ -867,7 +867,7 @@ export default function PlanPage() {
                     <span>
                       {remaining > 0
                         ? `${display.formatMoney(Math.round(remaining / months))} / month`
-                        : "Goal reached"}
+                        : "Target reached"}
                     </span>
                   </div>
 
@@ -901,7 +901,7 @@ export default function PlanPage() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        title="Take money out of this goal and lower its saved balance"
+                        title="Take money out of this savings pot and lower its saved balance"
                         onClick={() =>
                           setActionModal({
                             kind: "contribution",
@@ -1364,8 +1364,8 @@ export default function PlanPage() {
         <div className="grid gap-4 px-2 pb-4 sm:grid-cols-3">
           <MetricCard
             compact
-            label="Goal savings"
-            info="Net change in goal balances in the selected range."
+            label="Savings activity"
+            info="Net change in savings balances in the selected range."
             value={activitySummary.goals.total}
             foot={`${formatNumber(activitySummary.goals.count)} ${
               activitySummary.goals.count === 1 ? "change" : "changes"
@@ -1410,7 +1410,7 @@ export default function PlanPage() {
             ariaLabel="Activity type"
             options={[
               { value: "all", label: "All activity" },
-              { value: "goals", label: "Goals" },
+              { value: "goals", label: "Savings" },
               { value: "debts", label: "Debts" },
               { value: "recurring", label: "Recurring" },
             ]}
@@ -1420,7 +1420,7 @@ export default function PlanPage() {
 
         {filteredActivity.length === 0 ? (
           <p className="px-2 py-6 text-center text-sm text-muted-foreground">
-            No {activityFilter === "all" ? "" : `${activityFilter} `}activity
+            No {activityFilter === "all" ? "" : activityFilter === "goals" ? "savings " : `${activityFilter} `}activity
             in this range yet.
           </p>
         ) : (
@@ -1441,8 +1441,8 @@ export default function PlanPage() {
                     const label =
                       entry.kind === "goal-contribution"
                         ? withdrawal
-                          ? "Goal withdrawal"
-                          : "Goal contribution"
+                          ? "Savings withdrawal"
+                          : "Savings deposit"
                         : entry.kind === "debt-payment"
                           ? "Debt payment"
                           : "Recurring run";
@@ -1555,6 +1555,8 @@ export default function PlanPage() {
           <GoalForm
             key={modal.item?.id ?? "new-goal"}
             goal={modal.item}
+            accounts={accounts}
+            defaultAccountId={planDefaultAccountId}
             onSaved={saved}
             onCancel={() => setModal(null)}
           />
@@ -1596,7 +1598,7 @@ export default function PlanPage() {
         ariaLabel={
           actionModal?.kind === "payment"
             ? "Log debt payment"
-            : "Add goal contribution"
+            : "Add savings deposit"
         }
       >
         {actionModal?.kind === "contribution" ? (
@@ -1678,7 +1680,7 @@ function ContributionForm({
   const [amount, setAmount] = useState("");
   const [date, setDate] = useState(ymd(new Date()));
   const [source, setSource] = useState(
-    cashAccount ? "cash" : defaultAccountId,
+    goal.accountId ?? (cashAccount ? "cash" : defaultAccountId),
   );
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
@@ -1768,8 +1770,8 @@ function ContributionForm({
       </div>
       <div className="rounded-xl border border-foreground/10 bg-muted/50 p-3 text-[11px] leading-relaxed text-muted-foreground">
         {mode === "withdraw"
-          ? "A withdrawal takes money back out of this goal and records it in Plan activity. It does not create a spending entry."
-          : "A contribution adds to this goal's saved balance. Choose Cash for physical cash, or a bank/mobile money account for a transfer."}
+          ? "A withdrawal lowers this savings pot and returns the money to the account you pick. Nothing is counted as income."
+          : "A deposit raises this savings pot and moves the money out of the account you pick. Nothing is counted as spending."}
       </div>
       <Input
         label="Note"
@@ -1916,10 +1918,14 @@ function FormShell({
 
 function GoalForm({
   goal,
+  accounts,
+  defaultAccountId,
   onSaved,
   onCancel,
 }: {
   goal: Goal | null;
+  accounts: Account[];
+  defaultAccountId: string;
   onSaved: () => void;
   onCancel: () => void;
 }) {
@@ -1932,6 +1938,9 @@ function GoalForm({
     goal?.deadline ?? ymd(addDays(new Date(), 90)),
   );
   const [note, setNote] = useState(goal?.note ?? "");
+  const [accountId, setAccountId] = useState(
+    goal?.accountId ?? defaultAccountId,
+  );
   const [saving, setSaving] = useState(false);
 
   async function submit() {
@@ -1946,18 +1955,19 @@ function GoalForm({
         deadline,
         note,
         color: goal?.color ?? "oklch(0.7 0.15 155)",
+        accountId,
       };
       if (goal) {
         await api.patch(`/api/goals/${goal.id}`, payload);
       } else {
         await api.post("/api/goals", payload);
       }
-      gooeyToast.success(goal ? "Goal updated" : "Goal added", {
+      gooeyToast.success(goal ? "Savings pot updated" : "Savings pot added", {
         description: `${name.trim()} · ${display.formatMoney(Math.round(targetUgx))} target`,
       });
       onSaved();
     } catch (error) {
-      gooeyToast.error("Could not save goal", { description: (error as Error).message });
+      gooeyToast.error("Could not save savings pot", { description: (error as Error).message });
     } finally {
       setSaving(false);
     }
@@ -1965,8 +1975,8 @@ function GoalForm({
 
   return (
     <FormShell
-      title={goal ? "Edit goal" : "Add goal"}
-      hint="A target, what is saved, and a deadline."
+      title={goal ? "Edit savings pot" : "Add savings pot"}
+      hint="A target, the account it draws from, and a deadline."
       onCancel={onCancel}
       onSubmit={submit}
       saving={saving}
@@ -1980,6 +1990,12 @@ function GoalForm({
           setTarget(formatNumericInput(value, moneyInputDecimals(display)))
         }
         placeholder={moneyInputValue(display, 3_000_000)}
+      />
+      <AccountSelect
+        label="Funding account"
+        value={accountId}
+        accounts={accounts}
+        onValueChange={setAccountId}
       />
       <label className="block">
         <span className="mb-1 block text-[13px] text-muted-foreground">Deadline</span>

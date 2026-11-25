@@ -8,7 +8,9 @@ type Input = {
   transactions: Record<string, unknown>[];
   budgets: Doc<"budgets">[];
   goals: Doc<"goals">[];
+  goalContributions: Doc<"goalContributions">[];
   debts: Doc<"debts">[];
+  debtPayments: Doc<"debtPayments">[];
   recurring: Doc<"recurringRules">[];
   incomeSources: Doc<"incomeSources">[];
   settings: Record<string, unknown>;
@@ -23,6 +25,7 @@ type Tx = {
   spentOn: string;
   spentTime: string;
   note: string;
+  source?: string;
 };
 
 const ymd = (date: Date) =>
@@ -49,7 +52,7 @@ const PERIOD_DAYS: Record<string, number> = {
 };
 
 export function buildStats(input: Input) {
-  const { params, categories, transactions, budgets, goals, debts, recurring, incomeSources, settings } = input;
+  const { params, categories, transactions, budgets, goals, goalContributions, debts, debtPayments, recurring, incomeSources, settings } = input;
   const all = transactions as Tx[];
   const now = new Date();
   const today = ymd(now);
@@ -231,9 +234,39 @@ export function buildStats(input: Input) {
     recurring,
     incomeSources,
     activity: [
-      ...goals.map((g) => ({ kind: "goal", date: ymd(new Date(g.createdAt)), amountUgx: g.savedUgx, title: g.name, detail: "Goal", refId: g._id })),
-      ...debts.map((d) => ({ kind: "debt", date: d.dueOn, amountUgx: d.balanceUgx, title: d.counterparty, detail: d.direction, refId: d._id })),
-      ...recurring.map((r) => ({ kind: "recurring", date: r.nextOn, amountUgx: r.amountUgx, title: r.name, detail: r.frequency, refId: r._id })),
-    ],
+      ...goalContributions.map((c) => ({
+        id: c._id,
+        kind: "goal-contribution",
+        date: c.date,
+        amountUgx: c.amountUgx,
+        title: goals.find((g) => g._id === c.goalId)?.name ?? "Savings pot",
+        detail: c.amountUgx >= 0 ? "Savings deposit" : "Savings withdrawal",
+        accountName: input.accounts.find(
+          (a) => a.id === c.accountId,
+        )?.name,
+        refId: c._id,
+      })),
+      ...debtPayments.map((p) => ({
+        id: p._id,
+        kind: "debt-payment",
+        date: p.date,
+        amountUgx: p.amountUgx,
+        title: debts.find((d) => d._id === p.debtId)?.counterparty ?? "Debt",
+        detail: "Payment",
+        accountName: input.accounts.find(
+          (a) => a.id === p.accountId,
+        )?.name,
+        refId: p._id,
+      })),
+      ...(all as Tx[]).filter((t) => t.source === "recurring").map((t) => ({
+        id: t.id,
+        kind: "recurring-run",
+        date: t.spentOn,
+        amountUgx: t.amountUgx,
+        title: t.note || "Recurring run",
+        detail: "Recurring run",
+        refId: t.id,
+      })),
+    ].sort((a, b) => b.date.localeCompare(a.date)),
   };
 }

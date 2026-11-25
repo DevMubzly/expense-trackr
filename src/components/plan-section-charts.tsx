@@ -262,7 +262,7 @@ export function PlanSectionCharts({
           rows={(point) => [
             {
               color: COLORS.violet,
-              label: "Goals",
+              label: "Savings",
               value: display.formatMoney(Number(point.goals) || 0),
             },
             {

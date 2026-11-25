@@ -228,6 +228,7 @@ export type Goal = {
   deadline: string;
   color: string;
   note: string;
+  accountId?: string;
   createdAt: string;
 };
 

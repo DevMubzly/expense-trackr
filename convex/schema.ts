@@ -90,6 +90,7 @@ export default defineSchema({
     deadline: v.string(),
     color: v.string(),
     note: v.string(),
+    accountId: v.optional(v.id("accounts")),
     createdAt: v.number(),
   }).index("by_user", ["userId"]),
 

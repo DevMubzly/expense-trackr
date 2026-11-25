@@ -27,19 +27,21 @@ async function requireUser(ctx: QueryCtx | MutationCtx) {
 }
 
 async function rows(ctx: QueryCtx | MutationCtx, userId: Id<"users">) {
-  const [accounts, categories, transactions, budgets, goals, debts, recurring, incomeSources, settings] =
+  const [accounts, categories, transactions, budgets, goals, goalContributions, debts, debtPayments, recurring, incomeSources, settings] =
     await Promise.all([
       ctx.db.query("accounts").withIndex("by_user", (q) => q.eq("userId", userId)).collect(),
       ctx.db.query("categories").withIndex("by_user", (q) => q.eq("userId", userId)).collect(),
       ctx.db.query("transactions").withIndex("by_user", (q) => q.eq("userId", userId)).collect(),
       ctx.db.query("budgets").withIndex("by_user", (q) => q.eq("userId", userId)).collect(),
       ctx.db.query("goals").withIndex("by_user", (q) => q.eq("userId", userId)).collect(),
+      ctx.db.query("goalContributions").withIndex("by_user", (q) => q.eq("userId", userId)).collect(),
       ctx.db.query("debts").withIndex("by_user", (q) => q.eq("userId", userId)).collect(),
+      ctx.db.query("debtPayments").withIndex("by_user", (q) => q.eq("userId", userId)).collect(),
       ctx.db.query("recurringRules").withIndex("by_user", (q) => q.eq("userId", userId)).collect(),
       ctx.db.query("incomeSources").withIndex("by_user", (q) => q.eq("userId", userId)).collect(),
       ctx.db.query("settings").withIndex("by_user", (q) => q.eq("userId", userId)).first(),
     ]);
-  return { accounts, categories, transactions, budgets, goals, debts, recurring, incomeSources, settings };
+  return { accounts, categories, transactions, budgets, goals, goalContributions, debts, debtPayments, recurring, incomeSources, settings };
 }
 
 function shapeAccount(account: Doc<"accounts">, transactions: Doc<"transactions">[]) {
@@ -99,12 +101,13 @@ export const read = query({
   handler: async (ctx, { endpoint, params }) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) return null;
-    const { accounts, categories, transactions, budgets, goals, debts, recurring, incomeSources, settings } =
+    const { accounts, categories, transactions, budgets, goals, goalContributions, debts, debtPayments, recurring, incomeSources, settings } =
       await rows(ctx, userId);
 
     const shapedAccounts = accounts.map((a) => shapeAccount(a, transactions));
     const shapedCategories = categories.map(shapeCategory);
     const shapedTransactions = transactions
+      .filter((t) => t.source !== "savings")
       .slice()
       .sort((a, b) => b.createdAt - a.createdAt)
       .map((t) => ({
@@ -161,6 +164,9 @@ export const read = query({
         deadline: g.deadline,
         color: g.color,
         note: g.note,
+        accountId: g.accountId
+          ? accounts.find((a) => a._id === g.accountId)?.legacyId ?? g.accountId
+          : undefined,
         createdAt: new Date(g.createdAt).toISOString(),
       }));
     }
@@ -284,7 +290,9 @@ export const read = query({
         transactions: shapedTransactions,
         budgets,
         goals,
+        goalContributions,
         debts,
+        debtPayments,
         recurring,
         incomeSources,
         settings: shapeSettings(settings, userId),
@@ -359,14 +367,45 @@ export const write = mutation({
       const goal = (await resolveDoc(ctx, "goals", userId, parts[1])) as unknown as Doc<"goals"> | null;
       if (!goal) throw new Error("Goal not found.");
       const amountUgx = Number(b.amountUgx ?? 0);
+      const date = String(b.date ?? todayIso());
+      const account = await resolveDoc(
+        ctx,
+        "accounts",
+        userId,
+        String(b.accountId ?? goal.accountId ?? ""),
+      );
       await ctx.db.insert("goalContributions", {
         userId,
         goalId: goal._id as unknown as Id<"goals">,
         amountUgx,
-        date: String(b.date ?? todayIso()),
+        date,
+        accountId: account?._id,
         note: String(b.note ?? ""),
         createdAt: now,
       });
+      if (account) {
+        const settings = await ctx.db
+          .query("settings")
+          .withIndex("by_user", (q) => q.eq("userId", userId))
+          .first();
+        await ctx.db.insert("transactions", {
+          userId,
+          type: "transfer",
+          amount: amountUgx,
+          currency: "UGX",
+          amountUgx,
+          usdRate: Number(settings?.usdRate ?? 3800),
+          categoryId: undefined,
+          accountId: account._id,
+          toAccountId: undefined,
+          feeUgx: undefined,
+          note: `${amountUgx >= 0 ? "Saved to" : "Withdrawn from"} ${goal.name}`,
+          spentOn: date,
+          spentTime: "12:00",
+          source: "savings",
+          createdAt: now,
+        });
+      }
       await ctx.db.patch(goal._id, {
         savedUgx: Number(goal.savedUgx ?? 0) + amountUgx,
       });
@@ -499,6 +538,7 @@ export const write = mutation({
         });
       }
       if (resource === "goals") {
+        const account = await resolveDoc(ctx, "accounts", userId, String(b.accountId ?? ""));
         return await ctx.db.insert("goals", {
           ...common,
           name: String(b.name ?? "Goal"),
@@ -507,6 +547,7 @@ export const write = mutation({
           deadline: String(b.deadline ?? todayIso()),
           color: String(b.color ?? "oklch(0.6 0.16 150)"),
           note: String(b.note ?? ""),
+          accountId: account?._id,
         });
       }
       if (resource === "debts") {
@@ -567,6 +608,16 @@ export const write = mutation({
       if (b.categoryId !== undefined) {
         const category = await resolveDoc(ctx, "categories", userId, String(b.categoryId));
         patch.categoryId = category?._id as unknown as Id<"categories"> | undefined;
+      }
+      await ctx.db.patch(doc._id, patch as Record<string, unknown>);
+      return { ok: true };
+    }
+
+    if (resource === "goals") {
+      const patch = pick(b, ["name", "targetUgx", "savedUgx", "deadline", "color", "note"]);
+      if (b.accountId !== undefined) {
+        const account = await resolveDoc(ctx, "accounts", userId, String(b.accountId));
+        patch.accountId = account?._id;
       }
       await ctx.db.patch(doc._id, patch as Record<string, unknown>);
       return { ok: true };
