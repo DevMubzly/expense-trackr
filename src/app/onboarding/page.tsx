@@ -9,19 +9,18 @@ import {
 import { useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
+import { gooeyToast } from "goey-toast";
 import { BrandStrip } from "@/components/brand-strip";
 import { DropdownSelect } from "@/components/dropdown-select";
 import { Icon } from "@/components/huge-icon";
-import { useMutation } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { api as convexApi } from "../../../convex/_generated/api";
 import { CURRENCY_OPTIONS } from "@/lib/currencies";
 import type { AccountType, Currency } from "@/lib/types";
 import {
   STEP_META,
   firstIncomplete,
-  isOnboarded,
   isStep,
-  markOnboarded,
   readDraft,
   saveDraft,
   stepIndex,
@@ -59,16 +58,12 @@ function OnboardingFlow() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | undefined>();
   const completeOnboarding = useMutation(convexApi.onboarding.complete);
+  const onboardingStatus = useQuery(convexApi.onboarding.status, {});
 
   useEffect(() => {
     const stored = readDraft();
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setDraft(stored);
-
-    if (isOnboarded()) {
-      router.replace("/dashboard");
-      return;
-    }
 
     if (step !== "welcome" && step !== "done") {
       const missing = firstIncomplete(stored);
@@ -81,6 +76,10 @@ function OnboardingFlow() {
     setReady(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (onboardingStatus?.completed) router.replace("/dashboard");
+  }, [onboardingStatus, router]);
 
   function go(next: Step) {
     setDirection(stepIndex(next) >= stepIndex(step) ? 1 : -1);
@@ -113,7 +112,9 @@ function OnboardingFlow() {
         budget: Number(merged.budget ?? 0),
         payday: merged.payday ? Number(merged.payday) : undefined,
       });
-      markOnboarded();
+      gooeyToast.success("Setup complete", {
+        description: "Your workspace is ready.",
+      });
       go("done");
     } catch (cause) {
       setError((cause as Error).message);
@@ -122,7 +123,7 @@ function OnboardingFlow() {
     }
   }
 
-  if (!ready) {
+  if (!ready || onboardingStatus === undefined) {
     return <div className="dark min-h-dvh bg-background" />;
   }
 
@@ -260,7 +261,10 @@ function OnboardingFlow() {
                 <Done
                   accent={meta.accent}
                   draft={draft}
-                  onOpen={() => router.replace("/dashboard")}
+                  onOpen={() => {
+                  gooeyToast.success("Welcome to your dashboard");
+                  router.replace("/dashboard");
+                }}
                 />
               ) : null}
             </motion.div>

@@ -5,7 +5,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { useRouter } from "next/navigation";
 import { ArrowRight01Icon, Cancel01Icon } from "@hugeicons/core-free-icons";
 import { useAuthActions } from "@convex-dev/auth/react";
-import { isOnboarded } from "@/lib/onboarding";
+import { gooeyToast } from "goey-toast";
 import { Input } from "@/components/motion/input";
 import { Icon } from "@/components/huge-icon";
 import { Button } from "@/components/ui/button";
@@ -80,7 +80,7 @@ export function AuthDialog({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 8, scale: 0.98, transition: { duration: 0.16 } }}
             transition={{ type: "spring", duration: 0.4, bounce: 0.12 }}
-            className="dark relative z-10 max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto rounded-2xl border border-foreground/10 bg-card p-5 text-foreground shadow-2xl"
+            className="dark relative z-10 max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto rounded-2xl border border-foreground/10 bg-card p-1 text-foreground shadow-2xl"
           >
             <button
               type="button"
@@ -91,11 +91,7 @@ export function AuthDialog({
               <Icon icon={Cancel01Icon} className="size-4" />
             </button>
 
-            <h2 id={titleId} className="text-center text-base font-semibold tracking-[-0.02em]">
-              Expense Trackr
-            </h2>
-
-            <AuthBody onDone={onClose} />
+            <AuthBody onDone={onClose} titleId={titleId} />
           </motion.div>
         </motion.div>
       ) : null}
@@ -103,8 +99,8 @@ export function AuthDialog({
   );
 }
 
-function AuthBody({ onDone }: { onDone: () => void }) {
-  const { signIn } = useAuthActions();
+function AuthBody({ onDone, titleId }: { onDone: () => void; titleId: string }) {
+  const { signIn, signOut } = useAuthActions();
   const router = useRouter();
   const [mode, setMode] = useState<Mode>("signin");
   const [email, setEmail] = useState("");
@@ -114,9 +110,12 @@ function AuthBody({ onDone }: { onDone: () => void }) {
   const [error, setError] = useState<string | undefined>();
   const [pending, setPending] = useState(false);
 
-  function finish() {
+  function finish(message = "Welcome back") {
+    gooeyToast.success(message, {
+      description: "Opening your workspace.",
+    });
     onDone();
-    router.push(isOnboarded() ? "/dashboard" : "/onboarding?step=welcome");
+    router.push("/onboarding?step=welcome");
   }
 
   function switchMode(next: Mode) {
@@ -172,7 +171,11 @@ function AuthBody({ onDone }: { onDone: () => void }) {
           password,
           flow: "signUp",
         });
-        finish();
+        await signOut();
+        gooeyToast.success("Account created", {
+          description: "Sign in with your new password to continue.",
+        });
+        switchMode("signin");
       });
       return;
     }
@@ -208,7 +211,7 @@ function AuthBody({ onDone }: { onDone: () => void }) {
         newPassword: password,
         flow: "reset-verification",
       });
-      finish();
+      finish("Password updated");
     });
   }
 
@@ -240,7 +243,6 @@ function AuthBody({ onDone }: { onDone: () => void }) {
           : "Reset password";
 
   return (
-    <div className="mt-5">
       <AnimatePresence mode="wait" initial={false}>
         <motion.div
           key={mode}
@@ -248,10 +250,9 @@ function AuthBody({ onDone }: { onDone: () => void }) {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -6 }}
           transition={{ duration: 0.18, ease: EASE_OUT }}
-          className="space-y-4"
         >
-          <div>
-            <h3 className="font-display text-xl leading-tight tracking-[-0.03em]">
+          <div className="rounded-xl border border-foreground/10 bg-muted/15 p-3.5 px-4 pr-9">
+            <h3 id={titleId} className="font-display text-xl leading-tight tracking-[-0.03em]">
               {title}
             </h3>
             <p className="mt-1 text-[12px] leading-relaxed text-muted-foreground">
@@ -259,7 +260,8 @@ function AuthBody({ onDone }: { onDone: () => void }) {
             </p>
           </div>
 
-          <div className="space-y-3">
+          <div className="mt-1 space-y-3 rounded-xl border border-foreground/10 bg-muted/15 p-3.5 px-4">
+            <div className="space-y-3">
             <Input
               label="Email"
               type="email"
@@ -360,8 +362,8 @@ function AuthBody({ onDone }: { onDone: () => void }) {
               </button>
             )}
           </div>
+          </div>
         </motion.div>
       </AnimatePresence>
-    </div>
   );
 }

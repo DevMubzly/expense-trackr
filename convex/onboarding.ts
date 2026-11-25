@@ -1,6 +1,6 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
-import { mutation } from "./_generated/server";
+import { mutation, query } from "./_generated/server";
 
 const currency = v.union(
   v.literal("UGX"),
@@ -132,5 +132,19 @@ export const complete = mutation({
     }
 
     return { userId, accountId };
+  },
+});
+
+/** Whether this signed-in user has finished onboarding. */
+export const status = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return { completed: false };
+    const settings = await ctx.db
+      .query("settings")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .first();
+    return { completed: settings !== null };
   },
 });
