@@ -80,7 +80,7 @@ export function AuthDialog({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 8, scale: 0.98, transition: { duration: 0.16 } }}
             transition={{ type: "spring", duration: 0.4, bounce: 0.12 }}
-            className="dark relative z-10 max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto rounded-2xl border border-foreground/10 bg-card p-1 text-foreground shadow-2xl"
+            className="dark relative z-10 max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto rounded-2xl border border-foreground/10 bg-card p-1 pb-5 text-foreground shadow-2xl"
           >
             <button
               type="button"

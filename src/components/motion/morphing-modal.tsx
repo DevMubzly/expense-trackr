@@ -186,7 +186,7 @@ export function MorphingModal({
                   className,
                 )}
               >
-                <motion.div layout="position" className={cn("p-5", contentClassName)}>
+                <motion.div layout="position" className={cn("p-5", contentClassName, "pb-5")}>
                   <AnimatePresence mode="popLayout" initial={false}>
                     {/* The motion element is the direct child so popLayout can
                         take its ref and lift the outgoing view out of flow;
