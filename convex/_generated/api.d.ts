@@ -8,11 +8,13 @@
  * @module
  */
 
+import type * as app from "../app.js";
 import type * as auth from "../auth.js";
 import type * as finance from "../finance.js";
 import type * as http from "../http.js";
 import type * as mcp from "../mcp.js";
 import type * as onboarding from "../onboarding.js";
+import type * as stats from "../stats.js";
 import type * as transactions from "../transactions.js";
 import type * as users from "../users.js";
 
@@ -23,11 +25,13 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  app: typeof app;
   auth: typeof auth;
   finance: typeof finance;
   http: typeof http;
   mcp: typeof mcp;
   onboarding: typeof onboarding;
+  stats: typeof stats;
   transactions: typeof transactions;
   users: typeof users;
 }>;
