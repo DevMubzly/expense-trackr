@@ -3,11 +3,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { useRouter } from "next/navigation";
-import {
-  ArrowRight01Icon,
-  Cancel01Icon,
-  Tick02Icon,
-} from "@hugeicons/core-free-icons";
+import { ArrowRight01Icon, Cancel01Icon } from "@hugeicons/core-free-icons";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { isOnboarded } from "@/lib/onboarding";
 import { Input } from "@/components/motion/input";
@@ -15,11 +11,24 @@ import { Icon } from "@/components/huge-icon";
 import { Button } from "@/components/ui/button";
 import { EASE_OUT } from "@/lib/ease";
 
+type Mode = "signin" | "signup" | "reset" | "reset-verify";
+
 const UNDERLINE_FIELD = {
   field:
     "h-10 rounded-none border-x-0 border-t-0 border-b border-border bg-transparent data-[state=focused]:ring-0",
-  input: "text-sm",
+  input: "text-[13px] placeholder:text-muted-foreground/50",
 };
+
+function friendlyError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+  if (/InvalidSecret/i.test(message)) return "That email and password do not match.";
+  if (/already exists/i.test(message)) return "An account with that email already exists.";
+  if (/not found/i.test(message)) return "No account found for that email.";
+  if (/at least 8/i.test(message)) return "Use at least 8 characters.";
+  if (/code/i.test(message)) return "That code is not valid. Request a new one.";
+  if (/TooMany/i.test(message)) return "Too many attempts. Try again in a few minutes.";
+  return message || "Something went wrong.";
+}
 
 export function AuthDialog({
   open,
@@ -57,32 +66,36 @@ export function AuthDialog({
           exit={{ opacity: 0 }}
           transition={{ duration: 0.18 }}
         >
-          <motion.div
+          <div
             aria-hidden="true"
             onClick={onClose}
-            className="absolute inset-0 bg-black/50 backdrop-blur-[2px]"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
+            className="absolute inset-0 bg-black/50"
           />
           <motion.div
             ref={panelRef}
             role="dialog"
             aria-modal="true"
             aria-labelledby={titleId}
-            initial={{ opacity: 0, y: 16, scale: 0.97 }}
+            initial={{ opacity: 0, y: 14, scale: 0.97 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{
-              opacity: 0,
-              y: 8,
-              scale: 0.98,
-              transition: { duration: 0.16, ease: EASE_OUT },
-            }}
-            transition={{ type: "spring", stiffness: 360, damping: 30 }}
-            className="dark relative z-10 max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-hidden rounded-2xl border border-border bg-background p-1 text-foreground shadow-2xl"
+            exit={{ opacity: 0, y: 8, scale: 0.98, transition: { duration: 0.16 } }}
+            transition={{ type: "spring", duration: 0.4, bounce: 0.12 }}
+            className="dark relative z-10 max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto rounded-2xl border border-foreground/10 bg-card p-5 text-foreground shadow-2xl"
           >
-            <AuthBody onDone={onClose} titleId={titleId} />
+            <button
+              type="button"
+              aria-label="Close"
+              onClick={onClose}
+              className="absolute right-3 top-3 grid size-7 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              <Icon icon={Cancel01Icon} className="size-4" />
+            </button>
+
+            <h2 id={titleId} className="text-center text-base font-semibold tracking-[-0.02em]">
+              Expense Trackr
+            </h2>
+
+            <AuthBody onDone={onClose} />
           </motion.div>
         </motion.div>
       ) : null}
@@ -90,329 +103,282 @@ export function AuthDialog({
   );
 }
 
-type Step = "email" | "otp";
-
-function AuthBody({
-  onDone,
-  titleId,
-}: {
-  onDone: () => void;
-  titleId: string;
-}) {
+function AuthBody({ onDone }: { onDone: () => void }) {
   const { signIn } = useAuthActions();
   const router = useRouter();
-  const emailId = useId();
-  const emailRef = useRef<HTMLInputElement>(null);
-  const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
-
-  const [step, setStep] = useState<Step>("email");
+  const [mode, setMode] = useState<Mode>("signin");
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [otp, setOtp] = useState<string[]>(Array(6).fill(""));
-  const [error, setError] = useState<string>();
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [code, setCode] = useState("");
+  const [error, setError] = useState<string | undefined>();
   const [pending, setPending] = useState(false);
-  const [resending, setResending] = useState(false);
-  const [resent, setResent] = useState(false);
 
-  const code = otp.join("");
-  const validEmail = email.trim().includes("@");
-
-  function focusFirstOtp() {
-    window.setTimeout(() => otpRefs.current[0]?.focus(), 260);
+  function finish() {
+    onDone();
+    router.push(isOnboarded() ? "/dashboard" : "/onboarding?step=welcome");
   }
 
-  function goBack() {
-    setStep("email");
+  function switchMode(next: Mode) {
+    setMode(next);
     setError(undefined);
-    window.setTimeout(() => emailRef.current?.focus(), 260);
+    setPassword("");
+    setConfirm("");
+    setCode("");
   }
 
-  async function sendCode() {
-    if (pending || resending) return;
-    if (!validEmail) {
-      setError("Enter a valid email address.");
-      emailRef.current?.focus();
-      return;
-    }
-    setError(undefined);
+  async function run(task: () => Promise<unknown>) {
+    if (pending) return;
     setPending(true);
+    setError(undefined);
     try {
-      const form = new FormData();
-      form.set("email", email.trim());
-      await signIn("email-otp", form);
-      setStep("otp");
-      focusFirstOtp();
+      await task();
     } catch (cause) {
-      setError(
-        cause instanceof Error ? cause.message : "Could not send the code.",
-      );
+      setError(friendlyError(cause));
     } finally {
       setPending(false);
     }
   }
 
-  async function verifyCode() {
-    if (pending || code.length !== 6) {
-      if (code.length !== 6) setError("Enter the 6-digit code.");
-      return;
-    }
-    setError(undefined);
-    setPending(true);
-    try {
-      const form = new FormData();
-      form.set("email", email.trim());
-      form.set("code", code);
-      await signIn("email-otp", form);
-      onDone();
-      router.push(isOnboarded() ? "/dashboard" : "/onboarding?step=welcome");
-    } catch (cause) {
-      setError(
-        cause instanceof Error ? cause.message : "That code did not work.",
-      );
-    } finally {
-      setPending(false);
-    }
-  }
-
-  async function resendCode() {
-    if (resending || pending) return;
-    setError(undefined);
-    setResending(true);
-    try {
-      const form = new FormData();
-      form.set("email", email.trim());
-      await signIn("email-otp", form);
-      setResent(true);
-      window.setTimeout(() => setResent(false), 2400);
-    } catch (cause) {
-      setError(
-        cause instanceof Error ? cause.message : "Could not resend the code.",
-      );
-    } finally {
-      setResending(false);
-    }
-  }
-
-  function setDigit(index: number, value: string) {
-    const digit = value.replace(/\D/g, "").slice(-1);
-    setOtp((current) => {
-      const next = [...current];
-      next[index] = digit;
-      return next;
-    });
-    if (digit && index < 5) {
-      otpRefs.current[index + 1]?.focus();
-    }
-  }
-
-  function handleOtpKeyDown(
-    index: number,
-    event: React.KeyboardEvent<HTMLInputElement>,
-  ) {
-    if (event.key === "Backspace" && !otp[index] && index > 0) {
-      event.preventDefault();
-      setOtp((current) => {
-        const next = [...current];
-        next[index - 1] = "";
-        return next;
+  function submit() {
+    if (mode === "signin") {
+      if (!email.trim() || !password) {
+        setError("Enter your email and password.");
+        return;
+      }
+      void run(async () => {
+        await signIn("password", { email: email.trim(), password, flow: "signIn" });
+        finish();
       });
-      otpRefs.current[index - 1]?.focus();
+      return;
     }
-    if (event.key === "Enter") verifyCode();
+
+    if (mode === "signup") {
+      if (!name.trim()) {
+        setError("Enter your name.");
+        return;
+      }
+      if (!email.trim()) {
+        setError("Enter your email.");
+        return;
+      }
+      if (password.length < 8) {
+        setError("Use at least 8 characters.");
+        return;
+      }
+      if (password !== confirm) {
+        setError("Passwords do not match.");
+        return;
+      }
+      void run(async () => {
+        await signIn("password", {
+          email: email.trim(),
+          password,
+          name: name.trim(),
+          flow: "signUp",
+        });
+        finish();
+      });
+      return;
+    }
+
+    if (mode === "reset") {
+      if (!email.trim()) {
+        setError("Enter your email.");
+        return;
+      }
+      void run(async () => {
+        await signIn("password", { email: email.trim(), flow: "reset" });
+        switchMode("reset-verify");
+      });
+      return;
+    }
+
+    if (code.length !== 6) {
+      setError("Enter the 6-digit code.");
+      return;
+    }
+    if (password.length < 8) {
+      setError("Use at least 8 characters.");
+      return;
+    }
+    if (password !== confirm) {
+      setError("Passwords do not match.");
+      return;
+    }
+    void run(async () => {
+      await signIn("password", {
+        email: email.trim(),
+        code,
+        newPassword: password,
+        flow: "reset-verification",
+      });
+      finish();
+    });
   }
 
-  function handleOtpPaste(event: React.ClipboardEvent<HTMLInputElement>) {
-    const digits = event.clipboardData
-      .getData("text")
-      .replace(/\D/g, "")
-      .slice(0, 6);
-    if (!digits) return;
-    event.preventDefault();
-    const next = Array(6).fill("");
-    digits.split("").forEach((digit, index) => {
-      next[index] = digit;
-    });
-    setOtp(next);
-    otpRefs.current[Math.min(digits.length, 5)]?.focus();
-  }
+  const title =
+    mode === "signin"
+      ? "Welcome back"
+      : mode === "signup"
+        ? "Create your account"
+        : mode === "reset"
+          ? "Reset your password"
+          : "Choose a new password";
+
+  const subtitle =
+    mode === "signin"
+      ? "Sign in to pick up where you left off."
+      : mode === "signup"
+        ? "One account, every page."
+        : mode === "reset"
+          ? "Enter your email and we will generate a reset code."
+          : `Enter the code for ${email.trim()} and a new password.`;
+
+  const cta =
+    mode === "signin"
+      ? "Sign in"
+      : mode === "signup"
+        ? "Create account"
+        : mode === "reset"
+          ? "Send reset code"
+          : "Reset password";
 
   return (
-    <div className="flex flex-col">
-      <div className="overflow-y-auto rounded-xl border border-foreground/10 bg-muted/50 p-3.5 pb-2">
-        <AnimatePresence mode="wait" initial={false}>
-          <motion.div
-            key={step}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -6 }}
-            transition={{ duration: 0.18, ease: EASE_OUT }}
-          >
-            {step === "email" ? (
-              <div className="space-y-4">
-                <div>
-                  <h2
-                    id={titleId}
-                    className="text-lg font-semibold tracking-[-0.02em]"
-                  >
-                    Welcome back
-                  </h2>
-                  <p className="mt-0.5 text-[13px] leading-relaxed text-muted-foreground">
-                    Enter your email and we&apos;ll send a one-time code.
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2">
-                  <label
-                    htmlFor={emailId}
-                    className="text-[13px] text-muted-foreground"
-                  >
-                    Email:
-                  </label>
-                  <Input
-                    ref={emailRef}
-                    id={emailId}
-                    type="email"
-                    value={email}
-                    onChange={setEmail}
-                    placeholder="you@example.com"
-                    autoComplete="email"
-                    inputMode="email"
-                    aria-label="Email"
-                    disabled={pending}
-                    classNames={UNDERLINE_FIELD}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter") sendCode();
-                    }}
-                  />
-                  <Button
-                    onClick={sendCode}
-                    loading={pending}
-                    disabled={pending || !email.trim()}
-                    className="h-8 shrink-0 px-3 text-[12px]"
-                  >
-                    <Icon icon={ArrowRight01Icon} className="size-3.5" />
-                    Send code
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <div>
-                  <h2
-                    id={titleId}
-                    className="text-lg font-semibold tracking-[-0.02em]"
-                  >
-                    Enter your code
-                  </h2>
-                  <p className="mt-0.5 text-[13px] leading-relaxed text-muted-foreground">
-                    We sent a 6-digit code to{" "}
-                    <span className="font-medium text-foreground">
-                      {email.trim()}
-                    </span>
-                    .
-                  </p>
-                  {process.env.NODE_ENV !== "production" ? (
-                    <p className="mt-2 rounded-lg bg-muted/50 px-3 py-2 text-[11px] leading-relaxed text-muted-foreground">
-                      No email yet? On the dev deployment the code is printed in
-                      the terminal running{" "}
-                      <span className="font-medium text-foreground">bunx convex dev</span>.
-                    </p>
-                  ) : null}
-                </div>
-
-                <div>
-                  <p className="mb-2 text-[13px] text-muted-foreground">
-                    Verification code:
-                  </p>
-                  <div className="grid grid-cols-6 gap-1.5">
-                    {otp.map((digit, index) => (
-                      <input
-                        key={index}
-                        ref={(element) => {
-                          otpRefs.current[index] = element;
-                        }}
-                        value={digit}
-                        onChange={(event) =>
-                          setDigit(index, event.target.value)
-                        }
-                        onKeyDown={(event) =>
-                          handleOtpKeyDown(index, event)
-                        }
-                        onPaste={handleOtpPaste}
-                        inputMode="numeric"
-                        autoComplete={index === 0 ? "one-time-code" : "off"}
-                        maxLength={1}
-                        aria-label={`Digit ${index + 1}`}
-                        disabled={pending}
-                        className="h-12 min-w-0 rounded-xl border border-foreground/10 bg-background/70 text-center text-lg font-semibold text-foreground outline-none transition-[border-color,box-shadow] focus:border-foreground/35 focus:ring-2 focus:ring-foreground/15 disabled:opacity-60"
-                      />
-                    ))}
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between gap-3 text-[11px]">
-                  <button
-                    type="button"
-                    onClick={goBack}
-                    disabled={pending}
-                    className="text-muted-foreground underline-offset-2 transition-colors hover:text-foreground hover:underline disabled:opacity-50"
-                  >
-                    Change email
-                  </button>
-                  <button
-                    type="button"
-                    onClick={resendCode}
-                    disabled={pending || resending}
-                    className="text-muted-foreground underline-offset-2 transition-colors hover:text-foreground hover:underline disabled:opacity-50"
-                  >
-                    {resending
-                      ? "Sending…"
-                      : resent
-                        ? "Code sent"
-                        : "Resend code"}
-                  </button>
-                </div>
-              </div>
-            )}
-          </motion.div>
-        </AnimatePresence>
-
-        <AnimatePresence initial={false}>
-          {error ? (
-            <motion.p
-              role="alert"
-              initial={{ opacity: 0, y: -3 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -3 }}
-              transition={{ duration: 0.15 }}
-              className="mt-3 text-[12px] text-destructive"
-            >
-              {error}
-            </motion.p>
-          ) : null}
-        </AnimatePresence>
-      </div>
-
-      <div className="mt-1 flex shrink-0 items-center justify-between gap-2">
-        <Button
-          variant="ghost"
-          onClick={onDone}
-          disabled={pending}
-          className="h-8 px-3 text-[12px]"
+    <div className="mt-5">
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.div
+          key={mode}
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -6 }}
+          transition={{ duration: 0.18, ease: EASE_OUT }}
+          className="space-y-4"
         >
-          <Icon icon={Cancel01Icon} className="size-4" /> Cancel
-        </Button>
-        {step === "otp" ? (
-          <Button
-            onClick={verifyCode}
-            loading={pending}
-            disabled={pending || code.length !== 6}
-            className="h-8 min-w-28 px-3 text-[12px]"
-          >
-            <Icon icon={Tick02Icon} className="size-4" />
-            Verify
+          <div>
+            <h3 className="font-display text-xl leading-tight tracking-[-0.03em]">
+              {title}
+            </h3>
+            <p className="mt-1 text-[12px] leading-relaxed text-muted-foreground">
+              {subtitle}
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            {mode === "signup" ? (
+              <Input
+                label="Name"
+                value={name}
+                onChange={setName}
+                placeholder="Your name"
+                autoComplete="name"
+                classNames={UNDERLINE_FIELD}
+              />
+            ) : null}
+
+            <Input
+              label="Email"
+              type="email"
+              value={email}
+              onChange={setEmail}
+              placeholder="you@example.com"
+              autoComplete="email"
+              inputMode="email"
+              disabled={mode === "reset-verify"}
+              classNames={UNDERLINE_FIELD}
+            />
+
+            {mode === "reset-verify" ? (
+              <Input
+                label="Reset code"
+                value={code}
+                onChange={(value) => setCode(value.replace(/[^0-9]/g, "").slice(0, 6))}
+                placeholder="6-digit code"
+                inputMode="numeric"
+                classNames={UNDERLINE_FIELD}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") submit();
+                }}
+              />
+            ) : null}
+
+            {mode !== "reset" ? (
+              <Input
+                label={mode === "reset-verify" ? "New password" : "Password"}
+                type="password"
+                value={password}
+                onChange={setPassword}
+                placeholder="At least 8 characters"
+                autoComplete={mode === "signin" ? "current-password" : "new-password"}
+                classNames={UNDERLINE_FIELD}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") submit();
+                }}
+              />
+            ) : null}
+
+            {mode === "signup" || mode === "reset-verify" ? (
+              <Input
+                label="Confirm password"
+                type="password"
+                value={confirm}
+                onChange={setConfirm}
+                placeholder="Repeat your password"
+                autoComplete="new-password"
+                classNames={UNDERLINE_FIELD}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") submit();
+                }}
+              />
+            ) : null}
+          </div>
+
+          {error ? <p className="text-[12px] text-destructive">{error}</p> : null}
+
+          {mode === "reset" || mode === "reset-verify" ? (
+            <p className="rounded-lg bg-muted/50 px-3 py-2 text-[11px] leading-relaxed text-muted-foreground">
+              No email is sent on this deployment. The code is printed in the
+              terminal running{" "}
+              <span className="font-medium text-foreground">bunx convex dev</span>.
+            </p>
+          ) : null}
+
+          <Button onClick={submit} loading={pending} disabled={pending} className="w-full">
+            {cta}
+            <Icon icon={ArrowRight01Icon} className="size-4" />
           </Button>
-        ) : null}
-      </div>
+
+          <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-[12px] text-muted-foreground">
+            {mode === "signin" ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => switchMode("signup")}
+                  className="transition-colors hover:text-foreground"
+                >
+                  Create account
+                </button>
+                <button
+                  type="button"
+                  onClick={() => switchMode("reset")}
+                  className="transition-colors hover:text-foreground"
+                >
+                  Forgot password?
+                </button>
+              </>
+            ) : (
+              <button
+                type="button"
+                onClick={() => switchMode("signin")}
+                className="transition-colors hover:text-foreground"
+              >
+                Back to sign in
+              </button>
+            )}
+          </div>
+        </motion.div>
+      </AnimatePresence>
     </div>
   );
 }
