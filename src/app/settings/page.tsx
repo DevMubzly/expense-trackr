@@ -29,8 +29,6 @@ import { Icon } from "@/components/huge-icon";
 import { MetricCard } from "@/components/metric-card";
 import { Money } from "@/components/money";
 import { SectionPanel } from "@/components/panel";
-import { useAction, useMutation, useQuery } from "convex/react";
-import { api as convexApi } from "../../../convex/_generated/api";
 import { PageReveal, SettingsPageSkeleton } from "@/components/skeletons";
 import { useApi, api } from "@/lib/use-api";
 import { useTransactionDialog } from "@/components/expense-dialog";
@@ -905,7 +903,6 @@ function SettingsForm({
           </div>
         </SectionPanel>
 
-        <ConnectedAgentsSection />
 
         <SectionPanel
           title="Sign out"
@@ -1326,161 +1323,6 @@ function OtpDeleteDialog({
         )}
       </div>
     </div>
-  );
-}
-
-function ConnectedAgentsSection() {
-  const connections = useQuery(convexApi.mcp.listConnections, {});
-  const revoke = useMutation(convexApi.mcp.revokeConnection);
-  const createKey = useAction(convexApi.mcp.createApiKey);
-  const [apiKey, setApiKey] = useState<string | null>(null);
-  const [creating, setCreating] = useState(false);
-  const [revoking, setRevoking] = useState<string | null>(null);
-  const mcpUrl = `${process.env.NEXT_PUBLIC_CONVEX_SITE_URL ?? ""}/mcp`;
-
-  async function create() {
-    if (creating) return;
-    setCreating(true);
-    try {
-      const result = await createKey({ name: "CLI key" });
-      setApiKey(result.apiKey);
-    } catch (error) {
-      gooeyToast.error("Could not create API key", {
-        description: (error as Error).message,
-      });
-    } finally {
-      setCreating(false);
-    }
-  }
-
-  async function disconnect(id: string) {
-    if (revoking) return;
-    setRevoking(id);
-    try {
-      await revoke({ id });
-      gooeyToast.success("Agent disconnected");
-    } catch (error) {
-      gooeyToast.error("Could not disconnect agent", {
-        description: (error as Error).message,
-      });
-    } finally {
-      setRevoking(null);
-    }
-  }
-
-  return (
-    <SectionPanel
-      title="Connected agents"
-      info="AI agents and CLI tools connected to your account through MCP."
-      hint="MCP access for Claude, Cursor and other agents"
-      className="col-span-12"
-      bodyClassName="p-4"
-    >
-      <div className="space-y-4">
-        <div className="rounded-xl bg-muted/40 p-3">
-          <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
-            MCP server URL
-          </p>
-          <code className="mt-1 block break-all text-[11px] text-foreground">
-            {mcpUrl}
-          </code>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                void navigator.clipboard?.writeText(mcpUrl);
-                gooeyToast.success("MCP URL copied");
-              }}
-            >
-              Copy URL
-            </Button>
-            <Button
-              size="sm"
-              onClick={() => void create()}
-              loading={creating}
-              disabled={creating}
-            >
-              <Icon icon={PlusSignIcon} className="size-3.5" />
-              Create API key
-            </Button>
-          </div>
-        </div>
-
-        {apiKey ? (
-          <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3">
-            <p className="text-[11px] font-medium text-emerald-700 dark:text-emerald-300">
-              API key created — copy it now
-            </p>
-            <code className="mt-2 block break-all rounded-lg bg-background/60 p-2 text-[11px]">
-              {apiKey}
-            </code>
-            <div className="mt-2 flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  void navigator.clipboard?.writeText(apiKey);
-                  gooeyToast.success("API key copied");
-                }}
-              >
-                Copy key
-              </Button>
-              <Button variant="ghost" size="sm" onClick={() => setApiKey(null)}>
-                Done
-              </Button>
-            </div>
-          </div>
-        ) : null}
-
-        <div>
-          <p className="mb-2 text-[10px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
-            Active connections
-          </p>
-          {connections === undefined ? (
-            <p className="text-[12px] text-muted-foreground">Loading…</p>
-          ) : connections.length === 0 ? (
-            <p className="rounded-xl bg-muted/30 p-3 text-[12px] text-muted-foreground">
-              No agents connected yet.
-            </p>
-          ) : (
-            <ul className="divide-y divide-foreground/5">
-              {connections.map((connection) => (
-                <li
-                  key={connection.id}
-                  className="flex flex-wrap items-center justify-between gap-3 py-3"
-                >
-                  <div className="min-w-0">
-                    <p className="truncate text-[13px]">{connection.name}</p>
-                    <p className="text-[10px] text-muted-foreground">
-                      {connection.kind === "apiKey" ? "API key" : "OAuth agent"}
-                      {" · "}
-                      {connection.scopes.join(", ")}
-                      {" · "}
-                      {new Date(connection.createdAt).toLocaleDateString("en-GB", {
-                        day: "2-digit",
-                        month: "short",
-                        year: "numeric",
-                      })}
-                    </p>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => void disconnect(connection.id)}
-                    loading={revoking === connection.id}
-                    disabled={Boolean(revoking)}
-                    className="text-muted-foreground hover:text-destructive"
-                  >
-                    Disconnect
-                  </Button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      </div>
-    </SectionPanel>
   );
 }
 

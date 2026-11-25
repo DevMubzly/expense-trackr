@@ -370,7 +370,7 @@ export default function ExpensesPage() {
               <Icon icon={Delete02Icon} className="size-4" /> Delete {selected.length}
             </Button>
           ) : null}
-          <Button onClick={() => openTransaction(undefined, "expense")}>
+          <Button className="btn-3d" onClick={() => openTransaction(undefined, "expense")}>
             <Icon icon={PlusSignIcon} className="size-4" /> Add transaction
           </Button>
         </div>

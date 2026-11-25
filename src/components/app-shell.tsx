@@ -631,7 +631,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <div className="pointer-events-none fixed inset-x-0 bottom-4 z-50 flex justify-center">
         <Dock
           size={46}
-          className="pointer-events-auto max-w-[calc(100vw-1.5rem)] overflow-x-auto no-scrollbar"
+          className="btn-3d pointer-events-auto max-w-[calc(100vw-1.5rem)] overflow-x-auto no-scrollbar"
         >
           {NAV.slice(0, 4).map((item) => {
             const active = pathname === item.href;

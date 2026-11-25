@@ -20,7 +20,7 @@ export function useApi<T>(url: string | null) {
   const parsed = useMemo(() => (url ? parse(url) : null), [url]);
   const data = useQuery(
     convexApi.app.read,
-    parsed ? { endpoint: parsed.endpoint, params: parsed.params } : "skip",
+    parsed ? { endpoint: parsed.path, params: parsed.params } : "skip",
   ) as T | null | undefined;
 
   return {
@@ -36,7 +36,7 @@ async function write<T>(url: string, method: string, body?: unknown): Promise<T>
   if (!convexClient) throw new Error("Convex is not configured.");
   const parsed = parse(url);
   return convexClient.mutation(convexApi.app.write, {
-    endpoint: parsed.endpoint,
+    endpoint: parsed.path,
     method,
     id: parsed.id,
     body: body ?? undefined,
