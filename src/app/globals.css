@@ -374,6 +374,17 @@
     scrollbar-width: none;
   }
 
+  /* Chunky 3D press: a solid bottom edge that collapses on click. */
+  .btn-3d {
+    box-shadow:
+      0 3px 0 0 var(--btn-edge),
+      inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  }
+  .btn-3d:active {
+    translate: 0 3px;
+    box-shadow: 0 0 0 0 var(--btn-edge);
+  }
+
   /* Icons never get their own backing plate, including inside buttons. */
   .app-icon {
     box-sizing: border-box !important;
@@ -428,4 +439,12 @@
   .skeleton-shimmer {
     animation: none;
   }
+}
+
+/* 3D button edge colour, follows the theme scope. */
+:root {
+  --btn-edge: rgba(0, 0, 0, 0.3);
+}
+.dark {
+  --btn-edge: rgba(255, 255, 255, 0.22);
 }

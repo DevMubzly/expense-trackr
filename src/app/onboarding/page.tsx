@@ -695,7 +695,7 @@ function AccentButton({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="inline-flex h-10 items-center gap-2 rounded-full px-5 text-sm font-semibold text-black transition-transform hover:opacity-90 active:scale-[0.97] disabled:opacity-60"
+      className="btn-3d inline-flex h-10 items-center gap-2 rounded-full px-5 text-sm font-semibold text-black transition-[transform,translate,box-shadow,opacity] hover:opacity-90 active:scale-[0.97] disabled:opacity-60"
       style={{ background: accent }}
     >
       {children}

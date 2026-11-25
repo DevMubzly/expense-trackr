@@ -3,21 +3,21 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "cn"
 
 const buttonVariants = cva(
-  "group/button inline-flex shrink-0 items-center justify-center rounded-full bg-clip-padding text-sm font-medium whitespace-nowrap transition-[background-color,color,transform] outline-none select-none focus-visible:ring-2 focus-visible:ring-ring/50 active:not-aria-[haspopup]:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  "group/button inline-flex shrink-0 items-center justify-center rounded-full bg-clip-padding text-sm font-medium whitespace-nowrap transition-[background-color,color,transform,translate,box-shadow] outline-none select-none focus-visible:ring-2 focus-visible:ring-ring/50 active:not-aria-[haspopup]:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {
         // Monochrome: solid ink in light, solid paper in dark.
         default:
-          "bg-foreground text-background hover:bg-foreground/85",
+          "btn-3d bg-foreground text-background hover:bg-foreground/85",
         outline:
-          "bg-muted/50 text-foreground hover:bg-muted/70",
+          "btn-3d bg-muted/50 text-foreground hover:bg-muted/70",
         secondary:
-          "bg-muted text-foreground hover:bg-muted/70",
+          "btn-3d bg-muted text-foreground hover:bg-muted/70",
         ghost:
-          "bg-muted/30 text-foreground hover:bg-muted/50",
+          "btn-3d bg-muted/30 text-foreground hover:bg-muted/50",
         destructive:
-          "bg-destructive/15 text-destructive hover:bg-destructive/25",
+          "btn-3d bg-destructive/15 text-destructive hover:bg-destructive/25",
         link: "text-foreground underline-offset-4 hover:underline",
       },
       size: {
