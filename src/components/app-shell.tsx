@@ -569,6 +569,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         >
           <DynamicIsland
             view={islandView}
+            className="btn-3d"
             compact={
               <span className="flex items-center gap-2 whitespace-nowrap px-2 text-[10px] font-medium sm:px-3 sm:text-[11px]">
                 Today net
