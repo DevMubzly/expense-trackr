@@ -310,6 +310,13 @@ function AuthBody({
                     </span>
                     .
                   </p>
+                  {process.env.NODE_ENV !== "production" ? (
+                    <p className="mt-2 rounded-lg bg-muted/50 px-3 py-2 text-[11px] leading-relaxed text-muted-foreground">
+                      No email yet? On the dev deployment the code is printed in
+                      the terminal running{" "}
+                      <span className="font-medium text-foreground">bunx convex dev</span>.
+                    </p>
+                  ) : null}
                 </div>
 
                 <div>
