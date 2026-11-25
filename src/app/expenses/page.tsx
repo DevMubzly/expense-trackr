@@ -57,6 +57,7 @@ import { Money } from "@/components/money";
 import { EmptyState, Panel, PanelBody, sectionCardClass } from "@/components/panel";
 import { useTransactionDialog } from "@/components/expense-dialog";
 import { useApi } from "@/lib/use-api";
+import { friendlyError } from "@/lib/friendly-error";
 import {
   asTransactionId,
   toTransaction,
@@ -328,7 +329,7 @@ export default function ExpensesPage() {
       bumpVersion();
     } catch (error) {
       gooeyToast.error("Could not delete transactions", {
-        description: (error as Error).message,
+        description: friendlyError(error),
       });
     } finally {
       setDeleting(false);

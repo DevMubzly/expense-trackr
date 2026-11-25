@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { EASE_OUT, SPRING_LAYOUT } from "@/lib/ease";
+import { friendlyError } from "@/lib/friendly-error";
 import { gooeyToast } from "goey-toast";
 import {
   ArrowDown02Icon,
@@ -465,7 +466,7 @@ export default function PlanPage() {
       bumpVersion();
     } catch (error) {
       gooeyToast.error("Could not delete item", {
-        description: (error as Error).message,
+        description: friendlyError(error),
       });
     } finally {
       setRemovingKey(null);
@@ -500,7 +501,7 @@ export default function PlanPage() {
       bumpVersion();
     } catch (error) {
       gooeyToast.error("Could not run recurring items", {
-        description: (error as Error).message,
+        description: friendlyError(error),
       });
     } finally {
       setRunningDue(false);
@@ -519,7 +520,7 @@ export default function PlanPage() {
       bumpVersion();
     } catch (error) {
       gooeyToast.error("Could not skip occurrence", {
-        description: (error as Error).message,
+        description: friendlyError(error),
       });
     } finally {
       setSkippingId(null);
@@ -1720,7 +1721,7 @@ function ContributionForm({
           ? "Could not withdraw"
           : "Could not add contribution",
         {
-          description: (error as Error).message,
+          description: friendlyError(error),
         },
       );
     } finally {
@@ -1822,7 +1823,7 @@ function PaymentForm({
       onSaved();
     } catch (error) {
       gooeyToast.error("Could not log payment", {
-        description: (error as Error).message,
+        description: friendlyError(error),
       });
     } finally {
       setSaving(false);
@@ -1967,7 +1968,7 @@ function GoalForm({
       });
       onSaved();
     } catch (error) {
-      gooeyToast.error("Could not save savings pot", { description: (error as Error).message });
+      gooeyToast.error("Could not save savings pot", { description: friendlyError(error) });
     } finally {
       setSaving(false);
     }
@@ -2057,7 +2058,7 @@ function DebtForm({
       });
       onSaved();
     } catch (error) {
-      gooeyToast.error("Could not save debt", { description: (error as Error).message });
+      gooeyToast.error("Could not save debt", { description: friendlyError(error) });
     } finally {
       setSaving(false);
     }
@@ -2155,7 +2156,7 @@ function BudgetForm({
       });
       onSaved();
     } catch (error) {
-      gooeyToast.error("Could not save budget", { description: (error as Error).message });
+      gooeyToast.error("Could not save budget", { description: friendlyError(error) });
     } finally {
       setSaving(false);
     }
@@ -2288,7 +2289,7 @@ function RecurringForm({
       });
       onSaved();
     } catch (error) {
-      gooeyToast.error("Could not save rule", { description: (error as Error).message });
+      gooeyToast.error("Could not save rule", { description: friendlyError(error) });
     } finally {
       setSaving(false);
     }

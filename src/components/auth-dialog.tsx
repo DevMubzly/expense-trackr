@@ -10,6 +10,7 @@ import { Input } from "@/components/motion/input";
 import { Icon } from "@/components/huge-icon";
 import { Button } from "@/components/ui/button";
 import { EASE_OUT } from "@/lib/ease";
+import { friendlyError } from "@/lib/friendly-error";
 
 type Mode = "signin" | "signup" | "reset" | "reset-verify";
 
@@ -19,18 +20,6 @@ const UNDERLINE_FIELD = {
   input: "text-[13px] placeholder:text-muted-foreground/50",
 };
 
-function friendlyError(error: unknown) {
-  const message = error instanceof Error ? error.message : String(error);
-  if (/InvalidAccountId/i.test(message)) return "No account for that email yet. Create one first.";
-  if (/InvalidSecret/i.test(message)) return "That email and password do not match.";
-  if (/already exists/i.test(message)) return "An account with that email already exists.";
-  if (/not found/i.test(message)) return "No account found for that email.";
-  if (/at least 8/i.test(message)) return "Use at least 8 characters.";
-  if (/code/i.test(message)) return "That code is not valid. Request a new one.";
-  if (/TooMany/i.test(message)) return "Too many attempts. Try again in a few minutes.";
-  if (/Server Error|Called by client/i.test(message)) return "Could not sign in right now. Try again.";
-  return message || "Something went wrong.";
-}
 
 export function AuthDialog({
   open,

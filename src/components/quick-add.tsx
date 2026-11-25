@@ -16,6 +16,7 @@ import {
 } from "@/lib/convex-transactions";
 import { useCategories } from "@/components/categories-provider";
 import { formatNumber, parseNumericInput, parseYmd } from "@/lib/format";
+import { friendlyError } from "@/lib/friendly-error";
 import { parseQuickAdd, type QuickDraft } from "@/lib/quick-add";
 import type { Account, Settings } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -120,7 +121,7 @@ export function QuickAddForm({
       onSaved();
     } catch (error) {
       gooeyToast.error("Could not add transactions", {
-        description: (error as Error).message,
+        description: friendlyError(error),
       });
     } finally {
       setSaving(false);

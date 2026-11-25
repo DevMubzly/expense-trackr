@@ -17,6 +17,7 @@ import { useMutation, useQuery } from "convex/react";
 import { api as convexApi } from "../../../convex/_generated/api";
 import { CURRENCY_OPTIONS } from "@/lib/currencies";
 import { formatNumericInput, parseNumericInput } from "@/lib/format";
+import { friendlyError } from "@/lib/friendly-error";
 import type { AccountType, Currency } from "@/lib/types";
 import {
   STEP_META,
@@ -118,7 +119,7 @@ function OnboardingFlow() {
       });
       go("done");
     } catch (cause) {
-      setError((cause as Error).message);
+      setError(friendlyError(cause));
     } finally {
       setSaving(false);
     }

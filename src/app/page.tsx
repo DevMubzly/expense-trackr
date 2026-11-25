@@ -56,7 +56,7 @@ export default function LandingPage() {
                   : "px-8 sm:px-14 lg:px-16",
               )}
             >
-              <div className="flex min-h-[72px] flex-wrap items-center justify-between gap-2 sm:min-h-8">
+              <div className="flex min-h-[72px] flex-col items-center justify-center gap-2 sm:min-h-8 sm:flex-row sm:justify-between">
                 <Link
                   href="/"
                   style={{ fontFamily: "var(--font-syncopate), system-ui, sans-serif" }}
@@ -65,7 +65,7 @@ export default function LandingPage() {
                   Expense Trackr
                 </Link>
 
-                <div className="ml-auto flex items-center gap-2">
+                <div className="flex items-center justify-center gap-2 sm:ml-auto">
                   <button
                     type="button"
                     onClick={() => setAuthOpen(true)}

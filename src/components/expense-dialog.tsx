@@ -5,6 +5,7 @@ import { useMutation } from "convex/react";
 import { gooeyToast } from "goey-toast";
 import { AnimatePresence, motion } from "motion/react";
 import { EASE_OUT } from "@/lib/ease";
+import { friendlyError } from "@/lib/friendly-error";
 import { api as convexApi } from "../../convex/_generated/api";
 import {
   Camera01Icon,
@@ -367,7 +368,7 @@ function TransactionForm({
       onSaved();
     } catch (error) {
       gooeyToast.error("Could not save transaction", {
-        description: (error as Error).message,
+        description: friendlyError(error),
       });
     } finally {
       setSaving(false);
@@ -390,7 +391,7 @@ function TransactionForm({
       onSaved();
     } catch (error) {
       gooeyToast.error("Could not delete transaction", {
-        description: (error as Error).message,
+        description: friendlyError(error),
       });
     } finally {
       setSaving(false);

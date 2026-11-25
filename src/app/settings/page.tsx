@@ -31,6 +31,7 @@ import { Money } from "@/components/money";
 import { SectionPanel } from "@/components/panel";
 import { PageReveal, SettingsPageSkeleton } from "@/components/skeletons";
 import { useApi, api } from "@/lib/use-api";
+import { friendlyError } from "@/lib/friendly-error";
 import { useTransactionDialog } from "@/components/expense-dialog";
 import { COMPLETE_KEY, DRAFT_KEY } from "@/lib/onboarding";
 import {
@@ -349,7 +350,7 @@ function SettingsForm({
       return true;
     } catch (error) {
       gooeyToast.error("Could not save settings", {
-        description: (error as Error).message,
+        description: friendlyError(error),
       });
       return false;
     } finally {
@@ -420,7 +421,7 @@ function SettingsForm({
       setDeletingAccount(null);
     } catch (error) {
       gooeyToast.error("Could not remove account", {
-        description: (error as Error).message,
+        description: friendlyError(error),
       });
     } finally {
       setAccountDeleting(false);
@@ -440,7 +441,7 @@ function SettingsForm({
       setDeletingCategory(null);
     } catch (error) {
       gooeyToast.error("Could not remove category", {
-        description: (error as Error).message,
+        description: friendlyError(error),
       });
     } finally {
       setCategoryDeleting(false);
@@ -461,7 +462,7 @@ function SettingsForm({
       setDeletingIncome(null);
     } catch (error) {
       gooeyToast.error("Could not remove income source", {
-        description: (error as Error).message,
+        description: friendlyError(error),
       });
     } finally {
       setIncomeDeleting(false);
@@ -1413,7 +1414,7 @@ function IncomeSourceForm({
       onSaved();
     } catch (error) {
       gooeyToast.error("Could not save income source", {
-        description: (error as Error).message,
+        description: friendlyError(error),
       });
     } finally {
       setSaving(false);
@@ -1613,7 +1614,7 @@ function CategoryForm({
       onSaved();
     } catch (error) {
       gooeyToast.error("Could not save category", {
-        description: (error as Error).message,
+        description: friendlyError(error),
       });
     } finally {
       setSaving(false);
@@ -1754,7 +1755,7 @@ function AccountForm({
       onSaved();
     } catch (error) {
       gooeyToast.error("Could not save account", {
-        description: (error as Error).message,
+        description: friendlyError(error),
       });
     } finally {
       setSaving(false);

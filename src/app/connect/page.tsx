@@ -10,6 +10,7 @@ import { Input } from "@/components/motion/input";
 import { Icon } from "@/components/huge-icon";
 import { Tick02Icon } from "@hugeicons/core-free-icons";
 import { gooeyToast } from "goey-toast";
+import { friendlyError } from "@/lib/friendly-error";
 
 type AuthRequestView = {
   clientName: string;
@@ -65,7 +66,7 @@ function ConnectContent() {
       setStep("code");
     } catch (cause) {
       setError(
-        cause instanceof Error ? cause.message : "Could not send the code.",
+        friendlyError(cause),
       );
     } finally {
       setPending(false);
@@ -83,7 +84,7 @@ function ConnectContent() {
       await signIn("email-otp", form);
     } catch (cause) {
       setError(
-        cause instanceof Error ? cause.message : "That code did not work.",
+        friendlyError(cause),
       );
     } finally {
       setPending(false);
@@ -112,7 +113,7 @@ function ConnectContent() {
       setDone(true);
     } catch (cause) {
       const message =
-        cause instanceof Error ? cause.message : "Could not complete the request.";
+        friendlyError(cause);
       setError(message);
       gooeyToast.error(message);
     } finally {
