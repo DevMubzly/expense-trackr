@@ -36,6 +36,8 @@ export default defineSchema({
     openingBalanceUgx: v.number(),
     archived: v.optional(v.boolean()),
     createdAt: v.number(),
+    /** Transitional: id of the matching account in the still-mock app store. */
+    legacyId: v.optional(v.string()),
   }).index("by_user", ["userId"]),
 
   categories: defineTable({
@@ -45,6 +47,8 @@ export default defineSchema({
     color: v.string(),
     iconKey: v.string(),
     createdAt: v.number(),
+    /** Transitional: id of the matching category in the still-mock app store. */
+    legacyId: v.optional(v.string()),
   }).index("by_user", ["userId"]),
 
   transactions: defineTable({

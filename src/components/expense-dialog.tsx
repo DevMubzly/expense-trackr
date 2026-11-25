@@ -1,9 +1,11 @@
 "use client";
 
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
+import { useMutation } from "convex/react";
 import { gooeyToast } from "goey-toast";
 import { AnimatePresence, motion } from "motion/react";
 import { EASE_OUT } from "@/lib/ease";
+import { api as convexApi } from "../../convex/_generated/api";
 import {
   Camera01Icon,
   Cancel01Icon,
@@ -20,7 +22,12 @@ import { CategorySelect } from "@/components/category-select";
 import { TimeSelect } from "@/components/time-select";
 import { Icon } from "@/components/huge-icon";
 import { Button } from "@/components/ui/button";
-import { api, useApi } from "@/lib/use-api";
+import {
+  asTransactionId,
+  toAccountInput,
+  toCategoryInput,
+} from "@/lib/convex-transactions";
+import { useApi } from "@/lib/use-api";
 import {
   CURRENCY_META,
   CURRENCY_OPTIONS,
@@ -202,6 +209,9 @@ function TransactionForm({
   onCancel: () => void;
 }) {
   const { categoriesFor, categoryOf } = useCategories();
+  const createTransaction = useMutation(convexApi.transactions.create);
+  const updateTransaction = useMutation(convexApi.transactions.update);
+  const removeTransaction = useMutation(convexApi.transactions.remove);
   const initial = transaction ? parseYmd(transaction.spentOn) : new Date();
   const years = [initial.getFullYear() - 2, initial.getFullYear() - 1, initial.getFullYear()];
   const defaultAccountId = settings?.defaultAccountId ?? accounts[0]?.id ?? "";
@@ -245,12 +255,17 @@ function TransactionForm({
   const spentOn = ymd(new Date(year, month, safeDay));
   const numeric = parseNumericInput(amount);
   const selectedAccount = accounts.find((account) => account.id === accountId);
+  const destinationAccount = accounts.find(
+    (account) => account.id === toAccountId,
+  );
   const showFee = type !== "income" && selectedAccount?.type === "momo";
   const valid =
     Number.isFinite(numeric) &&
     numeric > 0 &&
-    Boolean(accountId) &&
-    (isTransfer ? Boolean(toAccountId) && toAccountId !== accountId : Boolean(category));
+    Boolean(selectedAccount) &&
+    (isTransfer
+      ? Boolean(destinationAccount) && toAccountId !== accountId
+      : Boolean(category));
 
   function changeType(next: TransactionType) {
     setType(next);
@@ -296,16 +311,19 @@ function TransactionForm({
   }
 
   async function submit() {
-    if (!valid || saving) return;
+    if (!valid || saving || !selectedAccount) return;
     setSaving(true);
     try {
       const payload = {
         type,
         amount: numeric,
         currency: isTransfer ? "UGX" : currency,
-        category: isTransfer ? "" : category,
-        accountId,
-        toAccountId: isTransfer ? toAccountId : undefined,
+        account: toAccountInput(selectedAccount),
+        category: isTransfer ? undefined : toCategoryInput(categoryOf(category)),
+        toAccount:
+          isTransfer && destinationAccount
+            ? toAccountInput(destinationAccount)
+            : undefined,
         feeUgx: showFee ? parseNumericInput(fee) : 0,
         note,
         spentOn,
@@ -318,20 +336,21 @@ function TransactionForm({
       });
       const amountLabel = formatAmount(numeric, isTransfer ? "UGX" : currency);
       const categoryLabel = categoryOf(category).label;
-      const transferFrom = selectedAccount?.name ?? "account";
-      const transferTo =
-        accounts.find((account) => account.id === toAccountId)?.name ??
-        "account";
+      const transferFrom = selectedAccount.name;
+      const transferTo = destinationAccount?.name ?? "account";
 
       if (transaction) {
-        await api.patch(`/api/transactions/${transaction.id}`, payload);
+        await updateTransaction({
+          transactionId: asTransactionId(transaction.id),
+          ...payload,
+        });
         gooeyToast.success("Transaction updated", {
           description: isTransfer
             ? `${amountLabel} moved from ${transferFrom} to ${transferTo} on ${spentLabel}.`
             : `${amountLabel} · ${categoryLabel} on ${spentLabel}.`,
         });
       } else {
-        await api.post("/api/transactions", payload);
+        await createTransaction(payload);
         gooeyToast.success(
           type === "income"
             ? "Income added"
@@ -359,7 +378,9 @@ function TransactionForm({
     if (!transaction) return;
     setSaving(true);
     try {
-      await api.delete(`/api/transactions/${transaction.id}`);
+      await removeTransaction({
+        transactionId: asTransactionId(transaction.id),
+      });
       gooeyToast.success("Transaction deleted", {
         description: `${formatAmount(
           transaction.amountUgx,

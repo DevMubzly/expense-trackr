@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useMutation, useQuery } from "convex/react";
 import { gooeyToast } from "goey-toast";
+import { api as convexApi } from "../../../convex/_generated/api";
 import {
   ArrowDown01Icon,
   ArrowLeft01Icon,
@@ -54,7 +56,11 @@ import { Icon } from "@/components/huge-icon";
 import { Money } from "@/components/money";
 import { EmptyState, Panel, PanelBody, sectionCardClass } from "@/components/panel";
 import { useTransactionDialog } from "@/components/expense-dialog";
-import { useApi, api } from "@/lib/use-api";
+import { useApi } from "@/lib/use-api";
+import {
+  asTransactionId,
+  toTransaction,
+} from "@/lib/convex-transactions";
 import { useNow } from "@/lib/use-now";
 import { useCategories } from "@/components/categories-provider";
 import { useCurrency } from "@/components/currency-provider";
@@ -177,11 +183,6 @@ export default function ExpensesPage() {
     return () => window.clearTimeout(timer);
   }, [query]);
 
-  const params = new URLSearchParams({ v: String(version) });
-  if (appliedQuery) params.set("q", appliedQuery);
-  if (typeFilter !== "all") params.set("type", typeFilter);
-  if (category !== "all") params.set("category", category);
-
   const periodRange = periodWindow(period, now);
   const rangeFrom = range?.from;
   const rangeTo = range?.to ?? range?.from;
@@ -193,14 +194,21 @@ export default function ExpensesPage() {
   const to = toCandidates.length
     ? toCandidates.reduce((a, b) => (a < b ? a : b))
     : undefined;
-  if (from) params.set("from", from);
-  if (to) params.set("to", to);
 
-  const { data, loading } = useApi<Transaction[]>(
-    `/api/transactions?${params.toString()}`,
-  );
   const { data: accountsData } = useApi<Account[]>(`/api/accounts?v=${version}`);
-  const transactions = useMemo(() => data ?? [], [data]);
+  const removeTransaction = useMutation(convexApi.transactions.remove);
+  const transactionRows = useQuery(convexApi.transactions.list, {
+    type: typeFilter === "all" ? undefined : typeFilter,
+    category: category === "all" ? undefined : category,
+    from,
+    to,
+    search: appliedQuery || undefined,
+  });
+  const transactions = useMemo(
+    () => (transactionRows ?? []).map(toTransaction),
+    [transactionRows],
+  );
+  const loading = transactionRows === undefined;
   const accounts = useMemo(() => accountsData ?? [], [accountsData]);
   const accountById = useMemo(
     () => new Map(accounts.map((entry) => [entry.id, entry])),
@@ -302,7 +310,9 @@ export default function ExpensesPage() {
     setDeleting(true);
     try {
       await Promise.all(
-        confirmDelete.ids.map((id) => api.delete(`/api/transactions/${id}`)),
+        confirmDelete.ids.map((id) =>
+          removeTransaction({ transactionId: asTransactionId(id) }),
+        ),
       );
       const count = confirmDelete.ids.length;
       gooeyToast.success(
@@ -336,7 +346,7 @@ export default function ExpensesPage() {
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="font-display text-2xl leading-none tracking-[-0.03em] md:text-3xl">Every shilling.</h1>
-          {loading && !data ? (
+          {loading ? (
             <Skeleton className="mt-3 h-3.5 w-52" />
           ) : (
             <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
@@ -535,7 +545,7 @@ export default function ExpensesPage() {
         </div>
       </div>
 
-      {loading && !data ? (
+      {loading ? (
         <ExpensesTableSkeleton />
       ) : (
         <PageReveal>

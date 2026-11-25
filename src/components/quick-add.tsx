@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useMutation } from "convex/react";
 import { gooeyToast } from "goey-toast";
 import { Cancel01Icon, SparklesIcon, Tick02Icon } from "@hugeicons/core-free-icons";
 import { AccountSelect } from "@/components/account-select";
@@ -8,7 +9,11 @@ import { CategorySelect } from "@/components/category-select";
 import { Checkbox } from "@/components/motion/checkbox";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/huge-icon";
-import { api } from "@/lib/use-api";
+import { api as convexApi } from "../../convex/_generated/api";
+import {
+  toAccountInput,
+  toCategoryInput,
+} from "@/lib/convex-transactions";
 import { useCategories } from "@/components/categories-provider";
 import { formatNumber, parseNumericInput, parseYmd } from "@/lib/format";
 import { parseQuickAdd, type QuickDraft } from "@/lib/quick-add";
@@ -36,6 +41,8 @@ export function QuickAddForm({
   const [drafts, setDrafts] = useState<QuickDraft[]>([]);
   const [selected, setSelected] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
+  const { categoryOf } = useCategories();
+  const createTransaction = useMutation(convexApi.transactions.create);
 
   const selectedDrafts = useMemo(
     () => drafts.filter((draft) => selected.includes(draft.id) && draft.amount > 0),
@@ -68,21 +75,41 @@ export function QuickAddForm({
   async function commit() {
     if (!selectedDrafts.length || saving) return;
     setSaving(true);
+    const spentTime = new Date().toLocaleTimeString("en-GB", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
     try {
       await Promise.all(
-        selectedDrafts.map((draft) =>
-          api.post("/api/transactions", {
+        selectedDrafts.map((draft) => {
+          const account = accounts.find(
+            (entry) => entry.id === draft.accountId,
+          );
+          if (!account) {
+            throw new Error("Pick an account for every draft.");
+          }
+          const destination = draft.toAccountId
+            ? accounts.find((entry) => entry.id === draft.toAccountId)
+            : undefined;
+          return createTransaction({
             type: draft.type,
             amount: draft.amount,
             currency: draft.currency,
-            category: draft.category,
-            accountId: draft.accountId,
-            toAccountId: draft.toAccountId,
+            account: toAccountInput(account),
+            category:
+              draft.type === "transfer"
+                ? undefined
+                : toCategoryInput(categoryOf(draft.category || "other")),
+            toAccount:
+              draft.type === "transfer" && destination
+                ? toAccountInput(destination)
+                : undefined,
             note: draft.note,
             spentOn: draft.spentOn,
+            spentTime,
             source: "ai",
-          }),
-        ),
+          });
+        }),
       );
       gooeyToast.success(
         `${selectedDrafts.length} transaction${selectedDrafts.length === 1 ? "" : "s"} added`,
