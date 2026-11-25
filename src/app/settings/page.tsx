@@ -526,8 +526,8 @@ function SettingsForm({
           className="col-span-12 lg:col-span-7"
           bodyClassName="p-5"
         >
-          <div className="flex flex-col gap-5 sm:flex-row">
-            <div className="flex shrink-0 flex-col items-center gap-2">
+          <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
+            <div className="flex shrink-0 flex-row items-center gap-3 sm:w-32 sm:flex-col">
               <div className="grid size-20 place-items-center overflow-hidden rounded-full bg-muted text-xl font-semibold text-muted-foreground">
                 {avatarDataUrl ? (
                   <div
@@ -538,28 +538,30 @@ function SettingsForm({
                   initials(profileName)
                 )}
               </div>
-              <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-full px-2 py-1 text-[11px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
-                <Icon icon={Upload01Icon} className="size-3.5" />
-                Change avatar
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="sr-only"
-                  onChange={(event) => {
-                    readAvatar(event.target.files?.[0]);
-                    event.target.value = "";
-                  }}
-                />
-              </label>
-              {avatarDataUrl ? (
-                <button
-                  type="button"
-                  onClick={() => setAvatarDataUrl("")}
-                  className="text-[11px] text-muted-foreground hover:text-destructive"
-                >
-                  Remove
-                </button>
-              ) : null}
+              <div className="flex flex-col items-start gap-1 sm:items-center">
+                <label className="btn-3d inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-muted/60 px-2.5 py-1 text-[11px] text-foreground transition-colors hover:bg-muted">
+                  <Icon icon={Upload01Icon} className="size-3.5" />
+                  Change avatar
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="sr-only"
+                    onChange={(event) => {
+                      readAvatar(event.target.files?.[0]);
+                      event.target.value = "";
+                    }}
+                  />
+                </label>
+                {avatarDataUrl ? (
+                  <button
+                    type="button"
+                    onClick={() => setAvatarDataUrl("")}
+                    className="text-[11px] text-muted-foreground transition-colors hover:text-destructive"
+                  >
+                    Remove
+                  </button>
+                ) : null}
+              </div>
             </div>
             <div className="grid min-w-0 flex-1 gap-4">
               <Input
@@ -568,7 +570,7 @@ function SettingsForm({
                 onChange={setProfileName}
                 placeholder="Your name"
               />
-              <div className="grid gap-4 sm:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+              <div className="grid gap-4 sm:grid-cols-2">
                 <Input
                   label="Email"
                   value={profileEmail}
@@ -598,7 +600,7 @@ function SettingsForm({
           className="col-span-12 lg:col-span-5"
           bodyClassName="p-5"
         >
-          <div className="space-y-5">
+          <div className="flex h-full flex-col justify-between gap-5">
             <div className="flex items-center justify-between gap-4">
               <div>
                 <p className="text-[13px]">Theme</p>
@@ -612,8 +614,14 @@ function SettingsForm({
                 iconClassName="size-4"
               />
             </div>
-            <div className="flex flex-wrap items-center gap-3">
-              <p className="text-[13px] text-muted-foreground">Currency:</p>
+            <div className="h-px bg-foreground/5" />
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-[13px]">Currency</p>
+                <p className="text-[11px] text-muted-foreground">
+                  Symbols and number formatting
+                </p>
+              </div>
               <DropdownSelect
                 value={defaultCurrency}
                 onValueChange={(value) => {
@@ -624,7 +632,7 @@ function SettingsForm({
                   );
                 }}
                 ariaLabel="Default currency"
-                className="w-44 min-[360px]:w-60"
+                className="w-40 min-[360px]:w-52"
                 options={CURRENCY_OPTIONS}
               />
             </div>
