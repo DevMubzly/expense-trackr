@@ -29,6 +29,7 @@ import { Icon } from "@/components/huge-icon";
 import { useApi } from "@/lib/use-api";
 import { useQuery } from "convex/react";
 import { api as convexApi } from "../../convex/_generated/api";
+import { gooeyToast } from "goey-toast";
 import type {
   BudgetProgress,
   Debt,
@@ -451,6 +452,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         icon: ArrowLeftRightIcon,
         keywords: ["signout", "logout", "exit", "session"],
         onSelect: () => {
+          gooeyToast.success("Signed out", {
+            description: "See you soon.",
+          });
           logout();
           router.push("/");
         },

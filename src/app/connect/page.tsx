@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/motion/input";
 import { Icon } from "@/components/huge-icon";
 import { Tick02Icon } from "@hugeicons/core-free-icons";
+import { gooeyToast } from "goey-toast";
 
 type AuthRequestView = {
   clientName: string;
@@ -103,14 +104,17 @@ function ConnectContent() {
           : {}),
       })) as { redirectUrl?: string | null };
       if (result?.redirectUrl) {
+        gooeyToast.success(approve ? "Access approved" : "Request declined");
         window.location.assign(result.redirectUrl);
         return;
       }
+      gooeyToast.success(approve ? "Access approved" : "Request declined");
       setDone(true);
     } catch (cause) {
-      setError(
-        cause instanceof Error ? cause.message : "Could not complete the request.",
-      );
+      const message =
+        cause instanceof Error ? cause.message : "Could not complete the request.";
+      setError(message);
+      gooeyToast.error(message);
     } finally {
       setPending(false);
     }
@@ -284,7 +288,12 @@ function ConnectContent() {
             <div className="flex flex-wrap items-center justify-between gap-2 border-t border-white/10 pt-4">
               <Button
                 variant="ghost"
-                onClick={() => void signOut()}
+                onClick={() => {
+                  gooeyToast.success("Signed out", {
+                    description: "See you soon.",
+                  });
+                  void signOut();
+                }}
                 disabled={pending}
               >
                 Sign out

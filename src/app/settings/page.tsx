@@ -555,7 +555,10 @@ function SettingsForm({
                 {avatarDataUrl ? (
                   <button
                     type="button"
-                    onClick={() => setAvatarDataUrl("")}
+                    onClick={() => {
+                      setAvatarDataUrl("");
+                      gooeyToast.success("Avatar removed");
+                    }}
                     className="text-[11px] text-muted-foreground transition-colors hover:text-destructive"
                   >
                     Remove
@@ -931,6 +934,9 @@ function SettingsForm({
             <Button
               variant="outline"
               onClick={() => {
+                gooeyToast.success("Signed out", {
+                  description: "See you soon.",
+                });
                 logout();
                 router.push("/");
               }}

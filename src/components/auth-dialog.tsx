@@ -10,8 +10,6 @@ import { Input } from "@/components/motion/input";
 import { Icon } from "@/components/huge-icon";
 import { Button } from "@/components/ui/button";
 import { EASE_OUT } from "@/lib/ease";
-import { convexClient } from "@/components/convex-provider";
-import { api as convexApi } from "../../convex/_generated/api";
 
 type Mode = "signin" | "signup" | "reset" | "reset-verify";
 
@@ -112,21 +110,12 @@ function AuthBody({ onDone, titleId }: { onDone: () => void; titleId: string }) 
   const [error, setError] = useState<string | undefined>();
   const [pending, setPending] = useState(false);
 
-  async function finish(message = "Welcome back") {
-    let onboarded = false;
-    try {
-      const status = (await convexClient?.query(convexApi.onboarding.status, {})) as
-        | { completed: boolean }
-        | undefined;
-      onboarded = Boolean(status?.completed);
-    } catch {
-      onboarded = false;
-    }
+  function finish(message = "Welcome back") {
     gooeyToast.success(message, {
-      description: onboarded ? "Opening your workspace." : "Finishing your setup.",
+      description: "Opening your workspace.",
     });
     onDone();
-    router.push(onboarded ? "/dashboard" : "/onboarding?step=welcome");
+    router.push("/dashboard");
   }
 
   function switchMode(next: Mode) {
@@ -144,7 +133,9 @@ function AuthBody({ onDone, titleId }: { onDone: () => void; titleId: string }) 
     try {
       await task();
     } catch (cause) {
-      setError(friendlyError(cause));
+      const message = friendlyError(cause);
+      setError(message);
+      gooeyToast.error(message);
     } finally {
       setPending(false);
     }
@@ -158,7 +149,7 @@ function AuthBody({ onDone, titleId }: { onDone: () => void; titleId: string }) 
       }
       void run(async () => {
         await signIn("password", { email: email.trim(), password, flow: "signIn" });
-        await finish();
+        finish();
       });
       return;
     }
@@ -222,7 +213,7 @@ function AuthBody({ onDone, titleId }: { onDone: () => void; titleId: string }) 
         newPassword: password,
         flow: "reset-verification",
       });
-      await finish("Password updated");
+      finish("Password updated");
     });
   }
 
