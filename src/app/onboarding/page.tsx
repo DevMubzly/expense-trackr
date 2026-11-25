@@ -16,6 +16,7 @@ import { Icon } from "@/components/huge-icon";
 import { useMutation, useQuery } from "convex/react";
 import { api as convexApi } from "../../../convex/_generated/api";
 import { CURRENCY_OPTIONS } from "@/lib/currencies";
+import { formatNumericInput, parseNumericInput } from "@/lib/format";
 import type { AccountType, Currency } from "@/lib/types";
 import {
   STEP_META,
@@ -487,6 +488,7 @@ function BudgetStep({
   onNext: (value: string) => void;
 }) {
   const [value, setValue] = useState(initial);
+  const commit = () => onNext(String(parseNumericInput(value)));
 
   return (
     <div className="max-w-[520px]" style={{ "--accent": accent } as CSSProperties}>
@@ -504,9 +506,9 @@ function BudgetStep({
         <span className="text-sm font-medium text-muted-foreground">{currency}</span>
         <input
           value={value}
-          onChange={(event) => setValue(event.target.value.replace(/[^0-9]/g, ""))}
+          onChange={(event) => setValue(formatNumericInput(event.target.value))}
           onKeyDown={(event) => {
-            if (event.key === "Enter") onNext(value);
+            if (event.key === "Enter") commit();
           }}
           placeholder="0"
           inputMode="numeric"
@@ -517,7 +519,7 @@ function BudgetStep({
       </div>
 
       <div className="mt-6">
-        <AccentButton accent={accent} onClick={() => onNext(value)}>
+        <AccentButton accent={accent} onClick={commit}>
           Set budget
         </AccentButton>
       </div>

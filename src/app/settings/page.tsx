@@ -574,7 +574,7 @@ function SettingsForm({
                 <Input
                   label="Email"
                   value={profileEmail}
-                  onChange={setProfileEmail}
+                  disabled
                   placeholder="you@example.com"
                 />
                 <Input
@@ -651,12 +651,14 @@ function SettingsForm({
               <Input
                 label={`Monthly budget (${display.unit})`}
                 value={budgetDraft ?? budgetFormatted}
-                onFocus={() => setBudgetDraft(String(Math.round(budget)))}
+                onFocus={() =>
+                  setBudgetDraft(formatNumericInput(String(Math.round(budget))))
+                }
                 onBlur={() => setBudgetDraft(null)}
                 onChange={(value) => {
-                  const digits = value.replace(/[^\d]/g, "");
-                  setBudgetDraft(digits);
-                  setBudget(digits ? Number(digits) : 0);
+                  const next = formatNumericInput(value);
+                  setBudgetDraft(next);
+                  setBudget(parseNumericInput(next));
                 }}
                 inputMode="numeric"
                 placeholder={budgetPlaceholder}

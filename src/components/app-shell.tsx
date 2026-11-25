@@ -27,6 +27,8 @@ import { useAuth } from "@/components/auth-provider";
 import { useTransactionDialog } from "@/components/expense-dialog";
 import { Icon } from "@/components/huge-icon";
 import { useApi } from "@/lib/use-api";
+import { useQuery } from "convex/react";
+import { api as convexApi } from "../../convex/_generated/api";
 import type {
   BudgetProgress,
   Debt,
@@ -82,6 +84,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, loading: authLoading, logout } = useAuth();
+  const onboardingStatus = useQuery(convexApi.onboarding.status, {});
   const publicRoute =
     pathname === "/" ||
     pathname.startsWith("/onboarding") ||
@@ -163,6 +166,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     if (publicRoute || authLoading || user) return;
     router.replace("/?auth=1");
   }, [authLoading, publicRoute, router, user]);
+
+  useEffect(() => {
+    if (publicRoute || authLoading || !user) return;
+    if (onboardingStatus?.completed === false) {
+      router.replace("/onboarding?step=welcome");
+    }
+  }, [authLoading, onboardingStatus, publicRoute, router, user]);
 
   const commands = useMemo<CommandItem[]>(() => {
     const accounts = stats?.accounts ?? [];
