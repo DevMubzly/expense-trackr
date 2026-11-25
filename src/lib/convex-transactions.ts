@@ -29,11 +29,7 @@ export type TransactionCategoryInput = {
   iconKey: string;
 };
 
-/**
- * Accounts and categories are still served by the mock store, so transactions
- * carry their descriptor for Convex to mirror. This disappears with the
- * accounts/categories migration.
- */
+/** Transactions carry descriptors so Convex can resolve the matching rows. */
 export function toAccountInput(
   account: Account,
 ): TransactionAccountInput {

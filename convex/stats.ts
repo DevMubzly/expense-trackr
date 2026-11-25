@@ -147,7 +147,6 @@ export function buildStats(input: Input) {
   const lastMonth = ymd(new Date(now.getFullYear(), now.getMonth() - 1, 1)).slice(0, 7);
   const lastMonthTotal = sum(expenses.filter((t) => t.spentOn.startsWith(lastMonth)));
   const monthTotal = sum(monthlyExpenses);
-  const liquidUgx = Number((input.accounts[0] as { balanceUgx?: number } | undefined)?.balanceUgx ?? 0);
   const payday = Number(settings.payday ?? 28);
   const daysToPayday = payday >= elapsed ? payday - elapsed : daysInMonth - elapsed + payday;
 
@@ -192,16 +191,37 @@ export function buildStats(input: Input) {
     heat,
     recent: (transactions as Tx[]).slice(0, 8) as unknown as Record<string, unknown>[],
     accounts: input.accounts,
-    forecast: {
-      payday,
-      daysToPayday,
-      liquidBalanceUgx: input.accounts.reduce((total, a) => total + Number((a as { balanceUgx?: number }).balanceUgx ?? 0), 0),
-      dailyBurnUgx: Math.round(sum(expenses.filter((t) => t.spentOn >= ymd(addDays(now, -29)))) / 30),
-      projectedBalanceUgx: liquidUgx,
-      safePerDayUgx: Math.max(0, Math.round((liquidUgx - Number(settings.forecastBufferUgx ?? 0)) / Math.max(1, daysToPayday))),
-      bufferUgx: Number(settings.forecastBufferUgx ?? 0),
-      points: [],
-    },
+    forecast: (() => {
+      const liquidBalanceUgx = input.accounts.reduce(
+        (total, a) => total + Number((a as { balanceUgx?: number }).balanceUgx ?? 0),
+        0,
+      );
+      const dailyBurnUgx = Math.round(
+        sum(expenses.filter((t) => t.spentOn >= ymd(addDays(now, -29)))) / 30,
+      );
+      const points = [{ date: today, balance: liquidBalanceUgx, projected: false }];
+      const horizon = Math.min(Math.max(1, daysToPayday), 14);
+      for (let day = 1; day <= horizon; day += 1) {
+        points.push({
+          date: ymd(addDays(now, day)),
+          balance: Math.max(0, liquidBalanceUgx - dailyBurnUgx * day),
+          projected: true,
+        });
+      }
+      return {
+        payday,
+        daysToPayday,
+        liquidBalanceUgx,
+        dailyBurnUgx,
+        projectedBalanceUgx: points[points.length - 1].balance,
+        safePerDayUgx: Math.max(
+          0,
+          Math.round((liquidBalanceUgx - Number(settings.forecastBufferUgx ?? 0)) / Math.max(1, daysToPayday)),
+        ),
+        bufferUgx: Number(settings.forecastBufferUgx ?? 0),
+        points,
+      };
+    })(),
     momoFees: {
       month: monthlyExpenses.reduce((total, t) => total + (t.feeUgx ?? 0), 0),
       period: periodExpenses.reduce((total, t) => total + (t.feeUgx ?? 0), 0),

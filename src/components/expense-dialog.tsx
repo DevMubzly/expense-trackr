@@ -83,7 +83,7 @@ function timeFromIso(iso: string): string {
   const date = new Date(iso);
   return Number.isNaN(date.getTime()) ? timeFromDate(new Date()) : timeFromDate(date);
 }
-/** Temporarily hidden: quick amounts and mock receipt scan. */
+/** Temporarily hidden: quick amounts and receipt scan. */
 const SHOW_AMOUNT_SHORTCUTS = false;
 const UNDERLINE_FIELD = {
   field:
@@ -468,7 +468,7 @@ function TransactionForm({
         </div>
       </div>
 
-      {/* Temporarily disabled: quick amount presets and mock receipt scan. */}
+      {/* Temporarily disabled: quick amount presets and receipt scan. */}
       {SHOW_AMOUNT_SHORTCUTS ? (
         <div className="flex flex-wrap items-center gap-2">
           {PRESETS.map((preset) => (

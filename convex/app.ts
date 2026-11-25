@@ -293,7 +293,7 @@ export const read = query({
       return built;
     }
 
-    return { unsupported: endpoint };
+    throw new Error(`Unknown read endpoint: ${endpoint}`);
   },
 });
 
@@ -389,6 +389,49 @@ export const write = mutation({
         balanceUgx: Math.max(0, Number(debt.balanceUgx ?? 0) - amountUgx),
       });
       return { ok: true };
+    }
+
+    if (resource === "recurring" && parts[2] === "run") {
+      const settings = await ctx.db
+        .query("settings")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .first();
+      const rules = await ctx.db
+        .query("recurringRules")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .collect();
+      const today = todayIso();
+      let created = 0;
+      for (const rule of rules) {
+        if (!rule.enabled || rule.nextOn > today) continue;
+        await ctx.db.insert("transactions", {
+          userId,
+          type: rule.type,
+          amount: rule.amountUgx,
+          currency: rule.currency,
+          amountUgx: rule.amountUgx,
+          usdRate: Number(settings?.usdRate ?? 3800),
+          categoryId: rule.categoryId,
+          accountId: rule.accountId,
+          toAccountId: undefined,
+          feeUgx: undefined,
+          note: rule.name,
+          spentOn: rule.nextOn,
+          spentTime: "09:00",
+          source: "recurring",
+          createdAt: now + created,
+        });
+        const next = new Date(`${rule.nextOn}T00:00:00`);
+        if (rule.frequency === "daily") next.setDate(next.getDate() + 1);
+        if (rule.frequency === "weekly") next.setDate(next.getDate() + 7);
+        if (rule.frequency === "monthly") next.setMonth(next.getMonth() + 1);
+        if (rule.frequency === "yearly") next.setFullYear(next.getFullYear() + 1);
+        await ctx.db.patch(rule._id, {
+          nextOn: `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, "0")}-${String(next.getDate()).padStart(2, "0")}`,
+        });
+        created += 1;
+      }
+      return { created };
     }
 
     if (resource === "recurring" && parts[2] === "skip") {
