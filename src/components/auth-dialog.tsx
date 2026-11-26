@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { ArrowRight01Icon, Cancel01Icon } from "@hugeicons/core-free-icons";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { gooeyToast } from "goey-toast";
+import { useAuth } from "@/components/auth-provider";
 import { Input } from "@/components/motion/input";
 import { Icon } from "@/components/huge-icon";
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,8 @@ const UNDERLINE_FIELD = {
     "h-10 rounded-none border-x-0 border-t-0 border-b border-border bg-transparent data-[state=focused]:ring-0",
   input: "text-[13px] placeholder:text-muted-foreground/50",
 };
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 
 export function AuthDialog({
@@ -91,7 +94,10 @@ export function AuthDialog({
 }
 
 function AuthBody({ onDone, titleId }: { onDone: () => void; titleId: string }) {
-  const { signIn, signOut } = useAuthActions();
+  const { signIn } = useAuthActions();
+  const { user } = useAuth();
+  const sessionReady = useRef<(() => void) | null>(null);
+  const sessionConfirmed = useRef(false);
   const router = useRouter();
   const [mode, setMode] = useState<Mode>("signin");
   const [email, setEmail] = useState("");
@@ -101,12 +107,47 @@ function AuthBody({ onDone, titleId }: { onDone: () => void; titleId: string }) 
   const [error, setError] = useState<string | undefined>();
   const [pending, setPending] = useState(false);
 
-  function finish(message = "Welcome back") {
-    gooeyToast.success(message, {
-      description: "Opening your workspace.",
-    });
+  useEffect(() => {
+    sessionConfirmed.current = Boolean(user);
+    if (sessionConfirmed.current) {
+      sessionReady.current?.();
+      sessionReady.current = null;
+    }
+  }, [user]);
+
+  function finish(message = "Welcome back", description = "Opening your workspace.") {
+    gooeyToast.success(message, { description });
     onDone();
     router.push("/dashboard");
+  }
+
+  /**
+   * `signIn()` resolves before the session is confirmed on the server.
+   * Navigating at that point can look like a signed-out visit, bounce back to
+   * the landing page and force a second login. Wait for the viewer to load.
+   */
+  async function waitForSession() {
+    if (sessionConfirmed.current) return;
+    await new Promise<void>((resolve, reject) => {
+      const timeout = window.setTimeout(() => {
+        sessionReady.current = null;
+        reject(new Error("We could not confirm your sign in. Please try again."));
+      }, 10000);
+      sessionReady.current = () => {
+        window.clearTimeout(timeout);
+        resolve();
+      };
+    });
+  }
+
+  async function signInWithPassword(
+    params: Record<string, string>,
+  ) {
+    const result = await signIn("password", params);
+    if (!result.signingIn) {
+      throw new Error("We could not start your session. Please try again.");
+    }
+    await waitForSession();
   }
 
   function switchMode(next: Mode) {
@@ -133,23 +174,31 @@ function AuthBody({ onDone, titleId }: { onDone: () => void; titleId: string }) 
   }
 
   function submit() {
+    // The server stores and looks up emails in lowercase.
+    const normalizedEmail = email.trim().toLowerCase();
+
+    if (!EMAIL_PATTERN.test(normalizedEmail)) {
+      setError("Enter a valid email address.");
+      return;
+    }
+
     if (mode === "signin") {
-      if (!email.trim() || !password) {
-        setError("Enter your email and password.");
+      if (!password) {
+        setError("Enter your password.");
         return;
       }
       void run(async () => {
-        await signIn("password", { email: email.trim(), password, flow: "signIn" });
+        await signInWithPassword({
+          email: normalizedEmail,
+          password,
+          flow: "signIn",
+        });
         finish();
       });
       return;
     }
 
     if (mode === "signup") {
-      if (!email.trim()) {
-        setError("Enter your email.");
-        return;
-      }
       if (password.length < 8) {
         setError("Use at least 8 characters.");
         return;
@@ -159,27 +208,20 @@ function AuthBody({ onDone, titleId }: { onDone: () => void; titleId: string }) 
         return;
       }
       void run(async () => {
-        await signIn("password", {
-          email: email.trim(),
+        // Stay signed in: one entry is enough, onboarding comes next.
+        await signInWithPassword({
+          email: normalizedEmail,
           password,
           flow: "signUp",
         });
-        await signOut();
-        gooeyToast.success("Account created", {
-          description: "Sign in with your new password to continue.",
-        });
-        switchMode("signin");
+        finish("Account created", "Finishing your setup.");
       });
       return;
     }
 
     if (mode === "reset") {
-      if (!email.trim()) {
-        setError("Enter your email.");
-        return;
-      }
       void run(async () => {
-        await signIn("password", { email: email.trim(), flow: "reset" });
+        await signIn("password", { email: normalizedEmail, flow: "reset" });
         switchMode("reset-verify");
       });
       return;
@@ -199,11 +241,12 @@ function AuthBody({ onDone, titleId }: { onDone: () => void; titleId: string }) 
     }
     void run(async () => {
       await signIn("password", {
-        email: email.trim(),
+        email: normalizedEmail,
         code,
         newPassword: password,
         flow: "reset-verification",
       });
+      await waitForSession();
       finish("Password updated");
     });
   }

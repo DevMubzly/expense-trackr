@@ -9,7 +9,7 @@ export function friendlyError(error: unknown): string {
   const message = raw.replace(/\[Request ID:[^\]]*\]/g, "").trim();
 
   if (/InvalidAccountId/i.test(message)) return "No account for that email yet. Create one first.";
-  if (/InvalidSecret/i.test(message)) return "That email and password do not match.";
+  if (/InvalidSecret|Invalid credentials|incorrect (email|password)|wrong password/i.test(message)) return "That email and password do not match.";
   if (/already exists/i.test(message)) return "That email already has an account.";
   if (/TooMany|rate.?limit/i.test(message)) return "Too many attempts. Try again in a few minutes.";
   if (/at least 8|password requirements/i.test(message)) return "Use a password of at least 8 characters.";
